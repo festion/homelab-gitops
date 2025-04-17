@@ -38,13 +38,57 @@ pct exec $CTID -- bash -c "apt update >/dev/null 2>&1 && apt install -y git curl
 msg_ok "Installed dependencies"
 
 msg_info "Setting up ${APP}"
-pct exec $CTID -- bash -c "rm -rf /opt/gitops && git clone --depth=1 $GIT_REPO /opt/gitops && cd /opt/gitops/dashboard && npm install && npm run build && mkdir -p /var/www/gitops-dashboard && cp -r dist/* /var/www/gitops-dashboard/"
+pct exec $CTID -- bash -c "\
+  rm -rf /opt/gitops && \
+  git clone --depth=1 $GIT_REPO /opt/gitops && \
+  cd /opt/gitops/dashboard && \
+  npm install && npm run build && \
+  mkdir -p /var/www/gitops-dashboard && \
+  cp -r dist/* /var/www/gitops-dashboard/"
 
-SERVICE_FILE="[Unit]\nDescription=GitOps Dashboard\nAfter=network.target\n\n[Service]\nWorkingDirectory=/var/www/gitops-dashboard\nExecStart=/usr/bin/python3 -m http.server ${SERVICE_PORT}\nRestart=always\n\n[Install]\nWantedBy=multi-user.target"
+# Create systemd service to serve the static dashboard
+SERVICE_FILE="[Unit]
+Description=GitOps Dashboard
+After=network.target
 
-pct exec $CTID -- bash -c "echo -e '$SERVICE_FILE' > /etc/systemd/system/gitops-dashboard.service && systemctl daemon-reload && systemctl enable --now gitops-dashboard.service"
-msg_ok "Setup Completed"
+[Service]
+WorkingDirectory=/var/www/gitops-dashboard
+ExecStart=/usr/bin/python3 -m http.server ${SERVICE_PORT}
+Restart=always
 
+[Install]
+WantedBy=multi-user.target"
+
+pct exec $CTID -- bash -c "echo '$SERVICE_FILE' > /etc/systemd/system/gitops-dashboard.service"
+pct exec $CTID -- systemctl daemon-reload
+pct exec $CTID -- systemctl enable --now gitops-dashboard.service
+msg_ok "Service installed and started"
+
+# Add Git post-merge hook to rebuild on pull
+HOOK_SCRIPT="#!/bin/bash
+cd /opt/gitops/dashboard
+npm install
+npm run build
+systemctl restart gitops-dashboard"
+
+pct exec $CTID -- bash -c "echo '$HOOK_SCRIPT' > /opt/gitops/.git/hooks/post-merge && chmod +x /opt/gitops/.git/hooks/post-merge"
+msg_ok "Auto-rebuild Git hook created"
+
+# Add shortcut to manually trigger update + rebuild
+UPDATE_SCRIPT="#!/bin/bash
+cd /opt/gitops
+git pull
+if [ -x .git/hooks/post-merge ]; then
+  .git/hooks/post-merge
+else
+  echo 'No post-merge hook found.'
+fi"
+
+pct exec $CTID -- bash -c "echo '$UPDATE_SCRIPT' > /usr/local/bin/gitops-update && chmod +x /usr/local/bin/gitops-update"
+msg_ok "Manual update script created at /usr/local/bin/gitops-update"
+
+
+# Final output
 IP=$(pct exec $CTID -- hostname -I | awk '{print $1}')
 msg_ok "Completed Successfully!\n"
 echo -e "${CREATING}${GN}${APP} setup has been successfully initialized!${CL}"
