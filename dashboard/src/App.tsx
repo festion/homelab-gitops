@@ -96,6 +96,11 @@ export default function App() {
     return { name: label, value };
   });
 
+  const formatXAxis = (tick: string) => {
+    // Optional: remove whitespace or customize label style
+    return tick.replace(" ", "\n");
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-5xl mx-auto">
@@ -140,7 +145,7 @@ export default function App() {
             <h2 className="text-lg font-semibold mb-2">📊 Repo Health (Bar)</h2>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={summaryData}>
-                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                <XAxis dataKey="name" tickFormatter={formatXAxis} tick={{ fontSize: 12 }} />
                 <YAxis allowDecimals={false} />
                 <Tooltip />
                 <Bar dataKey="value">

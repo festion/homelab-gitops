@@ -8,8 +8,13 @@ import argparse
 NPM_PROXY_PATH = "/opt/npm/data/nginx/proxy_host/"
 ADGUARD_HOST = "192.168.1.253"
 ADGUARD_PORT = "80"
+<<<<<<< HEAD
 ADGUARD_USER = "root"
 ADGUARD_PASS = "<see Infisical: GRAFANA_ADMIN_PASSWORD/INFLUXDB_ADMIN_PASSWORD - pre-rotation T5/T6>"  # 🔒 replace with your actual password
+=======
+ADGUARD_USER = "admin"
+ADGUARD_PASS = "yourpassword"  # 🔒 replace with your actual password
+>>>>>>> 56b5678b802635136727aea8076863adc23b2671
 ADGUARD_TARGET_IP = "192.168.1.95"  # NPM IP for internal rewrites
 
 API_BASE = f"http://{ADGUARD_HOST}:{ADGUARD_PORT}/control"
