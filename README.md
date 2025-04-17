@@ -97,6 +97,28 @@ tail -f /opt/gitops/logs/gitops_dns_sync.log
 
 ---
 
+## 🔍 Audit Terminology
+
+### 🔖 Stale Tags
+
+A Git tag is considered **stale** if:
+
+- It points to a commit that is not reachable from any current branch
+- It refers to outdated releases that are no longer part of active history
+
+**Why it matters**: Stale tags can confuse CI/CD pipelines or versioning tools by referencing irrelevant or outdated points in the project.
+
+### 📁 Missing Files
+
+A repository is marked with **missing files** if:
+
+- It lacks key project indicators like `README.md`, `Dockerfile`, or other required files
+- Its structure doesn’t meet expected criteria (e.g. missing `main.py`, `kustomization.yaml`, etc.)
+
+**Why it matters**: Repos missing essential files are likely broken or incomplete, and can’t reliably be used in automated workflows.
+
+---
+
 ## 📁 Project Structure
 
 ```text
@@ -110,3 +132,4 @@ homelab-gitops-auditor/
 ├── GitRepoAudit.py        # Main repo auditing script
 └── ...
 ```
+
