@@ -1,4 +1,4 @@
-# 🧭 GitOps Audit Dashboard
+# 📽 GitOps Audit Dashboard
 
 This project provides a visual dashboard for auditing the health and status of your Git repositories in a GitOps-managed homelab. It checks for uncommitted changes, stale branches, and missing files, and presents the results in an interactive web interface.
 
@@ -15,7 +15,101 @@ This project provides a visual dashboard for auditing the health and status of y
 
 ---
 
-## 🧠 AdGuard DNS Rewrite Sync
+## 🧠 GitHub to Local Repository Sync Auditor
+
+### Overview
+This script audits and remediates differences between your local Git repositories and your remote GitHub repositories. It is designed for use in GitOps-managed environments to ensure local and remote repositories stay in sync and compliant with expectations.
+
+### Script Location
+```
+/opt/gitops/scripts/sync_github_repos.sh
+```
+
+### Output Location
+```
+/opt/gitops/audit-history/
+```
+
+### Purpose
+- Ensures all GitHub repositories exist locally
+- Flags extra local repositories not found on GitHub
+- Detects uncommitted changes in local repositories
+- Outputs structured JSON for UI integration
+- Maintains full audit history with symlink to the latest result
+
+### Dependencies
+- `jq`: for parsing JSON
+- `curl`: for GitHub API access
+- Bash 4+
+
+### Usage
+```bash
+chmod +x /opt/gitops/scripts/sync_github_repos.sh
+/opt/gitops/scripts/sync_github_repos.sh
+```
+
+### Output Files
+Each run creates a file:
+```
+/opt/gitops/audit-history/YYYY-MM-DDTHH:MM:SSZ.json
+```
+And updates the symlink:
+```
+/opt/gitops/audit-history/latest.json
+```
+
+### JSON Output Structure
+```json
+{
+  "timestamp": "2025-04-18T15:00:00Z",
+  "health_status": "yellow",
+  "summary": {
+    "total": 42,
+    "missing": 2,
+    "extra": 1,
+    "dirty": 3,
+    "clean": 36
+  },
+  "repos": [
+    {
+      "name": "habitica",
+      "status": "missing",
+      "clone_url": "https://github.com/festion/habitica.git",
+      "dashboard_link": "http://gitopsdashboard.local/audit/habitica?action=clone"
+    },
+    {
+      "name": "untracked-repo",
+      "status": "extra",
+      "local_path": "/mnt/c/GIT/untracked-repo",
+      "dashboard_link": "http://gitopsdashboard.local/audit/untracked-repo?action=delete"
+    },
+    {
+      "name": "homebox",
+      "status": "dirty",
+      "local_path": "/mnt/c/GIT/homebox",
+      "dashboard_link": "http://gitopsdashboard.local/audit/homebox?action=review"
+    }
+  ]
+}
+```
+
+### Traffic Light Indicator Rules
+- **green**: All repos exist and are clean
+- **yellow**: Some repos are dirty or extra
+- **red**: One or more repos are missing
+
+### Integrations
+- This script supports full integration with the GitOps Dashboard.
+- `dashboard_link` entries allow remediation links in the UI to directly trigger repair actions.
+
+### Future Enhancements
+- API endpoint triggers for remediation: clone, delete, commit, discard
+- Commit JSON results to Git or notify via email/webhook
+- Dashboard history view with diffs between snapshots
+
+---
+
+## 👀 AdGuard DNS Rewrite Sync
 
 This repository includes tooling to automate AdGuard Home rewrite records based on Nginx Proxy Manager entries.
 
