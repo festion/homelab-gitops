@@ -1,96 +1,46 @@
-[
-  {
-    "lastCommitAgeDays": 176,
-    "isStale": true,
-    "missingFiles": [
-      "LICENSE"
-    ],
-    "lastCommit": "9d08738 - compatible with hass 2024.9",
-    "name": "component-ab-gateway",
-    "remote": "https://github.com/AprilBrother/component-ab-gateway.git",
-    "uncommittedChanges": false,
-    "branch": "main",
-    "path": "C:\\GIT\\component-ab-gateway"
+{
+  "timestamp": "2025-04-21T12:00:00Z",
+  "health_status": "yellow",
+  "summary": {
+    "total": 12,
+    "missing": 0,
+    "extra": 1,
+    "dirty": 3,
+    "clean": 8
   },
-  {
-    "lastCommitAgeDays": 0,
-    "isStale": false,
-    "missingFiles": [
-      ".gitignore",
-      "README.md",
-      "LICENSE"
-    ],
-    "lastCommit": "363ba01 - local sync",
-    "name": "Docker_Compose",
-    "remote": "https://github.com/festion/Docker_Compose.git",
-    "uncommittedChanges": false,
-    "branch": "main",
-    "path": "C:\\GIT\\Docker_Compose"
-  },
-  {
-    "lastCommitAgeDays": 0,
-    "isStale": false,
-    "missingFiles": [
-      ".gitignore",
-      "LICENSE"
-    ],
-    "lastCommit": "e04f868 - Initial commit",
-    "name": "ESPHome",
-    "remote": "https://github.com/festion/ESPHome.git",
-    "uncommittedChanges": false,
-    "branch": "main",
-    "path": "C:\\GIT\\ESPHome"
-  },
-  {
-    "lastCommitAgeDays": 77,
-    "isStale": false,
-    "missingFiles": [],
-    "lastCommit": "707c88a - Adding pick and place for BreakoutBoard",
-    "name": "halo",
-    "remote": "https://github.com/yashmulgaonkar/halo",
-    "uncommittedChanges": false,
-    "branch": "main",
-    "path": "C:\\GIT\\halo"
-  },
-  {
-    "lastCommitAgeDays": 0,
-    "isStale": false,
-    "missingFiles": [
-      "README.md",
-      "LICENSE"
-    ],
-    "lastCommit": "6c7ce64 - Template update for offline devices",
-    "name": "home-assistant-config",
-    "remote": "https://github.com/festion/home-assistant-config",
-    "uncommittedChanges": false,
-    "branch": "main",
-    "path": "C:\\GIT\\home-assistant-config"
-  },
-  {
-    "lastCommitAgeDays": 0,
-    "isStale": false,
-    "missingFiles": [
-      ".gitignore",
-      "LICENSE"
-    ],
-    "lastCommit": "c5e5250 - netbox pass",
-    "name": "homelab",
-    "remote": "https://github.com/festion/Homelab.git",
-    "uncommittedChanges": false,
-    "branch": "main",
-    "path": "C:\\GIT\\homelab"
-  },
-  {
-    "lastCommitAgeDays": 0,
-    "isStale": false,
-    "missingFiles": [
-      "LICENSE"
-    ],
-    "lastCommit": "7d32be2 - ≡ƒÆ╛ Save local changes before rebase",
-    "name": "homelab-gitops-auditor",
-    "remote": "https://github.com/festion/homelab-gitops-auditor.git",
-    "uncommittedChanges": true,
-    "branch": "main",
-    "path": "C:\\GIT\\homelab-gitops-auditor"
-  }
-]
+  "repos": [
+    {
+      "name": "homelab-gitops-auditor",
+      "path": "/mnt/c/GIT/homelab-gitops-auditor",
+      "remote": "https://github.com/festion/homelab-gitops-auditor.git",
+      "branch": "main",
+      "lastCommit": "2025-04-18T09:19:00Z",
+      "lastCommitAgeDays": 3,
+      "uncommittedChanges": false,
+      "missingFiles": [],
+      "isStale": false
+    },
+    {
+      "name": "home-assistant-config",
+      "path": "/mnt/c/GIT/home-assistant-config",
+      "remote": "https://github.com/festion/home-assistant-config.git",
+      "branch": "main",
+      "lastCommit": "2025-04-15T14:30:00Z",
+      "lastCommitAgeDays": 6,
+      "uncommittedChanges": true,
+      "missingFiles": [],
+      "isStale": false
+    },
+    {
+      "name": "ble-discovery-addon",
+      "path": "/mnt/c/GIT/ble-discovery-addon",
+      "remote": "https://github.com/festion/ble-discovery-addon.git",
+      "branch": "develop",
+      "lastCommit": "2025-04-10T11:15:00Z",
+      "lastCommitAgeDays": 11,
+      "uncommittedChanges": true,
+      "missingFiles": ["CONTRIBUTING.md"],
+      "isStale": false
+    }
+  ]
+}
