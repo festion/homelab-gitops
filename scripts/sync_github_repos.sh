@@ -10,7 +10,18 @@ set -euo pipefail
 ### CONFIGURATION ###
 GITHUB_USER="festion"
 GITHUB_API_URL="https://api.github.com/users/${GITHUB_USER}/repos?per_page=100"
-HISTORY_DIR="/opt/gitops/audit-history"
+
+# Determine if running in dev mode
+if [ "$1" = "--dev" ] || [ -f ".dev_mode" ]; then
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+  HISTORY_DIR="${PROJECT_ROOT}/audit-history"
+  echo "📂 Running in development mode. Using ${HISTORY_DIR}"
+else
+  HISTORY_DIR="/opt/gitops/audit-history"
+  echo "📂 Running in production mode. Using ${HISTORY_DIR}"
+fi
+
 TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 JSON_PATH="${HISTORY_DIR}/${TIMESTAMP}.json"
 
@@ -45,7 +56,7 @@ mapfile -t remote_repos < <(curl -s "$GITHUB_API_URL" | jq -r '.[].name' | sort)
     echo "      \"name\": \"$repo\"," 
     echo "      \"status\": \"clean\"," 
     echo "      \"clone_url\": \"https://github.com/$GITHUB_USER/$repo.git\"," 
-    echo "      \"dashboard_link\": \"http://gitopsdashboard.local/audit/$repo?action=view\""
+    echo "      \"dashboard_link\": \"/audit/$repo?action=view\""
     echo -n "    }"
     first=0
   done

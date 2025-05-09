@@ -12,6 +12,7 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <Home /> },
       { path: 'audit', element: <AuditPage /> },
+      { path: 'audit/:repo', element: <AuditPage /> },
     ],
   },
 ]);

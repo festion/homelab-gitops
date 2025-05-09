@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-  import {
+    import {
     BarChart,
     Bar,
     XAxis,
@@ -31,7 +31,7 @@ import { useEffect, useState } from "react";
     }>;
   };
 
-  const STATUS_LABELS = ["clean", "dirty", "missing", "extra"];
+  // Status colors for visualization
   const STATUS_COLORS: Record<string, string> = {
     "clean": "#22c55e",    // green
     "dirty": "#6366f1",    // indigo
