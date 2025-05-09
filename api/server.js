@@ -1,23 +1,65 @@
-// File: /opt/gitops/api/server.js
+// File: server.js
 
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const { exec } = require('child_process');
 
+// Parse command line arguments for port
+const args = process.argv.slice(2);
+let portArg = args.find(arg => arg.startsWith('--port='));
+let portFromArg = portArg ? parseInt(portArg.split('=')[1], 10) : null;
+
+// Determine if we're in development or production mode
+const isDev = process.env.NODE_ENV !== 'production';
+const rootDir = isDev
+  ? path.resolve(__dirname, '..') // Development: /mnt/c/GIT/homelab-gitops-auditor
+  : '/opt/gitops';                // Production: /opt/gitops
+
 const app = express();
-const PORT = process.env.PORT || 3070;
-const HISTORY_DIR = '/opt/gitops/audit-history';
-const LOCAL_DIR = '/mnt/c/GIT';
+const PORT = portFromArg || process.env.PORT || 3070;
+const HISTORY_DIR = path.join(rootDir, 'audit-history');
+const LOCAL_DIR = isDev ? '/mnt/c/GIT' : '/mnt/c/GIT';
+
+// Enable CORS for development
+if (isDev) {
+  app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE');
+    next();
+  });
+}
+
+// Serve static dashboard files in development
+if (isDev) {
+  app.use(express.static(path.join(rootDir, 'dashboard/public')));
+}
 
 app.use(express.json());
 
 // Load latest audit report
 app.get('/audit', (req, res) => {
   try {
-    const data = fs.readFileSync(path.join(HISTORY_DIR, 'latest.json'));
-    res.json(JSON.parse(data));
+    // Try loading latest.json from audit-history
+    const latestJsonPath = path.join(HISTORY_DIR, 'latest.json');
+    
+    if (fs.existsSync(latestJsonPath)) {
+      const data = fs.readFileSync(latestJsonPath);
+      res.json(JSON.parse(data));
+    } else {
+      // Fallback to reading the static file from dashboard/public in development
+      const staticFilePath = path.join(rootDir, 'dashboard/public/GitRepoReport.json');
+      
+      if (fs.existsSync(staticFilePath)) {
+        const data = fs.readFileSync(staticFilePath);
+        res.json(JSON.parse(data));
+      } else {
+        throw new Error('No JSON data found');
+      }
+    }
   } catch (err) {
+    console.error('Error loading audit report:', err);
     res.status(500).json({ error: 'Failed to load latest audit report.' });
   }
 });
@@ -25,12 +67,20 @@ app.get('/audit', (req, res) => {
 // List historical audit reports
 app.get('/audit/history', (req, res) => {
   try {
+    // Create history directory if it doesn't exist
+    if (!fs.existsSync(HISTORY_DIR)) {
+      fs.mkdirSync(HISTORY_DIR, { recursive: true });
+    }
+    
     const files = fs.readdirSync(HISTORY_DIR)
       .filter(f => f.endsWith('.json') && f !== 'latest.json')
       .sort()
       .reverse();
+    
+    // In development mode with no history, return empty array instead of error
     res.json(files);
   } catch (err) {
+    console.error('Error listing audit history:', err);
     res.status(500).json({ error: 'Failed to list audit history.' });
   }
 });

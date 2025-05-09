@@ -1,5 +1,11 @@
 # Changelog
 
+## [v1.0.2] - 2025-05-09
+### Changed
+- Updated installation instructions to work without Nginx
+- Added port configuration option for running on port 8080
+- Improved manual deployment script to support custom configurations
+
 ## [v1.0.1] - 2025-05-09
 ### Fixed
 - Dashboard compatibility with Node.js 18 (downgraded React from v19 to v18.2.0)
