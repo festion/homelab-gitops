@@ -1,5 +1,16 @@
 # Changelog
 
+## [v1.0.3] - 2025-05-09
+### Fixed
+- Fixed dashboard build process to correctly generate dist directory
+- Fixed API data handling in React components to match API response format
+- Added API proxy configuration in vite.config.ts to resolve CORS issues
+- Improved error handling for data fetching in the dashboard
+
+### Added
+- Enhanced error states with better user feedback
+- Status indicator with color-coded dashboard health states
+
 ## [v1.0.2] - 2025-05-09
 ### Changed
 - Updated installation instructions to work without Nginx
