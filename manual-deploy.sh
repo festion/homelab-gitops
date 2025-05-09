@@ -1,4 +1,4 @@
-#\!/bin/bash
+#!/bin/bash
 set -e
 
 # Configuration
@@ -7,9 +7,31 @@ DASHBOARD_BUILD_DIR="dashboard/dist"
 API_DIR="api"
 LOG_DIR="logs"
 SCRIPTS_DIR="scripts"
+API_PORT=3070 # Default port
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --port=*)
+      API_PORT="${1#*=}"
+      shift
+      ;;
+    --no-nginx)
+      NO_NGINX=true
+      shift
+      ;;
+    *)
+      echo "Unknown option: $1"
+      echo "Usage: $0 [--port=NUMBER] [--no-nginx]"
+      exit 1
+      ;;
+  esac
+done
 
 echo "==== GitOps Dashboard Manual Deployment ===="
 echo "This script will prepare files for manual deployment."
+echo "API Port: $API_PORT"
+echo "Nginx Included: ${NO_NGINX:+No}${NO_NGINX:-Yes}"
 
 # Create deployment directory
 DEPLOY_PACKAGE="gitops_deploy_$(date +%Y%m%d_%H%M%S)"
@@ -46,9 +68,13 @@ mkdir -p "${TARGET_DIR}/scripts"
 mkdir -p "${TARGET_DIR}/logs"
 mkdir -p "${WEB_DIR}"
 
-# Copy dashboard files to web directory
-echo "Installing dashboard files..."
-cp -r dashboard/* "${WEB_DIR}/"
+if [ "${NO_NGINX}" = "true" ]; then
+  echo "Nginx integration skipped as requested"
+else
+  # Copy dashboard files to web directory
+  echo "Installing dashboard files..."
+  cp -r dashboard/* "${WEB_DIR}/"
+fi
 
 # Copy API files
 echo "Installing API files..."
@@ -74,7 +100,7 @@ Description=GitOps Audit API Server
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/node /opt/gitops/api/server.js
+ExecStart=/usr/bin/node /opt/gitops/api/server.js --port=${API_PORT}
 WorkingDirectory=/opt/gitops/api
 Restart=always
 RestartSec=10
@@ -91,7 +117,7 @@ systemctl enable --now gitops-audit-api
 
 echo "Installation complete\!"
 echo "Dashboard URL: http://YOUR_SERVER_IP/"
-echo "API URL: http://YOUR_SERVER_IP:3070/audit"
+echo "API URL: http://YOUR_SERVER_IP:${API_PORT}/audit"
 INSTALLSCRIPT
 
 chmod +x "${DEPLOY_PACKAGE}/install.sh"

@@ -2,6 +2,23 @@
 
 This project provides a visual dashboard for auditing the health and status of your Git repositories in a GitOps-managed homelab. It checks for uncommitted changes, stale branches, and missing files, and presents the results in an interactive web interface.
 
+## 📦 Quick Install
+
+```bash
+# Clone the repository
+git clone https://github.com/festion/homelab-gitops-auditor.git /tmp/gitops-install
+
+# Create deployment package (with port 8080, without Nginx)
+cd /tmp/gitops-install
+bash manual-deploy.sh --port=8080 --no-nginx
+
+# Install the package
+cd gitops_deploy_*
+bash install.sh
+
+# Access at http://YOUR_SERVER_IP:8080
+```
+
 ---
 
 ## 📊 Features
