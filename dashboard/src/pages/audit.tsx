@@ -3,12 +3,21 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 
+// Development configuration
+const API_BASE_URL = process.env.NODE_ENV === 'production' 
+  ? '' // In production, use relative paths
+  : 'http://localhost:3070'; // In development, connect to local API
+
 interface RepoEntry {
   name: string;
-  status: 'missing' | 'extra' | 'dirty';
+  status: 'missing' | 'extra' | 'dirty' | 'clean';
   clone_url?: string;
   local_path?: string;
-  dashboard_link: string;
+  path?: string;
+  remote?: string;
+  uncommittedChanges?: boolean;
+  missingFiles?: string[];
+  dashboard_link?: string;
 }
 
 interface AuditReport {
@@ -31,11 +40,37 @@ const AuditPage = () => {
 
   useEffect(() => {
     const fetchAudit = () => {
-      axios.get('/audit')
+      axios.get(`${API_BASE_URL}/audit`)
         .then((res: { data: AuditReport }) => {
-          setData(res.data);
+          // Transform data if needed to match expected interface
+          const reportData = res.data;
+          
+          // If repo objects don't have 'status' field but have 'uncommittedChanges',
+          // derive status from other fields
+          if (reportData.repos && reportData.repos.length > 0 && reportData.repos[0].status === undefined) {
+            reportData.repos = reportData.repos.map(repo => ({
+              ...repo,
+              status: repo.uncommittedChanges ? 'dirty' : 'clean',
+              local_path: repo.path, // Normalize field names
+            }));
+          }
+          
+          setData(reportData);
         })
-        .catch((err: any) => console.error('Failed to load audit data:', err))
+        .catch((err: any) => {
+          console.error('Failed to load audit data:', err);
+          // Fallback to static file in development
+          if (process.env.NODE_ENV !== 'production') {
+            fetch('/GitRepoReport.json')
+              .then(res => res.json())
+              .then(data => {
+                console.log('Using fallback data source');
+                setData(data);
+              })
+              .catch(err => console.error('Failed to load fallback data:', err))
+              .finally(() => setLoading(false));
+          }
+        })
         .finally(() => setLoading(false));
     };
 
@@ -47,19 +82,21 @@ const AuditPage = () => {
   const triggerAction = async (action: string, repo: RepoEntry) => {
     try {
       const body: any = { repo: repo.name };
-      if (action === 'clone') body['clone_url'] = repo.clone_url;
-      const response = await axios.post(`/audit/${action}`, body);
+      if (action === 'clone') body['clone_url'] = repo.clone_url || repo.remote;
+      const response = await axios.post(`${API_BASE_URL}/audit/${action}`, body);
       alert(response.data.status);
     } catch (err: any) {
+      console.error(`Action failed:`, err);
       alert(`Failed to ${action} ${repo.name}`);
     }
   };
 
   const loadDiff = async (repo: string) => {
     try {
-      const res = await axios.get(`/audit/diff/${repo}`);
+      const res = await axios.get(`${API_BASE_URL}/audit/diff/${repo}`);
       setDiffs(prev => ({ ...prev, [repo]: res.data.diff }));
     } catch (err: any) {
+      console.error(`Load diff failed:`, err);
       alert(`Failed to load diff for ${repo}`);
     }
   };
@@ -92,7 +129,7 @@ const AuditPage = () => {
               {repo.clone_url && <div>🌐 {repo.clone_url}</div>}
             </div>
             <div className="mt-4 space-x-2">
-              {repo.status === 'missing' && (
+              {(repo.status === 'missing' || (repo.status === undefined && repo.clone_url)) && (
                 <button
                   className="bg-blue-600 text-white px-3 py-1 rounded"
                   onClick={() => triggerAction('clone', repo)}>
@@ -106,7 +143,7 @@ const AuditPage = () => {
                   Delete
                 </button>
               )}
-              {repo.status === 'dirty' && (
+              {(repo.status === 'dirty' || repo.uncommittedChanges) && (
                 <>
                   <button
                     className="bg-green-600 text-white px-3 py-1 rounded"
