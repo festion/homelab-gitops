@@ -10,6 +10,13 @@
 set -euo pipefail
 export PATH="$PATH:/mnt/c/Program Files/nodejs/"
 
+# --- Terminal colors ---
+GREEN='\033[0;32m'
+CYAN='\033[0;36m'
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
 # --- 🧾 Globals ---
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DASHBOARD_DIR="$SCRIPT_DIR/../dashboard"
@@ -19,14 +26,6 @@ API_DST_DIR="/opt/gitops/api"
 SERVICE_NAME="gitops-audit-api"
 SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
 CRON_FILE="/etc/cron.d/gitops-nightly-audit"
-
-# --- Install runtime dependencies ---
-echo -e "${CYAN}📦 Installing required packages...${NC}"
-apt update && apt install -y git curl npm nodejs jq
-
-GREEN='\033[0;32m'
-CYAN='\033[0;36m'
-NC='\033[0m'
 
 # --- 📦 Install Required Dependencies ---
 echo -e "${CYAN}📦 Installing required packages...${NC}"
@@ -51,6 +50,13 @@ fi
 # --- 🧼 Clean and Build Dashboard ---
 echo -e "${GREEN}📦 Building the GitOps Dashboard...${NC}"
 rm -rf dist tsconfig.tsbuildinfo
+
+# Install missing dependencies
+echo -e "${CYAN}Installing missing dependencies...${NC}"
+npm install react-router-dom lucide-react
+npm install --save-dev @types/node
+
+# Install all other dependencies
 npm install
 npm run build
 
@@ -68,7 +74,15 @@ systemctl restart gitops-dashboard.service || true
 # --- 🔌 Install GitOps Audit API Backend ---
 echo -e "${GREEN}🔌 Installing GitOps Audit API...${NC}"
 mkdir -p "$API_DST_DIR"
-cp "$API_SRC_DIR/server.js" "$API_DST_DIR/server.js"
+# Debug path information
+echo "Source: $API_SRC_DIR/server.js"
+echo "Destination: $API_DST_DIR/server.js"
+# Use safer test with readlink instead of realpath (which might not be available on all systems)
+if [ ! -e "$API_DST_DIR/server.js" ] || [ "$(readlink -f "$API_SRC_DIR/server.js")" != "$(readlink -f "$API_DST_DIR/server.js")" ]; then
+  cp "$API_SRC_DIR/server.js" "$API_DST_DIR/server.js"
+else
+  echo -e "${YELLOW}Source and destination paths are the same, skipping copy.${NC}"
+fi
 cd "$API_DST_DIR"
 npm install express
 

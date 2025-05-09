@@ -1,5 +1,18 @@
 # Changelog
 
+## [v1.0.4] - 2025-05-09
+### Fixed
+- Fixed repository-specific view routing with proper React Router configuration
+- Fixed dashboard links to use relative URLs instead of hardcoded domain
+- Improved SPA routing with HTML5 History API support
+- Fixed API connection issues in production environment
+- Added auto-scrolling to repository when accessing via direct URL
+
+### Added
+- Support for `/audit/:repo?action=view` routes
+- Visual highlight for currently selected repository
+- Deployment script to update production environment
+
 ## [v1.0.3] - 2025-05-09
 ### Fixed
 - Fixed dashboard build process to correctly generate dist directory

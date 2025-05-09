@@ -1,10 +1,11 @@
 // File: dashboard/src/pages/audit.tsx
 
 import { useEffect, useState } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 
 // Development configuration
-const API_BASE_URL = process.env.NODE_ENV === 'production' 
+const API_BASE_URL = process.env.NODE_ENV === 'production'
   ? '' // In production, use relative paths
   : 'http://localhost:3070'; // In development, connect to local API
 
@@ -34,9 +35,35 @@ interface AuditReport {
 }
 
 const AuditPage = () => {
+  const { repo } = useParams<{ repo: string }>();
+  const [searchParams] = useSearchParams();
+  const action = searchParams.get('action');
+
   const [data, setData] = useState<AuditReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [diffs, setDiffs] = useState<Record<string, string>>({});
+  const [expandedRepo, setExpandedRepo] = useState<string | null>(repo || null);
+
+  // Handle repo parameter and action when component mounts or parameters change
+  useEffect(() => {
+    if (repo && data) {
+      setExpandedRepo(repo);
+
+      // Auto-load diff when action is 'view' and repo status is 'dirty'
+      if (action === 'view') {
+        const repoData = data.repos.find(r => r.name === repo);
+        if (repoData && (repoData.status === 'dirty' || repoData.uncommittedChanges)) {
+          loadDiff(repo);
+        }
+      }
+
+      // Scroll to the repository if it exists
+      const repoElement = document.getElementById(`repo-${repo}`);
+      if (repoElement) {
+        repoElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  }, [repo, action, data]);
 
   useEffect(() => {
     const fetchAudit = () => {
@@ -118,54 +145,58 @@ const AuditPage = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {data.repos.map((repo, i) => (
-          <div key={i} className="border rounded-xl p-4 shadow">
+        {data.repos.map((repoItem, i) => (
+          <div
+            key={i}
+            className={`border rounded-xl p-4 shadow ${expandedRepo === repoItem.name ? 'ring-2 ring-blue-500' : ''}`}
+            id={`repo-${repoItem.name}`}
+          >
             <div className="flex justify-between items-center">
-              <h2 className="text-lg font-semibold">{repo.name}</h2>
-              <span className="text-sm text-gray-500 capitalize">{repo.status}</span>
+              <h2 className="text-lg font-semibold">{repoItem.name}</h2>
+              <span className="text-sm text-gray-500 capitalize">{repoItem.status}</span>
             </div>
             <div className="text-xs mt-2 text-gray-500">
-              {repo.local_path && <div>📁 {repo.local_path}</div>}
-              {repo.clone_url && <div>🌐 {repo.clone_url}</div>}
+              {repoItem.local_path && <div>📁 {repoItem.local_path}</div>}
+              {repoItem.clone_url && <div>🌐 {repoItem.clone_url}</div>}
             </div>
             <div className="mt-4 space-x-2">
-              {(repo.status === 'missing' || (repo.status === undefined && repo.clone_url)) && (
+              {(repoItem.status === 'missing' || (repoItem.status === undefined && repoItem.clone_url)) && (
                 <button
                   className="bg-blue-600 text-white px-3 py-1 rounded"
-                  onClick={() => triggerAction('clone', repo)}>
+                  onClick={() => triggerAction('clone', repoItem)}>
                   Clone
                 </button>
               )}
-              {repo.status === 'extra' && (
+              {repoItem.status === 'extra' && (
                 <button
                   className="bg-red-600 text-white px-3 py-1 rounded"
-                  onClick={() => triggerAction('delete', repo)}>
+                  onClick={() => triggerAction('delete', repoItem)}>
                   Delete
                 </button>
               )}
-              {(repo.status === 'dirty' || repo.uncommittedChanges) && (
+              {(repoItem.status === 'dirty' || repoItem.uncommittedChanges) && (
                 <>
                   <button
                     className="bg-green-600 text-white px-3 py-1 rounded"
-                    onClick={() => triggerAction('commit', repo)}>
+                    onClick={() => triggerAction('commit', repoItem)}>
                     Commit
                   </button>
                   <button
                     className="bg-gray-600 text-white px-3 py-1 rounded"
-                    onClick={() => triggerAction('discard', repo)}>
+                    onClick={() => triggerAction('discard', repoItem)}>
                     Discard
                   </button>
                   <button
                     className="bg-yellow-600 text-white px-3 py-1 rounded"
-                    onClick={() => loadDiff(repo.name)}>
+                    onClick={() => loadDiff(repoItem.name)}>
                     View Diff
                   </button>
                 </>
               )}
             </div>
-            {diffs[repo.name] && (
+            {diffs[repoItem.name] && (
               <pre className="mt-4 p-2 bg-gray-100 text-xs overflow-x-auto whitespace-pre-wrap">
-                {diffs[repo.name]}
+                {diffs[repoItem.name]}
               </pre>
             )}
           </div>

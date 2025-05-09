@@ -2,6 +2,8 @@
 
 This project provides a visual dashboard for auditing the health and status of your Git repositories in a GitOps-managed homelab. It checks for uncommitted changes, stale branches, and missing files, and presents the results in an interactive web interface.
 
+**Latest Version: v1.0.4** - Added repository-specific viewing with improved routing
+
 ## 📦 Quick Install
 
 ```bash
