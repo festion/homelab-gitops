@@ -86,7 +86,11 @@ if (-not (Test-Path ".github\workflows")) {
 if (Test-Path ".github\workflows\code-quality.yml") {
     Write-Host "⚠ GitHub Actions workflow already exists. Skipping creation." -ForegroundColor $Yellow
 } else {
-    $workflowContent = @'
+    # Create the workflow file using separate write operations to avoid parsing issues
+    $workflowPath = ".github\workflows\code-quality.yml"
+    
+    # Write the workflow content line by line to avoid PowerShell parsing issues
+    @"
 name: Code Quality Check
 
 on:
@@ -129,7 +133,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/.cache/pre-commit
-          key: pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
+          key: pre-commit-`${{ hashFiles('.pre-commit-config.yaml') }}
 
       - name: Run pre-commit on all files
         run: |
@@ -141,9 +145,9 @@ jobs:
         run: |
           echo "# 🔍 GitOps Auditor Code Quality Report" > quality-report.md
           echo "" >> quality-report.md
-          echo "**Generated:** $(date)" >> quality-report.md
-          echo "**Commit:** ${{ github.sha }}" >> quality-report.md
-          echo "**Branch:** ${{ github.ref_name }}" >> quality-report.md
+          echo "**Generated:** `$(date)" >> quality-report.md
+          echo "**Commit:** `${{ github.sha }}" >> quality-report.md
+          echo "**Branch:** `${{ github.ref_name }}" >> quality-report.md
           echo "" >> quality-report.md
           
           echo "## Pre-commit Results" >> quality-report.md
@@ -152,13 +156,12 @@ jobs:
           echo "\`\`\`" >> quality-report.md
           echo "" >> quality-report.md
           
-          # Check if pre-commit passed
           if pre-commit run --all-files; then
             echo "✅ **All quality checks passed!**" >> quality-report.md
-            echo "quality_status=passed" >> $GITHUB_ENV
+            echo "quality_status=passed" >> `$GITHUB_ENV
           else
             echo "❌ **Quality issues found. Please review and fix.**" >> quality-report.md
-            echo "quality_status=failed" >> $GITHUB_ENV
+            echo "quality_status=failed" >> `$GITHUB_ENV
           fi
           
           echo "" >> quality-report.md
@@ -170,14 +173,13 @@ jobs:
           mkdir -p output
           cp quality-report.md output/CodeQualityReport.md
           
-          # Create JSON summary for dashboard integration
           cat > output/CodeQualityReport.json << EOF
           {
-            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-            "commit": "${{ github.sha }}",
-            "branch": "${{ github.ref_name }}",
-            "workflow_run": "${{ github.run_id }}",
-            "quality_status": "${{ env.quality_status }}",
+            "timestamp": "`$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "commit": "`${{ github.sha }}",
+            "branch": "`${{ github.ref_name }}",
+            "workflow_run": "`${{ github.run_id }}",
+            "quality_status": "`${{ env.quality_status }}",
             "report_file": "CodeQualityReport.md"
           }
           EOF
@@ -218,16 +220,15 @@ jobs:
           git add output/CodeQualityReport.md output/CodeQualityReport.json
           git diff --cached --quiet || git commit -m "📊 Update code quality report [skip ci]"
           
-          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
+          git push https://x-access-token:`${{ secrets.GITHUB_TOKEN }}@github.com/`${{ github.repository }}.git HEAD:main
 
       - name: Fail if quality checks failed
         if: env.quality_status == 'failed'
         run: |
           echo "Quality checks failed. Please fix the issues above."
           exit 1
-'@
-
-    Set-Content -Path ".github\workflows\code-quality.yml" -Value $workflowContent -Encoding UTF8
+"@ | Out-File -FilePath $workflowPath -Encoding UTF8
+    
     Write-Host "✓ GitHub Actions workflow created" -ForegroundColor $Green
 }
 
