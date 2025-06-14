@@ -2,8 +2,8 @@ name: Weekly GitOps Audit Email
 
 on:
   schedule:
-    - cron: '0 6 * * 0'  # Every Sunday at 6AM UTC
-  workflow_dispatch:  # ✅ must NOT be indented under anything
+    - cron: '0 6 * * 0' # Every Sunday at 6AM UTC
+  workflow_dispatch: # ✅ must NOT be indented under anything
     inputs:
       mode:
         description: 'Run mode (default or test)'
@@ -29,12 +29,12 @@ jobs:
       - name: Validate GitHub PAT is set
         shell: pwsh
         env:
-         GH_REPO_PAT: ${{ secrets.GH_REPO_PAT }}
+          GH_REPO_PAT: ${{ secrets.GH_REPO_PAT }}
         run: |
-           if (-not $env:GH_REPO_PAT) {
-           Write-Error "❌ GH_REPO_PAT is not set. Cannot fetch repos via GitHub API."
-           exit 1
-           }
+          if (-not $env:GH_REPO_PAT) {
+          Write-Error "❌ GH_REPO_PAT is not set. Cannot fetch repos via GitHub API."
+          exit 1
+          }
 
       - name: Run GitOps Audit Script
         shell: pwsh
@@ -75,7 +75,7 @@ jobs:
           server_port: 587
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: "Weekly GitOps Audit Report"
+          subject: 'Weekly GitOps Audit Report'
           to: jeremy.ames@outlook.com
           from: GitOps Bot <${{ secrets.EMAIL_USERNAME }}>
           html_body: ${{ env.HTML_BODY }}
