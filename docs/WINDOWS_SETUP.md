@@ -5,12 +5,14 @@ This guide provides Windows 11 PowerShell commands for setting up code quality a
 ## 🚀 Quick Setup Options
 
 ### Option 1: PowerShell Script (Recommended)
+
 ```powershell
 # Run the automated PowerShell setup script
 .\setup-linting.ps1
 ```
 
 ### Option 2: Use WSL2 (If you prefer Linux commands)
+
 ```powershell
 # Use WSL2 to run the bash script
 .\setup-linting.ps1 -UseWSL
@@ -26,6 +28,7 @@ wsl bash ./setup-linting.sh
 ### 1. Install Prerequisites
 
 **Python & pip:**
+
 ```powershell
 # Check if Python is installed
 python --version
@@ -36,6 +39,7 @@ pip --version
 ```
 
 **Node.js & npm:**
+
 ```powershell
 # Check if Node.js is installed
 node --version
@@ -45,6 +49,7 @@ npm --version
 ```
 
 ### 2. Install Python Dependencies
+
 ```powershell
 # Install pre-commit
 pip install pre-commit
@@ -54,6 +59,7 @@ pre-commit install
 ```
 
 ### 3. Install Node.js Dependencies
+
 ```powershell
 # Create package.json if it doesn't exist
 if (-not (Test-Path "package.json")) {
@@ -65,6 +71,7 @@ npm install --save-dev eslint "@typescript-eslint/parser" "@typescript-eslint/es
 ```
 
 ### 4. Create GitHub Actions Workflow
+
 ```powershell
 # Create directories
 New-Item -ItemType Directory -Path ".github" -Force
@@ -77,6 +84,7 @@ New-Item -ItemType Directory -Path ".github\workflows" -Force
 ## 🧪 Testing Your Setup
 
 ### Run quality checks locally:
+
 ```powershell
 # Run all pre-commit checks
 pre-commit run --all-files
@@ -90,6 +98,7 @@ npx tsc --noEmit
 ```
 
 ### Auto-fix formatting issues:
+
 ```powershell
 # Fix code formatting
 npx prettier --write .
@@ -118,11 +127,12 @@ wsl
 ## 🛠️ PowerShell Specific Commands
 
 ### Check what's installed:
+
 ```powershell
 # Check Python tools
 Get-Command python, pip, pre-commit -ErrorAction SilentlyContinue
 
-# Check Node.js tools  
+# Check Node.js tools
 Get-Command node, npm, npx -ErrorAction SilentlyContinue
 
 # List installed packages
@@ -131,6 +141,7 @@ npm list --depth=0
 ```
 
 ### Troubleshooting:
+
 ```powershell
 # Fix execution policy if needed
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
@@ -173,7 +184,7 @@ The quality checks will:
 ✅ **Save reports** to `output\CodeQualityReport.md`  
 ✅ **Integrate** with your existing GitOps dashboard  
 ✅ **Comment on PRs** with quality feedback  
-✅ **Enforce standards** by failing builds on critical issues  
+✅ **Enforce standards** by failing builds on critical issues
 
 ## 💡 Pro Tips for Windows Users
 
@@ -188,11 +199,11 @@ Add these to your VS Code settings for better integration:
 
 ```json
 {
-    "eslint.enable": true,
-    "editor.formatOnSave": true,
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "python.formatting.provider": "black",
-    "terminal.integrated.defaultProfile.windows": "PowerShell"
+  "eslint.enable": true,
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "python.formatting.provider": "black",
+  "terminal.integrated.defaultProfile.windows": "PowerShell"
 }
 ```
 

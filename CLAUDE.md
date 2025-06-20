@@ -6,17 +6,20 @@ The Homelab GitOps Auditor is a comprehensive tool designed to monitor, audit, a
 
 ## Key Components
 
-1. **Dashboard Frontend** (`/dashboard/`): 
+1. **Dashboard Frontend** (`/dashboard/`):
+
    - React-based web interface with charts and visualizations
    - Shows repository status with filtering capabilities
    - Auto-refreshing data with configurable intervals
 
 2. **API Backend** (`/api/`):
+
    - Express.js server providing API endpoints for dashboard
    - Handles repository operations (clone, commit, discard changes)
    - Serves audit report data
 
 3. **Audit Scripts** (`/scripts/`):
+
    - Repository synchronization with GitHub (`sync_github_repos.sh`)
    - DNS synchronization with AdGuard (`gitops_dns_sync.sh`)
    - Deployment utilities (`deploy.sh`, `install-dashboard.sh`)
@@ -31,6 +34,7 @@ The Homelab GitOps Auditor is a comprehensive tool designed to monitor, audit, a
 ### 1. Repository Auditing
 
 The system audits Git repositories for:
+
 - **Uncommitted changes**: Identifies repos with local modifications
 - **Stale tags**: Flags tags pointing to unreachable commits
 - **Missing files**: Detects repos missing key files like README.md
@@ -39,6 +43,7 @@ The system audits Git repositories for:
 ### 2. Interactive Dashboard
 
 The dashboard provides:
+
 - Bar and pie charts for overall repository health
 - Repository cards with status indicators
 - Searchable repository list
@@ -48,6 +53,7 @@ The dashboard provides:
 ### 3. DNS Sync Automation
 
 The system also handles:
+
 - Automatic extraction of internal domains from Nginx Proxy Manager
 - Generation of DNS rewrites for AdGuard Home
 - Idempotent sync operations with dry-run capability
@@ -57,12 +63,14 @@ The system also handles:
 ### Installation
 
 1. **Dashboard Setup**:
+
    ```bash
    cd /mnt/c/GIT/homelab-gitops-auditor
    bash scripts/install-dashboard.sh
    ```
 
 2. **API Setup**:
+
    ```bash
    cd /mnt/c/GIT/homelab-gitops-auditor
    bash scripts/deploy.sh
@@ -76,11 +84,13 @@ The system also handles:
 ### Dashboard Usage
 
 1. **View Repository Status**:
+
    - Access dashboard at `http://<your-lxc-ip>/`
    - Use search box to filter repositories
    - View health metrics in charts
 
 2. **Configure Auto-Refresh**:
+
    - Select refresh interval (5s, 10s, 30s, 60s)
    - Switch between local and GitHub data sources
 
@@ -92,6 +102,7 @@ The system also handles:
 ### Manual Tools
 
 1. **Run Manual Audit**:
+
    ```bash
    /opt/gitops/scripts/sync_github_repos.sh
    ```
@@ -110,17 +121,20 @@ The system also handles:
 ### Common Issues
 
 1. **Dashboard Not Displaying**:
+
    - Check for CSS generation issues (`npm run tw:watch`)
    - Verify JSON data exists in `/output/GitRepoReport.json`
    - Check browser console for JavaScript errors
    - Ensure API is running and accessible (`systemctl status gitops-audit-api`)
 
 2. **No Repositories Showing**:
+
    - Ensure `/repos` directory exists and contains Git repositories
    - Verify `/output/GitRepoReport.json` is valid and contains data
    - Check output of manual audit run
 
 3. **API Connection Issues**:
+
    - Verify API port (3070) is not blocked by firewall
    - Check API service is running (`systemctl status gitops-audit-api`)
    - Check logs for connection errors
@@ -135,18 +149,21 @@ The system also handles:
 ### Planned Features
 
 1. **Dashboard Improvements**:
+
    - Add WebSocket real-time updates
    - Implement dark mode toggle
    - Add repository history visualization
    - Create detailed diff viewer
 
 2. **API Enhancements**:
+
    - Add authentication layer
    - Implement webhook notifications
    - Support GitHub API integration for remote operations
    - Add repository restore capabilities
 
 3. **Auditing Features**:
+
    - Add more health metrics (commit frequency, branch age)
    - Implement security scanning
    - Add config drift detection

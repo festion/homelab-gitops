@@ -5,7 +5,7 @@ import { useState } from 'react';
 import {
   Home as HomeIcon,
   FileSearch as AuditIcon,
-  ListTodo as RoadmapIcon
+  ListTodo as RoadmapIcon,
 } from 'lucide-react';
 
 const navItems = [

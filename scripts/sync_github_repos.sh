@@ -38,8 +38,8 @@ mapfile -t remote_repos < <(curl -s "$GITHUB_API_URL" | jq -r '.[].name' | sort)
 ### JSON STRUCTURE (GitHub presence only) ###
 {
   echo "{"
-  echo "  \"timestamp\": \"${TIMESTAMP}\"," 
-  echo "  \"health_status\": \"green\"," 
+  echo "  \"timestamp\": \"${TIMESTAMP}\","
+  echo "  \"health_status\": \"green\","
   echo "  \"summary\": {"
   echo "    \"total\": ${#remote_repos[@]},"
   echo "    \"missing\": 0,"
@@ -53,9 +53,9 @@ mapfile -t remote_repos < <(curl -s "$GITHUB_API_URL" | jq -r '.[].name' | sort)
   for repo in "${remote_repos[@]}"; do
     [[ $first -eq 0 ]] && echo ","
     echo "    {"
-    echo "      \"name\": \"$repo\"," 
-    echo "      \"status\": \"clean\"," 
-    echo "      \"clone_url\": \"https://github.com/$GITHUB_USER/$repo.git\"," 
+    echo "      \"name\": \"$repo\","
+    echo "      \"status\": \"clean\","
+    echo "      \"clone_url\": \"https://github.com/$GITHUB_USER/$repo.git\","
     echo "      \"dashboard_link\": \"/audit/$repo?action=view\""
     echo -n "    }"
     first=0

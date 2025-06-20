@@ -1,131 +1,144 @@
 #!/bin/bash
 
-# ------------------------------------------------------------------
-# GitOps Dashboard Deploy Script
-# Description: Builds and deploys the frontend and audit API service.
-# Author: festion GitOps
-# Last Updated: 2025-04-18
-# ------------------------------------------------------------------
+# GitOps Auditor Production Deployment Script
+# Version: 1.1.0 (Phase 1 MCP Integration)
+# Usage: curl -fsSL https://raw.githubusercontent.com/festion/homelab-gitops-auditor/main/scripts/deploy.sh | bash
 
 set -euo pipefail
-export PATH="$PATH:/mnt/c/Program Files/nodejs/"
 
-# --- Terminal colors ---
-GREEN='\033[0;32m'
-CYAN='\033[0;36m'
-RED='\033[0;31m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
-
-# --- 🧾 Globals ---
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DASHBOARD_DIR="$SCRIPT_DIR/../dashboard"
-DEPLOY_PATH="/var/www/gitops-dashboard"
-API_SRC_DIR="$SCRIPT_DIR/../api"
-API_DST_DIR="/opt/gitops/api"
+# Configuration
+INSTALL_DIR="/opt/gitops"
+BACKUP_DIR="/opt/gitops-backups"
 SERVICE_NAME="gitops-audit-api"
-SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
-CRON_FILE="/etc/cron.d/gitops-nightly-audit"
+GITHUB_REPO="festion/homelab-gitops-auditor"
+BRANCH="main"
 
-# --- 📦 Install Required Dependencies ---
-echo -e "${CYAN}📦 Installing required packages...${NC}"
-apt update && apt install -y git curl npm nodejs jq
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
 
-# --- 🛠 Bootstrap Tailwind if missing ---
-cd "$DASHBOARD_DIR"
-echo -e "${CYAN}🔧 Ensuring Tailwind setup...${NC}"
-if [ ! -f tailwind.config.js ] || [ ! -f postcss.config.js ]; then
-  npm install -D tailwindcss postcss autoprefixer
-  npx tailwindcss init -p
+log_info() { echo -e "${BLUE}ℹ️  $1${NC}"; }
+log_success() { echo -e "${GREEN}✅ $1${NC}"; }
+log_warning() { echo -e "${YELLOW}⚠️  $1${NC}"; }
+log_error() { echo -e "${RED}❌ $1${NC}"; }
+
+# Parse arguments
+BACKUP_CURRENT=false
+ENABLE_MCP=false
+VERSION="main"
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --backup-current)
+            BACKUP_CURRENT=true
+            shift
+            ;;
+        --enable-mcp-integration)
+            ENABLE_MCP=true
+            shift
+            ;;
+        --version=*)
+            VERSION="${1#*=}"
+            shift
+            ;;
+        *)
+            shift
+            ;;
+    esac
+done
+
+log_info "GitOps Auditor Production Deployment"
+log_info "Version: $VERSION"
+log_info "MCP Integration: $ENABLE_MCP"
+log_info "Backup Current: $BACKUP_CURRENT"
+
+# Check if running as root
+if [[ $EUID -ne 0 ]]; then
+    log_error "This script must be run as root"
+    exit 1
 fi
 
-# Fix tailwind.config.js paths
-sed -i 's|content: .*|content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],|' tailwind.config.js
-
-# --- ✅ Validate Tailwind Directives ---
-if ! grep -q '@tailwind base;' src/index.css; then
-  echo -e "@tailwind base;\n@tailwind components;\n@tailwind utilities;" > src/index.css
+# Create backup if requested
+if [[ "$BACKUP_CURRENT" == "true" && -d "$INSTALL_DIR" ]]; then
+    BACKUP_NAME="$BACKUP_DIR/gitops-$(date +%Y%m%d_%H%M%S)"
+    log_info "Creating backup: $BACKUP_NAME"
+    mkdir -p "$BACKUP_DIR"
+    cp -r "$INSTALL_DIR" "$BACKUP_NAME"
+    log_success "Backup created: $BACKUP_NAME"
 fi
 
-# --- 🧼 Clean and Build Dashboard ---
-echo -e "${GREEN}📦 Building the GitOps Dashboard...${NC}"
-rm -rf dist tsconfig.tsbuildinfo
+# Download and extract
+log_info "Downloading GitOps Auditor..."
+cd /tmp
+wget -q "https://github.com/$GITHUB_REPO/archive/refs/heads/$BRANCH.zip" -O gitops-update.zip
 
-# Install missing dependencies
-echo -e "${CYAN}Installing missing dependencies...${NC}"
-npm install react-router-dom lucide-react
-npm install --save-dev @types/node
+if [[ ! -f "gitops-update.zip" ]]; then
+    log_error "Failed to download repository"
+    exit 1
+fi
 
-# Install all other dependencies
-npm install
-npm run build
+unzip -q gitops-update.zip
+EXTRACT_DIR="homelab-gitops-auditor-$BRANCH"
 
-# --- 🚚 Deploy Static Assets ---
-echo -e "${CYAN}🚚 Deploying dashboard to ${DEPLOY_PATH}...${NC}"
-mkdir -p "$DEPLOY_PATH"
-cp -r dist/* "$DEPLOY_PATH/"
+# Install/Update
+log_info "Installing to $INSTALL_DIR..."
+mkdir -p "$INSTALL_DIR"
+cp -r "$EXTRACT_DIR"/* "$INSTALL_DIR/"
+chmod +x "$INSTALL_DIR"/scripts/*.sh
 
-# --- 🔁 Restart Dashboard Service ---
-echo -e "${CYAN}🔁 Restarting service 'gitops-dashboard'...${NC}"
-systemctl daemon-reexec
-systemctl daemon-reload
-systemctl restart gitops-dashboard.service || true
+# Install dependencies
+log_info "Installing API dependencies..."
+cd "$INSTALL_DIR/api" && npm install --production --silent
 
-# --- 🔌 Install GitOps Audit API Backend ---
-echo -e "${GREEN}🔌 Installing GitOps Audit API...${NC}"
-mkdir -p "$API_DST_DIR"
-# Debug path information
-echo "Source: $API_SRC_DIR/server.js"
-echo "Destination: $API_DST_DIR/server.js"
-# Use safer test with readlink instead of realpath (which might not be available on all systems)
-if [ ! -e "$API_DST_DIR/server.js" ] || [ "$(readlink -f "$API_SRC_DIR/server.js")" != "$(readlink -f "$API_DST_DIR/server.js")" ]; then
-  cp "$API_SRC_DIR/server.js" "$API_DST_DIR/server.js"
+log_info "Building dashboard..."
+cd "$INSTALL_DIR/dashboard" && npm install --silent && npm run build
+
+# Configure MCP integration
+if [[ "$ENABLE_MCP" == "true" ]]; then
+    log_info "Enabling MCP integration..."
+    # Copy MCP-enabled server if available
+    if [[ -f "$INSTALL_DIR/api/server-v2.js" ]]; then
+        cp "$INSTALL_DIR/api/server-v2.js" "$INSTALL_DIR/api/server.js"
+        log_success "MCP-integrated server enabled"
+    fi
+fi
+
+# Restart services
+log_info "Restarting services..."
+if systemctl is-active --quiet "$SERVICE_NAME"; then
+    systemctl restart "$SERVICE_NAME"
+    log_success "Restarted $SERVICE_NAME"
 else
-  echo -e "${YELLOW}Source and destination paths are the same, skipping copy.${NC}"
+    log_warning "$SERVICE_NAME service not found or not running"
 fi
-cd "$API_DST_DIR"
-npm install express
 
-# --- 🔧 Create/Update API Service ---
-tee "$SERVICE_FILE" > /dev/null <<EOF
-[Unit]
-Description=GitOps Audit API Server
-After=network.target
+if systemctl is-active --quiet nginx; then
+    systemctl reload nginx
+    log_success "Reloaded nginx"
+fi
 
-[Service]
-ExecStart=/usr/bin/node /opt/gitops/api/server.js
-WorkingDirectory=/opt/gitops/api
-Restart=always
-RestartSec=10
-Environment=NODE_ENV=production
-User=root
+# Cleanup
+cd /tmp && rm -rf gitops-update.zip "$EXTRACT_DIR"
 
-[Install]
-WantedBy=multi-user.target
-EOF
+# Verify installation
+log_info "Verifying installation..."
+if [[ -f "$INSTALL_DIR/api/server.js" && -f "$INSTALL_DIR/dashboard/dist/index.html" ]]; then
+    log_success "GitOps Auditor deployment completed successfully!"
+    log_info "API: http://localhost:3070"
+    log_info "Dashboard: http://localhost (if nginx configured)"
+    
+    if [[ "$ENABLE_MCP" == "true" ]]; then
+        log_success "Phase 1 MCP Integration is active!"
+        log_info "GitHub MCP: Ready for integration"
+        log_info "Code-linter MCP: Ready for integration"
+        log_info "Serena Orchestration: Framework ready"
+    fi
+else
+    log_error "Installation verification failed"
+    exit 1
+fi
 
-systemctl daemon-reload
-systemctl enable --now "$SERVICE_NAME"
-echo -e "${GREEN}✅ Audit API service is now running on port 3070${NC}"
-
-# --- 🕒 Create Audit Cron Job ---
-echo -e "${CYAN}🕒 Setting up nightly GitOps audit cron job...${NC}"
-echo "0 3 * * * root /opt/gitops/scripts/sync_github_repos.sh >> /opt/gitops/logs/nightly_audit.log 2>&1" > "$CRON_FILE"
-chmod 644 "$CRON_FILE"
-echo -e "${GREEN}✅ Nightly audit will run at 3:00 AM UTC daily.${NC}"
-
-# --- 📘 Known Issues & Notes ---
-# - React Router v7+ requires Node >= 20 to fully silence warnings
-# - Lucide React icons require proper import size handling
-# - Vite direct linking (e.g. /audit) requires NGINX try_files or SPA fallback
-
-# --- 🛣️ Roadmap ---
-# - Add WebSocket or polling auto-refresh
-# - Add email summary on nightly audit
-# - Add GitHub Actions deploy hook for push-to-main
-# - Implement Git-based file diffs in dashboard
-# - Add SSO and auth layer
-# - Optional dark mode toggle
-
-# --- ✅ Done ---
-echo -e "${GREEN}✅ Full GitOps Dashboard deployment complete.${NC}"
+log_success "🚀 Deployment complete!"

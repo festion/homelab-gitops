@@ -1,14 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
 
 export default function App() {
   const [data, setData] = useState([]);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState('');
 
   useEffect(() => {
-    fetch("/GitRepoReport.json")
+    fetch('/GitRepoReport.json')
       .then((res) => res.json())
       .then((json) => setData(json))
-      .catch((err) => console.error("Failed to load report:", err));
+      .catch((err) => console.error('Failed to load report:', err));
   }, []);
 
   const filtered = data.filter((repo) =>
@@ -19,11 +19,11 @@ export default function App() {
     <span
       className={`text-xs px-2 py-1 rounded-full font-semibold border ${
         condition
-          ? "bg-red-100 text-red-800 border-red-300"
-          : "bg-green-100 text-green-800 border-green-300"
+          ? 'bg-red-100 text-red-800 border-red-300'
+          : 'bg-green-100 text-green-800 border-green-300'
       }`}
     >
-      {label}: {condition ? "Yes" : "No"}
+      {label}: {condition ? 'Yes' : 'No'}
     </span>
   );
 
@@ -50,16 +50,20 @@ export default function App() {
                 Branch: <span className="font-mono">{repo.branch}</span>
               </p>
               <p className="text-sm text-gray-600 mb-1">
-                Last Commit: <span className="font-mono">{repo.lastCommit}</span>
+                Last Commit:{' '}
+                <span className="font-mono">{repo.lastCommit}</span>
               </p>
               <p className="text-sm text-gray-600 mb-2">
-                Remote: {repo.remote || <span className="italic text-gray-400">None</span>}
+                Remote:{' '}
+                {repo.remote || (
+                  <span className="italic text-gray-400">None</span>
+                )}
               </p>
 
               <div className="flex flex-wrap gap-2">
-                {badge("Uncommitted", repo.uncommittedChanges)}
-                {badge("Stale", repo.isStale)}
-                {badge("Missing Files", repo.missingFiles?.length > 0)}
+                {badge('Uncommitted', repo.uncommittedChanges)}
+                {badge('Stale', repo.isStale)}
+                {badge('Missing Files', repo.missingFiles?.length > 0)}
               </div>
             </div>
           ))}
