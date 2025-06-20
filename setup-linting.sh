@@ -37,7 +37,7 @@ if command -v npm &> /dev/null; then
         echo "Creating package.json..."
         npm init -y > /dev/null
     fi
-    
+
     npm install --save-dev \
         eslint \
         @typescript-eslint/parser \
@@ -45,7 +45,7 @@ if command -v npm &> /dev/null; then
         prettier \
         eslint-config-prettier \
         eslint-plugin-prettier
-    
+
     echo -e "${GREEN}✓${NC} ESLint and Prettier installed"
 else
     echo -e "${YELLOW}Warning: npm not found. Please install Node.js dependencies manually.${NC}"
@@ -56,7 +56,7 @@ echo "🔧 Setting up pre-commit hooks..."
 if command -v pre-commit &> /dev/null; then
     pre-commit install
     echo -e "${GREEN}✓${NC} Pre-commit hooks installed"
-    
+
     # Test the hooks
     echo "🧪 Testing pre-commit setup..."
     if pre-commit run --all-files; then
@@ -125,7 +125,7 @@ jobs:
       - name: Run pre-commit on all files
         run: |
           pre-commit run --all-files --show-diff-on-failure > precommit-results.txt 2>&1 || true
-          echo "Pre-commit results:" 
+          echo "Pre-commit results:"
           cat precommit-results.txt
 
       - name: Create quality report
@@ -136,13 +136,13 @@ jobs:
           echo "**Commit:** ${{ github.sha }}" >> quality-report.md
           echo "**Branch:** ${{ github.ref_name }}" >> quality-report.md
           echo "" >> quality-report.md
-          
+
           echo "## Pre-commit Results" >> quality-report.md
           echo "\`\`\`" >> quality-report.md
           cat precommit-results.txt >> quality-report.md
           echo "\`\`\`" >> quality-report.md
           echo "" >> quality-report.md
-          
+
           # Check if pre-commit passed
           if pre-commit run --all-files; then
             echo "✅ **All quality checks passed!**" >> quality-report.md
@@ -151,7 +151,7 @@ jobs:
             echo "❌ **Quality issues found. Please review and fix.**" >> quality-report.md
             echo "quality_status=failed" >> $GITHUB_ENV
           fi
-          
+
           echo "" >> quality-report.md
           echo "---" >> quality-report.md
           echo "**🤖 Automated by GitHub Actions**" >> quality-report.md
@@ -160,7 +160,7 @@ jobs:
         run: |
           mkdir -p output
           cp quality-report.md output/CodeQualityReport.md
-          
+
           # Create JSON summary for dashboard integration
           cat > output/CodeQualityReport.json << EOF
           {
@@ -205,10 +205,10 @@ jobs:
         run: |
           git config user.name "GitOps Quality Bot"
           git config user.email "bot@users.noreply.github.com"
-          
+
           git add output/CodeQualityReport.md output/CodeQualityReport.json
           git diff --cached --quiet || git commit -m "📊 Update code quality report [skip ci]"
-          
+
           git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
 
       - name: Fail if quality checks failed
@@ -217,7 +217,7 @@ jobs:
           echo "Quality checks failed. Please fix the issues above."
           exit 1
 EOF
-    
+
     echo -e "${GREEN}✓${NC} GitHub Actions workflow created"
 fi
 

@@ -1,10 +1,6 @@
 module.exports = {
   parser: '@typescript-eslint/parser',
-  extends: [
-    'eslint:recommended',
-    '@typescript-eslint/recommended',
-    'prettier'
-  ],
+  extends: ['eslint:recommended', '@typescript-eslint/recommended', 'prettier'],
   plugins: ['@typescript-eslint', 'prettier'],
   parserOptions: {
     ecmaVersion: 2020,
@@ -13,7 +9,7 @@ module.exports = {
   env: {
     node: true,
     es6: true,
-    browser: true
+    browser: true,
   },
   rules: {
     'prettier/prettier': 'error',
@@ -39,6 +35,6 @@ module.exports = {
     'frontend/node_modules/',
     'dashboard/dist/',
     'dashboard/node_modules/',
-    'gitops_deploy_*.tar.gz'
-  ]
+    'gitops_deploy_*.tar.gz',
+  ],
 };

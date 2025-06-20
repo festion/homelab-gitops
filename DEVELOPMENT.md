@@ -31,6 +31,7 @@ We've provided a single script to start all components in development mode:
 ```
 
 This script:
+
 - Creates necessary directories
 - Installs dependencies
 - Starts API server on http://localhost:3070
@@ -67,10 +68,12 @@ bash scripts/sync_github_repos.sh --dev
 In development mode, the GitOps Auditor uses these modifications:
 
 1. **Path adaptations:**
+
    - Uses relative paths based on project root
    - API detects environment and adjusts paths
 
 2. **Data storage:**
+
    - Stores audit history in `./audit-history/` instead of `/opt/gitops/audit-history/`
    - Falls back to static JSON file if no history exists
 
@@ -84,17 +87,19 @@ In development mode, the GitOps Auditor uses these modifications:
 2. Edit API endpoints in `./api/server.js`
 3. Changes to bash scripts can be tested with the `--dev` flag
 
-## Production vs Development
+## Development vs Production
 
-The primary differences in development mode:
+The primary differences between development and production environments:
 
-| Feature | Development | Production |
-|---------|-------------|------------|
-| Base directory | Project folder | `/opt/gitops/` |
-| API Server | Manual start | systemd service |
-| Dashboard | Vite dev server | Static NGINX |
-| API URL | `http://localhost:3070` | Relative paths |
-| Data Persistence | Project folder | `/opt/gitops/audit-history/` |
+| Feature           | Development             | Production                   |
+| ----------------- | ----------------------- | ---------------------------- |
+| Base directory    | Project folder          | `/opt/gitops/`               |
+| API Server        | Manual start            | systemd service              |
+| Dashboard         | Vite dev server         | Static NGINX                 |
+| API URL           | `http://localhost:3070` | `http://192.168.1.58:3070`   |
+| Dashboard URL     | `http://localhost:5173` | `http://192.168.1.58/`       |
+| Data Persistence  | Project folder          | `/opt/gitops/audit-history/` |
+| Production Server | N/A                     | 192.168.1.58                 |
 
 ## Troubleshooting
 

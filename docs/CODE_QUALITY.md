@@ -9,9 +9,10 @@ The project uses **GitHub Actions** for automated linting and code quality check
 ## What's Been Configured
 
 ### ✅ Files Already Added:
+
 - `.pre-commit-config.yaml` - Pre-commit hooks configuration
 - `.eslintrc.js` - ESLint configuration for TypeScript/JavaScript
-- `.prettierrc` - Prettier formatting configuration  
+- `.prettierrc` - Prettier formatting configuration
 - `setup-linting.sh` - Automated setup script
 
 ### 🔧 Quick Setup
@@ -24,6 +25,7 @@ chmod +x setup-linting.sh
 ```
 
 This will:
+
 1. Install pre-commit hooks
 2. Install ESLint/Prettier dependencies
 3. Create the GitHub Actions workflow
@@ -34,12 +36,13 @@ This will:
 If you prefer manual setup:
 
 1. **Install dependencies:**
+
    ```bash
    # Python dependencies
    pip install pre-commit
    pre-commit install
 
-   # Node.js dependencies  
+   # Node.js dependencies
    npm install --save-dev eslint @typescript-eslint/parser @typescript-eslint/eslint-plugin prettier eslint-config-prettier eslint-plugin-prettier
    ```
 
@@ -54,14 +57,15 @@ If you prefer manual setup:
 ### 🤖 GitHub Actions Workflow
 
 The workflow automatically runs on:
-- **Push** to `main` or `develop` branches  
+
+- **Push** to `main` or `develop` branches
 - **Pull requests** to `main` or `develop`
 - **Manual trigger** via GitHub UI
 
 ### 🔍 Checks Performed
 
 1. **Shell Scripts** - ShellCheck linting
-2. **Python Code** - Flake8, Black formatting  
+2. **Python Code** - Flake8, Black formatting
 3. **TypeScript/JavaScript** - ESLint, Prettier
 4. **General** - Trailing whitespace, file endings, merge conflicts
 5. **Security** - Secret detection, npm audit
@@ -73,6 +77,7 @@ Quality reports are saved to `output/CodeQualityReport.md` and `output/CodeQuali
 ## Local Development
 
 ### Run checks locally:
+
 ```bash
 # Run all pre-commit checks
 pre-commit run --all-files
@@ -84,6 +89,7 @@ shellcheck *.sh
 ```
 
 ### Auto-fix issues:
+
 ```bash
 # Auto-fix formatting
 npx prettier --write .
@@ -106,30 +112,36 @@ The GitHub Actions workflow:
 
 ## Benefits
 
-✅ **No local dependencies** - Everything runs on GitHub  
-✅ **Automatic enforcement** - Quality gates on every commit  
-✅ **PR feedback** - Immediate feedback on pull requests  
-✅ **Dashboard integration** - Reports saved to `output/` directory  
-✅ **Consistent formatting** - Automatic code formatting  
-✅ **Security scanning** - Detects secrets and vulnerabilities  
+✅ **No local dependencies** - Everything runs on GitHub
+✅ **Automatic enforcement** - Quality gates on every commit
+✅ **PR feedback** - Immediate feedback on pull requests
+✅ **Dashboard integration** - Reports saved to `output/` directory
+✅ **Consistent formatting** - Automatic code formatting
+✅ **Security scanning** - Detects secrets and vulnerabilities
 
 ## Configuration Files
 
 ### `.pre-commit-config.yaml`
+
 Defines which tools run automatically:
+
 - ShellCheck for shell scripts
 - Black/Flake8 for Python
 - ESLint/Prettier for JS/TS
 - General file checks
 
-### `.eslintrc.js`  
+### `.eslintrc.js`
+
 ESLint rules for TypeScript/JavaScript:
+
 - TypeScript-specific rules
 - Prettier integration
 - Project-specific ignores
 
 ### `.prettierrc`
+
 Code formatting standards:
+
 - 2-space indentation
 - Single quotes
 - Semicolons
@@ -138,10 +150,12 @@ Code formatting standards:
 ## Troubleshooting
 
 ### Workflow not running?
+
 - Check repository permissions for GitHub Actions
 - Ensure `GITHUB_TOKEN` has workflow permissions
 
 ### Pre-commit issues?
+
 ```bash
 # Reset pre-commit
 pre-commit clean
@@ -149,6 +163,7 @@ pre-commit install --install-hooks
 ```
 
 ### Dependency issues?
+
 ```bash
 # Reinstall Node dependencies
 rm -rf node_modules package-lock.json
@@ -158,17 +173,20 @@ npm install
 ## Advanced Configuration
 
 ### Customize rules:
+
 - Edit `.eslintrc.js` for linting rules
-- Edit `.prettierrc` for formatting preferences  
+- Edit `.prettierrc` for formatting preferences
 - Edit `.pre-commit-config.yaml` for hook configuration
 
 ### Skip checks:
+
 ```bash
 # Skip pre-commit hooks for emergency commits
 git commit --no-verify -m "Emergency fix"
 ```
 
 ### Add new tools:
+
 Add entries to `.pre-commit-config.yaml` and update the GitHub Actions workflow accordingly.
 
 ---

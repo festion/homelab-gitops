@@ -40,9 +40,9 @@ if (Get-Command npm -ErrorAction SilentlyContinue) {
         Write-Host "Creating package.json..." -ForegroundColor Yellow
         npm init -y | Out-Null
     }
-    
+
     npm install --save-dev eslint "@typescript-eslint/parser" "@typescript-eslint/eslint-plugin" prettier eslint-config-prettier eslint-plugin-prettier
-    
+
     Write-Host "✓ ESLint and Prettier installed" -ForegroundColor Green
 } else {
     Write-Host "Warning: npm not found. Please install Node.js first." -ForegroundColor Yellow
@@ -54,7 +54,7 @@ Write-Host "🔧 Setting up pre-commit hooks..." -ForegroundColor Yellow
 if (Get-Command pre-commit -ErrorAction SilentlyContinue) {
     pre-commit install
     Write-Host "✓ Pre-commit hooks installed" -ForegroundColor Green
-    
+
     # Test the hooks
     Write-Host "🧪 Testing pre-commit setup..." -ForegroundColor Yellow
     try {

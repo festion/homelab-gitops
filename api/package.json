@@ -1,9 +1,19 @@
 {
   "dependencies": {
-    "express": "^5.1.0"
+    "chokidar": "^4.0.3",
+    "express": "^5.1.0",
+    "express-ws": "^5.0.2",
+    "ws": "^8.18.2"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "nodemon": "^3.0.2"
   },
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "dev": "nodemon server.js"
   },
   "name": "api",
   "version": "1.0.3",

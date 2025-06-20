@@ -1,15 +1,22 @@
-import { useEffect, useState } from "react";
-    import {
-    BarChart,
-    Bar,
-    XAxis,
-    YAxis,
-    Tooltip,
-    PieChart,
-    Pie,
-    Cell,
-    ResponsiveContainer,
-  } from "recharts";
+import { useState, useMemo, useCallback } from "react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+} from "recharts";
+import { useAuditData } from "./hooks/useAuditData";
+import { useConnectionStatus } from "./hooks/useConnectionStatus";
+import { useFallbackPolling } from "./hooks/useFallbackPolling";
+import { ConnectionStatus } from "./components/ConnectionStatus";
+import { RealTimeToggle } from "./components/RealTimeToggle";
+import { ConnectionSettings } from "./components/ConnectionSettings";
+import { WebSocketErrorBoundary } from "./components/WebSocketErrorBoundary";
 
   // Define the API response type
   type ApiResponse = {
@@ -39,92 +46,212 @@ import { useEffect, useState } from "react";
     "extra": "#f59e0b",    // amber
   };
 
-  export default function App() {
-    console.log("App component rendering");
-    const [data, setData] = useState<ApiResponse | null>(null);
-    const [query, setQuery] = useState("");
-    const [refreshInterval, setRefreshInterval] = useState<number>(10000);
+export default function App() {
+  console.log("App component rendering");
+  const [query, setQuery] = useState("");
+  const [showSettings, setShowSettings] = useState(false);
+  const [settings, setSettings] = useState({
+    autoReconnect: true,
+    reconnectAttempts: 10,
+    heartbeatInterval: 30000,
+    pollingInterval: 10000,
+    enableWebSocket: true
+  });
 
-    useEffect(() => {
-      console.log("useEffect running");
-      const fetchData = () => {
-        console.log("fetchData called");
+  // Use the new audit data hook for unified data management
+  const {
+    data,
+    isLoading,
+    error,
+    isRealTime,
+    dataSource,
+    lastUpdated,
+    enableRealTime,
+    disableRealTime,
+    toggleRealTime,
+    refreshData
+  } = useAuditData({
+    enableWebSocket: settings.enableWebSocket,
+    pollingInterval: settings.pollingInterval
+  });
 
-        // Development environment uses relative path
-        const apiUrl = '/audit';
+  // Connection status for WebSocket monitoring
+  const connectionStatus = useConnectionStatus({
+    enabled: isRealTime && settings.enableWebSocket
+  });
 
-        fetch(apiUrl)
-          .then((res) => {
-            console.log("fetch response:", res.status);
-            return res.json();
-          })
-          .then((json) => {
-            console.log("data received:", json);
-            setData(json);
-          })
-          .catch((err) => {
-            console.error("Failed to load report:", err);
-          });
-      };
-
-      fetchData();
-      const interval = setInterval(fetchData, refreshInterval);
-      return () => {
-        console.log("Cleaning up interval");
-        clearInterval(interval);
-      };
-    }, [refreshInterval]);
-
-    console.log("Current data state:", data);
-
-    // Show loading state if data isn't loaded yet
-    if (!data) {
-      return <div className="p-8">Loading dashboard data...</div>;
+  // Fallback polling system for automatic error recovery
+  const fallbackSystem = useFallbackPolling(
+    connectionStatus.isConnected,
+    connectionStatus.connectionStatus,
+    () => {
+      console.log('Fallback system forcing polling mode');
+      disableRealTime();
+    },
+    () => {
+      console.log('Fallback system retrying WebSocket');
+      connectionStatus.reconnect();
+    },
+    {
+      maxConnectionFailures: 3,
+      messageSuccessThreshold: 0.7,
+      retryInterval: 30000,
+      enabled: settings.enableWebSocket
     }
+  );
 
-    // Create summary data for charts
-    const summaryData = Object.entries(data.summary)
-      .filter(([key]) => key !== "total")
-      .map(([name, value]) => ({ name, value }));
+  const handleSettingsChange = useCallback((newSettings: typeof settings) => {
+    setSettings(newSettings);
+    console.log("Settings updated:", newSettings);
+  }, []);
 
-    // Filter repos based on search query
-    const filteredRepos = data.repos.filter((repo) =>
-      repo.name.toLowerCase().includes(query.toLowerCase())
+  const handleForcePolling = useCallback(() => {
+    disableRealTime();
+    refreshData();
+  }, [disableRealTime, refreshData]);
+
+  const handleErrorRecovery = useCallback(() => {
+    console.log('Attempting error recovery...');
+    connectionStatus.reconnect();
+  }, [connectionStatus]);
+
+  const handleErrorFallback = useCallback(() => {
+    console.log('Using fallback mode due to persistent errors');
+    fallbackSystem.forceFallback();
+  }, [fallbackSystem]);
+
+  console.log("Current data state:", data);
+  console.log("Connection status:", connectionStatus.connectionStatus);
+  console.log("Data source:", dataSource);
+
+  // Show loading state if data isn't loaded yet
+  if (isLoading || !data) {
+    return (
+      <WebSocketErrorBoundary
+        onError={(error, errorInfo) => {
+          console.error('WebSocket Error Boundary triggered:', error, errorInfo);
+        }}
+        onRetry={handleErrorRecovery}
+        onFallbackMode={handleErrorFallback}
+      >
+        <div className="min-h-screen bg-gray-50 p-6">
+          <div className="max-w-5xl mx-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h1 className="text-3xl font-bold">🧭 GitOps Audit Dashboard</h1>
+              <ConnectionStatus
+                status={connectionStatus.connectionStatus}
+                latency={connectionStatus.latency}
+                clientCount={connectionStatus.clientCount}
+                uptime={connectionStatus.uptime}
+                lastUpdate={connectionStatus.lastUpdate}
+                connectionQuality={connectionStatus.connectionQuality}
+                onReconnect={connectionStatus.reconnect}
+              />
+            </div>
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading dashboard data...</p>
+                {error && (
+                  <p className="text-red-600 mt-2 text-sm">Error: {error}</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </WebSocketErrorBoundary>
+  );
+
+    // Create summary data for charts (memoized)
+    const summaryData = useMemo(() =>
+      Object.entries(data.summary)
+        .filter(([key]) => key !== "total")
+        .map(([name, value]) => ({ name, value })),
+      [data.summary]
+    );
+
+    // Filter repos based on search query (memoized)
+    const filteredRepos = useMemo(() =>
+      data.repos.filter((repo) =>
+        repo.name.toLowerCase().includes(query.toLowerCase())
+      ),
+      [data.repos, query]
     );
 
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-5xl mx-auto">
-          <h1 className="text-3xl font-bold mb-4">🧭 GitOps Audit Dashboard</h1>
-          <p className="text-gray-600 mb-4">Last updated: {data.timestamp}</p>
+      <WebSocketErrorBoundary
+        onError={(error, errorInfo) => {
+          console.error('Main WebSocket Error Boundary triggered:', error, errorInfo);
+        }}
+        onRetry={handleErrorRecovery}
+        onFallbackMode={handleErrorFallback}
+      >
+        <div className="min-h-screen bg-gray-50 p-6">
+          <div className="max-w-5xl mx-auto">
+          {/* Header with Connection Status */}
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <h1 className="text-3xl font-bold mb-2">🧭 GitOps Audit Dashboard</h1>
+              <p className="text-gray-600">
+                Last updated: {lastUpdated ? new Date(lastUpdated).toLocaleString() : data.timestamp}
+              </p>
+            </div>
+            <ConnectionStatus
+              status={connectionStatus.connectionStatus}
+              latency={connectionStatus.latency}
+              clientCount={connectionStatus.clientCount}
+              uptime={connectionStatus.uptime}
+              lastUpdate={connectionStatus.lastUpdate}
+              connectionQuality={connectionStatus.connectionQuality}
+              onReconnect={connectionStatus.reconnect}
+            />
+          </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
+          {/* Controls Section */}
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 gap-4">
             <input
               type="text"
               placeholder="Search repositories..."
-              className="w-full sm:w-1/2 border border-gray-300 rounded-md px-4 py-2 shadow-sm"
+              className="w-full lg:w-1/2 border border-gray-300 rounded-md px-4 py-2 shadow-sm"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
 
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium ml-4">⏱ Refresh:</label>
-              <select
-                value={refreshInterval}
-                onChange={(e) => setRefreshInterval(Number(e.target.value))}
-                className="border border-gray-300 rounded px-3 py-1 text-sm shadow-sm"
-              >
-                <option value={5000}>5s</option>
-                <option value={10000}>10s</option>
-                <option value={30000}>30s</option>
-                <option value={60000}>60s</option>
-              </select>
+            <div className="flex items-center gap-4">
+              {/* Real-time Toggle */}
+              <RealTimeToggle
+                enabled={isRealTime}
+                isConnected={connectionStatus.isConnected}
+                dataSource={dataSource}
+                onToggle={toggleRealTime}
+                showSettings={true}
+                onSettingsClick={() => setShowSettings(true)}
+              />
+
+              {/* Manual Refresh for polling mode */}
+              {!isRealTime && (
+                <button
+                  onClick={refreshData}
+                  className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  title="Refresh data manually"
+                >
+                  Refresh
+                </button>
+              )}
             </div>
           </div>
 
-          <div className="flex items-center justify-center gap-2 mb-4">
+          {/* System Health Status */}
+          <div className="flex items-center justify-center gap-2 mb-6">
             <div className={`p-2 rounded-full ${data.health_status === "green" ? "bg-green-500" : data.health_status === "yellow" ? "bg-yellow-500" : "bg-red-500"} h-4 w-4`}></div>
-            <span className="font-medium">Status: {data.health_status.toUpperCase()}</span>
+            <span className="font-medium">System Status: {data.health_status.toUpperCase()}</span>
+            {isRealTime && dataSource === 'websocket' && (
+              <div className="flex items-center gap-1 text-green-600 text-sm">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                <span>Live</span>
+              </div>
+            )}
           </div>
 
           <div className="mb-10 grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -181,7 +308,7 @@ import { useEffect, useState } from "react";
             {filteredRepos.map((repo) => (
               <div
                 key={repo.name}
-                className={`bg-white shadow-md rounded-xl p-4 border-l-4 ${
+                className={`bg-white shadow-md rounded-xl p-4 border-l-4 transition-all duration-300 hover:shadow-lg ${
                   repo.status === "clean"
                     ? "border-green-500"
                     : repo.status === "dirty"
@@ -222,6 +349,24 @@ import { useEffect, useState } from "react";
             ))}
           </div>
         </div>
-      </div>
+
+        {/* Connection Settings Modal */}
+        <ConnectionSettings
+          isOpen={showSettings}
+          onClose={() => setShowSettings(false)}
+          settings={settings}
+          onSettingsChange={handleSettingsChange}
+          connectionInfo={{
+            status: connectionStatus.connectionStatus,
+            latency: connectionStatus.latency,
+            clientCount: connectionStatus.clientCount,
+            uptime: connectionStatus.uptime,
+            dataSource,
+            lastUpdate: connectionStatus.lastUpdate
+          }}
+          onReconnect={connectionStatus.reconnect}
+          onForcePolling={handleForcePolling}
+        />
+      </WebSocketErrorBoundary>
     );
   }
