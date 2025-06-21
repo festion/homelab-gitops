@@ -25,7 +25,7 @@ class MockWebSocket {
     }, 100);
   }
 
-  send(data: string) {
+  send(_data: string) {
     if (this.readyState !== MockWebSocket.OPEN) {
       throw new Error('WebSocket is not open');
     }
@@ -90,8 +90,8 @@ global.fetch = jest.fn(() =>
         }
       ]
     }),
-  })
-) as jest.Mock;
+  } as Response)
+);
 
 // Mock localStorage
 const localStorageMock = {
@@ -115,7 +115,7 @@ Object.defineProperty(window, 'location', {
 
 // Suppress console warnings in tests unless debugging
 const originalWarn = console.warn;
-console.warn = jest.fn((message) => {
+console.warn = jest.fn((message: any) => {
   if (process.env.DEBUG_TESTS) {
     originalWarn(message);
   }

@@ -56,6 +56,46 @@ export const useAuditData = (options: AuditDataOptions = {}): AuditDataHook => {
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastPollingDataRef = useRef<string>('');
 
+  // Validate and normalize audit data
+  const validateAuditData = useCallback((rawData: any): ApiResponse | null => {
+    try {
+      if (!rawData || typeof rawData !== 'object') {
+        throw new Error('Invalid data format');
+      }
+
+      const { timestamp, health_status, summary, repos } = rawData;
+
+      if (!timestamp || !health_status || !summary || !Array.isArray(repos)) {
+        throw new Error('Missing required fields');
+      }
+
+      // Validate summary structure
+      const { total, missing, extra, dirty, clean } = summary;
+      if (typeof total !== 'number' || typeof missing !== 'number' ||
+          typeof extra !== 'number' || typeof dirty !== 'number' ||
+          typeof clean !== 'number') {
+        throw new Error('Invalid summary data');
+      }
+
+      // Validate repos array
+      const validRepos = repos.filter(repo =>
+        repo && typeof repo === 'object' &&
+        typeof repo.name === 'string' &&
+        typeof repo.status === 'string'
+      );
+
+      return {
+        timestamp,
+        health_status,
+        summary: { total, missing, extra, dirty, clean },
+        repos: validRepos
+      };
+    } catch (validationError) {
+      console.error('Data validation error:', validationError);
+      return null;
+    }
+  }, []);
+
   // Handle WebSocket messages for audit data
   const handleWebSocketMessage = useCallback((message: any) => {
     if (message.type === 'audit-update' && message.data) {
@@ -78,59 +118,19 @@ export const useAuditData = (options: AuditDataOptions = {}): AuditDataHook => {
     onMessage: handleWebSocketMessage
   });
 
-  // Validate and normalize audit data
-  const validateAuditData = useCallback((rawData: any): ApiResponse | null => {
-    try {
-      if (!rawData || typeof rawData !== 'object') {
-        throw new Error('Invalid data format');
-      }
-
-      const { timestamp, health_status, summary, repos } = rawData;
-
-      if (!timestamp || !health_status || !summary || !Array.isArray(repos)) {
-        throw new Error('Missing required fields');
-      }
-
-      // Validate summary structure
-      const { total, missing, extra, dirty, clean } = summary;
-      if (typeof total !== 'number' || typeof missing !== 'number' || 
-          typeof extra !== 'number' || typeof dirty !== 'number' || 
-          typeof clean !== 'number') {
-        throw new Error('Invalid summary data');
-      }
-
-      // Validate repos array
-      const validRepos = repos.filter(repo => 
-        repo && typeof repo === 'object' && 
-        typeof repo.name === 'string' && 
-        typeof repo.status === 'string'
-      );
-
-      return {
-        timestamp,
-        health_status,
-        summary: { total, missing, extra, dirty, clean },
-        repos: validRepos
-      };
-    } catch (validationError) {
-      console.error('Data validation error:', validationError);
-      return null;
-    }
-  }, []);
-
   // Fetch data via API polling
   const fetchData = useCallback(async (): Promise<ApiResponse | null> => {
     try {
       setError(null);
       const response = await fetch(apiEndpoint);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const rawData = await response.json();
       const validatedData = validateAuditData(rawData);
-      
+
       if (!validatedData) {
         throw new Error('Invalid data received from API');
       }
@@ -198,7 +198,7 @@ export const useAuditData = (options: AuditDataOptions = {}): AuditDataHook => {
     if (isRealTime && enableWebSocket && connectionStatus.isConnected) {
       // Use WebSocket for real-time updates
       setDataSource('websocket');
-      
+
       // Request initial data via WebSocket
       if (connectionStatus.isConnected) {
         // Send request for current data

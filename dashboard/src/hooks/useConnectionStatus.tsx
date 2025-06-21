@@ -44,7 +44,7 @@ export const useConnectionStatus = (options: ConnectionStatusOptions = {}): Conn
     } else if (message.type === 'audit-update') {
       setLastUpdate(new Date().toISOString());
     }
-    
+
     // Forward all messages to external handler if provided
     externalOnMessage?.(message);
   }, [externalOnMessage]);
@@ -59,7 +59,7 @@ export const useConnectionStatus = (options: ConnectionStatusOptions = {}): Conn
     setClientCount(0);
   }, []);
 
-  const handleError = useCallback((error: Event) => {
+  const handleError = useCallback((error: ErrorEvent | Error) => {
     console.error('WebSocket connection error:', error);
     setConnectionQuality('poor');
   }, []);

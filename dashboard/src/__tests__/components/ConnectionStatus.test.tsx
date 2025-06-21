@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ConnectionStatus } from '../../components/ConnectionStatus';
 
@@ -28,15 +27,15 @@ describe('ConnectionStatus', () => {
 
   it('should render connecting status with animation', () => {
     render(
-      <ConnectionStatus 
-        {...defaultProps} 
-        status="connecting" 
+      <ConnectionStatus
+        {...defaultProps}
+        status="connecting"
         latency={0}
       />
     );
 
     expect(screen.getByText('Connecting...')).toBeInTheDocument();
-    
+
     // Should have animated pulse effect
     const statusDot = document.querySelector('.animate-pulse');
     expect(statusDot).toBeInTheDocument();
@@ -45,15 +44,15 @@ describe('ConnectionStatus', () => {
   it('should render disconnected status with retry button', () => {
     const onReconnect = jest.fn();
     render(
-      <ConnectionStatus 
-        {...defaultProps} 
-        status="disconnected" 
+      <ConnectionStatus
+        {...defaultProps}
+        status="disconnected"
         onReconnect={onReconnect}
       />
     );
 
     expect(screen.getByText('Disconnected')).toBeInTheDocument();
-    
+
     const retryButton = screen.getByText('Retry');
     expect(retryButton).toBeInTheDocument();
 
@@ -64,15 +63,15 @@ describe('ConnectionStatus', () => {
   it('should render error status with retry button', () => {
     const onReconnect = jest.fn();
     render(
-      <ConnectionStatus 
-        {...defaultProps} 
-        status="error" 
+      <ConnectionStatus
+        {...defaultProps}
+        status="error"
         onReconnect={onReconnect}
       />
     );
 
     expect(screen.getByText('Connection Error')).toBeInTheDocument();
-    
+
     const retryButton = screen.getByText('Retry');
     expect(retryButton).toBeInTheDocument();
 
@@ -101,25 +100,25 @@ describe('ConnectionStatus', () => {
     jest.spyOn(Date, 'now').mockImplementation(() => now.getTime());
 
     const { rerender } = render(
-      <ConnectionStatus 
-        {...defaultProps} 
-        lastUpdate="2025-01-01T11:59:30Z" 
+      <ConnectionStatus
+        {...defaultProps}
+        lastUpdate="2025-01-01T11:59:30Z"
       />
     );
     expect(screen.getByText('Updated 30s ago')).toBeInTheDocument();
 
     rerender(
-      <ConnectionStatus 
-        {...defaultProps} 
-        lastUpdate="2025-01-01T11:58:00Z" 
+      <ConnectionStatus
+        {...defaultProps}
+        lastUpdate="2025-01-01T11:58:00Z"
       />
     );
     expect(screen.getByText('Updated 2m ago')).toBeInTheDocument();
 
     rerender(
-      <ConnectionStatus 
-        {...defaultProps} 
-        lastUpdate="2025-01-01T10:00:00Z" 
+      <ConnectionStatus
+        {...defaultProps}
+        lastUpdate="2025-01-01T10:00:00Z"
       />
     );
     // Should show actual time for older updates
@@ -162,14 +161,14 @@ describe('ConnectionStatus', () => {
 
   it('should handle missing optional props gracefully', () => {
     render(
-      <ConnectionStatus 
+      <ConnectionStatus
         status="connected"
         onReconnect={jest.fn()}
       />
     );
 
     expect(screen.getByText('Connected')).toBeInTheDocument();
-    
+
     // Should not crash with missing optional props
     expect(screen.queryByText('0ms')).toBeInTheDocument();
     expect(screen.queryByText('0 clients')).toBeInTheDocument();
@@ -177,8 +176,8 @@ describe('ConnectionStatus', () => {
 
   it('should handle invalid lastUpdate gracefully', () => {
     render(
-      <ConnectionStatus 
-        {...defaultProps} 
+      <ConnectionStatus
+        {...defaultProps}
         lastUpdate="invalid-date"
       />
     );
@@ -188,8 +187,8 @@ describe('ConnectionStatus', () => {
 
   it('should not show retry button when onReconnect is not provided', () => {
     render(
-      <ConnectionStatus 
-        {...defaultProps} 
+      <ConnectionStatus
+        {...defaultProps}
         status="disconnected"
         onReconnect={undefined}
       />
@@ -200,8 +199,8 @@ describe('ConnectionStatus', () => {
 
   it('should apply custom className', () => {
     const { container } = render(
-      <ConnectionStatus 
-        {...defaultProps} 
+      <ConnectionStatus
+        {...defaultProps}
         className="custom-class"
       />
     );
@@ -211,8 +210,8 @@ describe('ConnectionStatus', () => {
 
   it('should handle empty lastUpdate', () => {
     render(
-      <ConnectionStatus 
-        {...defaultProps} 
+      <ConnectionStatus
+        {...defaultProps}
         lastUpdate=""
       />
     );
@@ -222,8 +221,8 @@ describe('ConnectionStatus', () => {
 
   it('should show appropriate tooltips for disconnected state', async () => {
     render(
-      <ConnectionStatus 
-        {...defaultProps} 
+      <ConnectionStatus
+        {...defaultProps}
         status="disconnected"
         onReconnect={jest.fn()}
       />
@@ -239,8 +238,8 @@ describe('ConnectionStatus', () => {
 
   it('should handle very large uptime values', () => {
     render(
-      <ConnectionStatus 
-        {...defaultProps} 
+      <ConnectionStatus
+        {...defaultProps}
         uptime={604800} // 1 week in seconds
       />
     );

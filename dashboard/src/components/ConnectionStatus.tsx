@@ -1,4 +1,4 @@
-import React, { memo, useMemo, useCallback } from 'react';
+import { memo, useMemo, useCallback } from 'react';
 import { Wifi, WifiOff, AlertTriangle, RotateCcw, Users, Clock } from 'lucide-react';
 
 interface ConnectionStatusProps {
@@ -12,7 +12,7 @@ interface ConnectionStatusProps {
   className?: string;
 }
 
-export const ConnectionStatus: React.FC<ConnectionStatusProps> = memo(({
+export const ConnectionStatus = memo<ConnectionStatusProps>(({
   status,
   latency = 0,
   clientCount = 0,
@@ -94,7 +94,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = memo(({
       const now = new Date();
       const diffMs = now.getTime() - date.getTime();
       const diffSeconds = Math.floor(diffMs / 1000);
-      
+
       if (diffSeconds < 60) return `${diffSeconds}s ago`;
       if (diffSeconds < 3600) return `${Math.floor(diffSeconds / 60)}m ago`;
       return date.toLocaleTimeString();
@@ -134,7 +134,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = memo(({
             </span>
           )}
         </div>
-        
+
         {status === 'connected' && (
           <div className="flex items-center gap-4 text-xs text-gray-500 mt-1">
             {clientCount > 0 && (
@@ -173,7 +173,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = memo(({
         <button className="w-5 h-5 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-xs text-gray-600 transition-colors">
           ?
         </button>
-        
+
         {/* Tooltip */}
         <div className="absolute right-0 top-full mt-2 w-64 bg-gray-900 text-white text-xs rounded-lg p-3 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
           <div className="space-y-1">
@@ -195,7 +195,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = memo(({
               </div>
             )}
           </div>
-          
+
           {/* Tooltip Arrow */}
           <div className="absolute top-0 right-4 -mt-1 w-2 h-2 bg-gray-900 transform rotate-45"></div>
         </div>
