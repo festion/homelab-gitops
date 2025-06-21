@@ -159,9 +159,9 @@ export default function App() {
             </div>
           </div>
         </div>
-      </div>
-    </WebSocketErrorBoundary>
-  );
+      </WebSocketErrorBoundary>
+    );
+  }
 
   // Create summary data for charts (memoized)
   const summaryData = useMemo(() =>
