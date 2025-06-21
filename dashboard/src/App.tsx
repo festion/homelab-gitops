@@ -349,6 +349,7 @@ export default function App() {
             ))}
           </div>
         </div>
+      </div>
 
         {/* Connection Settings Modal */}
         <ConnectionSettings
