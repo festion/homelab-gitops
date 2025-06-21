@@ -163,32 +163,32 @@ export default function App() {
     </WebSocketErrorBoundary>
   );
 
-    // Create summary data for charts (memoized)
-    const summaryData = useMemo(() =>
-      Object.entries(data.summary)
-        .filter(([key]) => key !== "total")
-        .map(([name, value]) => ({ name, value })),
-      [data.summary]
-    );
+  // Create summary data for charts (memoized)
+  const summaryData = useMemo(() =>
+    Object.entries(data.summary)
+      .filter(([key]) => key !== "total")
+      .map(([name, value]) => ({ name, value })),
+    [data.summary]
+  );
 
-    // Filter repos based on search query (memoized)
-    const filteredRepos = useMemo(() =>
-      data.repos.filter((repo) =>
-        repo.name.toLowerCase().includes(query.toLowerCase())
-      ),
-      [data.repos, query]
-    );
+  // Filter repos based on search query (memoized)
+  const filteredRepos = useMemo(() =>
+    data.repos.filter((repo) =>
+      repo.name.toLowerCase().includes(query.toLowerCase())
+    ),
+    [data.repos, query]
+  );
 
-    return (
-      <WebSocketErrorBoundary
-        onError={(error, errorInfo) => {
-          console.error('Main WebSocket Error Boundary triggered:', error, errorInfo);
-        }}
-        onRetry={handleErrorRecovery}
-        onFallbackMode={handleErrorFallback}
-      >
-        <div className="min-h-screen bg-gray-50 p-6">
-          <div className="max-w-5xl mx-auto">
+  return (
+    <WebSocketErrorBoundary
+      onError={(error, errorInfo) => {
+        console.error('Main WebSocket Error Boundary triggered:', error, errorInfo);
+      }}
+      onRetry={handleErrorRecovery}
+      onFallbackMode={handleErrorFallback}
+    >
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-5xl mx-auto">
           {/* Header with Connection Status */}
           <div className="flex items-start justify-between mb-4">
             <div>
