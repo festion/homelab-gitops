@@ -47,15 +47,19 @@ jobs:
           echo "\`\`\`" >> quality-report.md
           cat quality-results.txt >> quality-report.md
           echo "\`\`\`" >> quality-report.md
-          
+
           mkdir -p output
           cp quality-report.md output/CodeQualityReport.md
 
-      - name: Commit report to main branch
+      - name: Upload quality report as artifact
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-quality-report
+          path: output/CodeQualityReport.md
+          retention-days: 30
+
+      - name: Display quality results
         run: |
-          git config user.name "GitOps Quality Bot"
-          git config user.email "bot@users.noreply.github.com"
-          git add output/CodeQualityReport.md
-          git diff --cached --quiet || git commit -m "📊 Update code quality report [skip ci]"
-          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
+          echo "Quality check completed. Results:"
+          cat quality-results.txt
