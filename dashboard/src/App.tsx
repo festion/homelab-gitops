@@ -18,25 +18,6 @@ import { RealTimeToggle } from "./components/RealTimeToggle";
 import { ConnectionSettings } from "./components/ConnectionSettings";
 import { WebSocketErrorBoundary } from "./components/WebSocketErrorBoundary";
 
-  // Define the API response type
-  type ApiResponse = {
-    timestamp: string;
-    health_status: string;
-    summary: {
-      total: number;
-      missing: number;
-      extra: number;
-      dirty: number;
-      clean: number;
-    };
-    repos: Array<{
-      name: string;
-      status: string;
-      clone_url?: string;
-      local_path?: string;
-      dashboard_link?: string;
-    }>;
-  };
 
   // Status colors for visualization
   const STATUS_COLORS: Record<string, string> = {
@@ -47,7 +28,6 @@ import { WebSocketErrorBoundary } from "./components/WebSocketErrorBoundary";
   };
 
 export default function App() {
-  console.log("App component rendering");
   const [query, setQuery] = useState("");
   const [showSettings, setShowSettings] = useState(false);
   const [settings, setSettings] = useState({
@@ -66,7 +46,6 @@ export default function App() {
     isRealTime,
     dataSource,
     lastUpdated,
-    enableRealTime,
     disableRealTime,
     toggleRealTime,
     refreshData
@@ -120,9 +99,7 @@ export default function App() {
     fallbackSystem.forceFallback();
   }, [fallbackSystem]);
 
-  console.log("Current data state:", data);
-  console.log("Connection status:", connectionStatus.connectionStatus);
-  console.log("Data source:", dataSource);
+  // Data state monitoring removed for production
 
   // Show loading state if data isn't loaded yet
   if (isLoading || !data) {
@@ -349,7 +326,6 @@ export default function App() {
             ))}
           </div>
         </div>
-      </div>
 
         {/* Connection Settings Modal */}
         <ConnectionSettings
@@ -368,6 +344,7 @@ export default function App() {
           onReconnect={connectionStatus.reconnect}
           onForcePolling={handleForcePolling}
         />
-      </WebSocketErrorBoundary>
+      </div>
+    </WebSocketErrorBoundary>
     );
   }

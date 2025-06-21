@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Settings, X, Wifi, Database, RefreshCw, AlertCircle, CheckCircle, Info } from 'lucide-react';
 
 interface ConnectionSettingsProps {
@@ -25,7 +25,7 @@ interface ConnectionSettingsProps {
   className?: string;
 }
 
-export const ConnectionSettings: React.FC<ConnectionSettingsProps> = ({
+export const ConnectionSettings = ({
   isOpen,
   onClose,
   settings,
@@ -34,7 +34,7 @@ export const ConnectionSettings: React.FC<ConnectionSettingsProps> = ({
   onReconnect,
   onForcePolling,
   className = ''
-}) => {
+}: ConnectionSettingsProps) => {
   const [localSettings, setLocalSettings] = useState(settings);
   const [hasChanges, setHasChanges] = useState(false);
 
@@ -89,7 +89,7 @@ export const ConnectionSettings: React.FC<ConnectionSettingsProps> = ({
               <Info className="w-4 h-4" />
               Connection Status
             </h3>
-            
+
             <div className="bg-gray-50 rounded-lg p-4 space-y-3">
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -103,7 +103,7 @@ export const ConnectionSettings: React.FC<ConnectionSettingsProps> = ({
                     <span className="font-medium capitalize">{connectionInfo.status}</span>
                   </div>
                 </div>
-                
+
                 <div>
                   <div className="text-xs text-gray-500 uppercase tracking-wide">Data Source</div>
                   <div className="flex items-center gap-2 mt-1">
@@ -152,7 +152,7 @@ export const ConnectionSettings: React.FC<ConnectionSettingsProps> = ({
               <Wifi className="w-4 h-4" />
               WebSocket Settings
             </h3>
-            
+
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -239,7 +239,7 @@ export const ConnectionSettings: React.FC<ConnectionSettingsProps> = ({
               <Database className="w-4 h-4" />
               Polling Fallback Settings
             </h3>
-            
+
             <div>
               <label className="text-sm font-medium text-gray-700">
                 Polling Interval: {formatDuration(localSettings.pollingInterval)}
@@ -264,7 +264,7 @@ export const ConnectionSettings: React.FC<ConnectionSettingsProps> = ({
           {/* Debug Information */}
           <div className="mb-6">
             <h3 className="text-md font-medium text-gray-900 mb-3">Debug Information</h3>
-            
+
             <div className="bg-gray-50 rounded-lg p-3 font-mono text-xs space-y-1">
               <div>Last Update: {connectionInfo.lastUpdate || 'Never'}</div>
               <div>Server Uptime: {connectionInfo.uptime}s</div>
@@ -283,7 +283,7 @@ export const ConnectionSettings: React.FC<ConnectionSettingsProps> = ({
               <span className="text-green-600">• Settings saved</span>
             )}
           </div>
-          
+
           <div className="flex gap-2">
             <button
               onClick={handleReset}

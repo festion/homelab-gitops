@@ -1,4 +1,4 @@
-import React, { memo, useMemo, useCallback } from 'react';
+import { memo, useMemo, useCallback } from 'react';
 import { Zap, ZapOff, Wifi, Database, Settings } from 'lucide-react';
 
 interface RealTimeToggleProps {
@@ -12,7 +12,7 @@ interface RealTimeToggleProps {
   className?: string;
 }
 
-export const RealTimeToggle: React.FC<RealTimeToggleProps> = memo(({
+export const RealTimeToggle = memo<RealTimeToggleProps>(({
   enabled,
   isConnected,
   dataSource,
@@ -83,7 +83,7 @@ export const RealTimeToggle: React.FC<RealTimeToggleProps> = memo(({
           onClick={handleToggle}
           disabled={disabled}
           className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-            enabled 
+            enabled
               ? isConnected && dataSource === 'websocket'
                 ? 'bg-green-600'
                 : 'bg-yellow-500'
@@ -103,7 +103,7 @@ export const RealTimeToggle: React.FC<RealTimeToggleProps> = memo(({
           <div className={`p-1.5 rounded-lg ${config.bgColor}`}>
             <Icon className={`w-4 h-4 ${config.color}`} />
           </div>
-          
+
           <div className="min-w-0">
             <div className="flex items-center gap-1">
               <span className="text-sm font-medium text-gray-900">{config.label}</span>
@@ -144,12 +144,12 @@ export const RealTimeToggle: React.FC<RealTimeToggleProps> = memo(({
         <div className="w-4 h-4 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-xs text-gray-600 cursor-help transition-colors">
           i
         </div>
-        
+
         {/* Tooltip */}
         <div className="absolute right-0 top-full mt-2 w-72 bg-gray-900 text-white text-xs rounded-lg p-3 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
           <div className="space-y-2">
             <div className="font-medium border-b border-gray-700 pb-1">Real-time Status</div>
-            
+
             <div className="space-y-1">
               <div>Mode: <span className="font-medium">{enabled ? 'Enabled' : 'Disabled'}</span></div>
               <div>Data Source: <span className="font-medium capitalize">{dataSource}</span></div>
@@ -172,7 +172,7 @@ export const RealTimeToggle: React.FC<RealTimeToggleProps> = memo(({
               Click the toggle to {enabled ? 'disable' : 'enable'} real-time updates
             </div>
           </div>
-          
+
           {/* Tooltip Arrow */}
           <div className="absolute top-0 right-4 -mt-1 w-2 h-2 bg-gray-900 transform rotate-45"></div>
         </div>

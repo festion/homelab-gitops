@@ -1,5 +1,5 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { AlertTriangle, RefreshCw, Wifi, Database } from 'lucide-react';
+import { Component, ErrorInfo, ReactNode } from 'react';
+import { AlertTriangle, RefreshCw, Database } from 'lucide-react';
 
 interface Props {
   children: ReactNode;
@@ -41,7 +41,7 @@ export class WebSocketErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('WebSocket Error Boundary caught an error:', error, errorInfo);
-    
+
     this.setState({
       error,
       errorInfo
@@ -75,7 +75,7 @@ export class WebSocketErrorBoundary extends Component<Props, State> {
       /timeout/i
     ];
 
-    return webSocketErrorPatterns.some(pattern => 
+    return webSocketErrorPatterns.some(pattern =>
       pattern.test(error.message) || pattern.test(error.name)
     );
   }
@@ -86,7 +86,7 @@ export class WebSocketErrorBoundary extends Component<Props, State> {
     this.setState({ isRetrying: true });
 
     const retryDelay = Math.min(1000 * Math.pow(2, this.state.retryCount), 10000);
-    
+
     this.retryTimeoutId = setTimeout(() => {
       this.setState(prevState => ({
         hasError: false,
@@ -132,7 +132,7 @@ export class WebSocketErrorBoundary extends Component<Props, State> {
     }
 
     // Check for critical errors
-    if (this.state.error.message.includes('memory') || 
+    if (this.state.error.message.includes('memory') ||
         this.state.error.message.includes('stack overflow')) {
       return 'high';
     }
@@ -174,11 +174,11 @@ export class WebSocketErrorBoundary extends Component<Props, State> {
             {/* Error Icon and Title */}
             <div className="flex items-center gap-3 mb-4">
               <div className={`p-2 rounded-full ${
-                severity === 'high' ? 'bg-red-100' : 
+                severity === 'high' ? 'bg-red-100' :
                 severity === 'medium' ? 'bg-yellow-100' : 'bg-blue-100'
               }`}>
                 <AlertTriangle className={`w-6 h-6 ${
-                  severity === 'high' ? 'text-red-600' : 
+                  severity === 'high' ? 'text-red-600' :
                   severity === 'medium' ? 'text-yellow-600' : 'text-blue-600'
                 }`} />
               </div>
@@ -195,7 +195,7 @@ export class WebSocketErrorBoundary extends Component<Props, State> {
               <p className="text-gray-700 mb-2">
                 The dashboard encountered a connection problem and needs to recover.
               </p>
-              
+
               {this.state.retryCount > 0 && (
                 <p className="text-sm text-gray-600">
                   Retry attempts: {this.state.retryCount}/{this.maxRetries}

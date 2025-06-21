@@ -1,7 +1,6 @@
 // File: dashboard/src/pages/audit.tsx
 
 import { useEffect, useState } from 'react';
-import DiffViewer from '../components/DiffViewer';
 import { useParams, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 
@@ -42,9 +41,6 @@ const AuditPage = () => {
   const action = searchParams.get('action');
 
   const [data, setData] = useState<AuditReport | null>(null);
-  const [showEnhancedDiff, setShowEnhancedDiff] = useState<string | null>(null);
-  const [emailAddress, setEmailAddress] = useState('');
-  const [emailSending, setEmailSending] = useState(false);
   const [loading, setLoading] = useState(true);
   const [diffs, setDiffs] = useState<Record<string, string>>({});
   const [expandedRepo, setExpandedRepo] = useState<string | null>(repo || null);
@@ -126,71 +122,6 @@ const AuditPage = () => {
       const body: any = { repo: repo.name };
       if (action === 'clone') body['clone_url'] = repo.clone_url || repo.remote;
 
-  // v1.1.0 - CSV Export functionality
-  const exportToCSV = async () => {
-    try {
-      const response = await axios.get(`${API_BASE_URL}/audit/export/csv`, {
-        responseType: 'blob'
-      });
-      
-      // Create download link
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      
-      // Get filename from content-disposition header or create default
-      const contentDisposition = response.headers['content-disposition'];
-      const filename = contentDisposition 
-        ? contentDisposition.split('filename=')[1].replace(/"/g, '')
-        : `gitops-audit-${new Date().toISOString().split('T')[0]}.csv`;
-      
-      link.setAttribute('download', filename);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      
-      console.log('📊 CSV export downloaded successfully');
-    } catch (error) {
-      console.error('❌ Failed to export CSV:', error);
-      alert('Failed to export CSV. Please try again.');
-    }
-  };
-
-  // v1.1.0 - Email Summary functionality
-  const sendEmailSummary = async () => {
-    if (!emailAddress) {
-      alert('Please enter an email address');
-      return;
-    }
-
-    setEmailSending(true);
-    try {
-      const response = await axios.post(`${API_BASE_URL}/audit/email-summary`, {
-        email: emailAddress
-      });
-      
-      alert(`✅ Email sent successfully to ${emailAddress}`);
-      setEmailAddress('');
-      console.log('📧 Email summary sent:', response.data);
-    } catch (error) {
-      console.error('❌ Failed to send email:', error);
-      alert('Failed to send email summary. Please check the email address and try again.');
-    } finally {
-      setEmailSending(false);
-    }
-  };
-
-  // v1.1.0 - Enhanced diff viewer
-  const showEnhancedDiffViewer = async (repo: string) => {
-    try {
-      const res = await axios.get(`${API_BASE_URL}/audit/diff/${repo}`);
-      setShowEnhancedDiff(res.data.diff);
-    } catch (err: any) {
-      console.error(`Load diff failed:`, err);
-      alert(`Failed to load diff for ${repo}`);
-    }
-  };
       const response = await axios.post(
         `${API_BASE_URL}/audit/${action}`,
         body

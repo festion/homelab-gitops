@@ -19,7 +19,7 @@ interface WebSocketOptions {
   onMessage?: (message: any) => void;
   onConnect?: () => void;
   onDisconnect?: () => void;
-  onError?: (error: Event) => void;
+  onError?: (error: ErrorEvent | Error) => void;
 }
 
 export const useWebSocket = (url: string, options: WebSocketOptions = {}): WebSocketHook => {
@@ -83,7 +83,7 @@ export const useWebSocket = (url: string, options: WebSocketOptions = {}): WebSo
   const connect = useCallback(() => {
     try {
       setConnectionStatus('connecting');
-      
+
       // Enhanced connection validation
       if (!url || typeof url !== 'string') {
         throw new Error('Invalid WebSocket URL provided');
@@ -116,7 +116,7 @@ export const useWebSocket = (url: string, options: WebSocketOptions = {}): WebSo
           }
 
           const message = JSON.parse(event.data);
-          
+
           // Validate message structure
           if (typeof message !== 'object') {
             throw new Error('Invalid message format: not an object');
@@ -151,16 +151,16 @@ export const useWebSocket = (url: string, options: WebSocketOptions = {}): WebSo
         if (reconnect && reconnectAttempts.current < maxReconnectAttempts) {
           // Analyze close code to determine if we should retry
           const shouldRetry = [1000, 1001, 1006, 1011, 1012, 1013, 1014].includes(event.code);
-          
+
           if (shouldRetry) {
             const backoffDelay = Math.min(
               reconnectInterval * Math.pow(2, reconnectAttempts.current),
               maxReconnectInterval
             );
-            
+
             reconnectAttempts.current++;
             console.log(`Attempting to reconnect in ${backoffDelay}ms (attempt ${reconnectAttempts.current}/${maxReconnectAttempts})`);
-            
+
             reconnectTimeoutId.current = setTimeout(() => {
               connect();
             }, backoffDelay);
@@ -177,10 +177,10 @@ export const useWebSocket = (url: string, options: WebSocketOptions = {}): WebSo
       ws.current.onerror = (error) => {
         console.error('WebSocket error occurred:', error);
         setConnectionStatus('error');
-        
-        // Enhanced error handling
-        const enhancedError = new Error(`WebSocket connection failed: ${error.type}`);
-        onError?.(enhancedError);
+
+        // Enhanced error handling - convert to ErrorEvent for compatibility
+        const errorEvent = new ErrorEvent('error', { error });
+        onError?.(errorEvent);
       };
 
       // Set connection timeout
@@ -196,13 +196,17 @@ export const useWebSocket = (url: string, options: WebSocketOptions = {}): WebSo
       const originalOnOpen = ws.current.onopen;
       ws.current.onopen = (event) => {
         clearTimeout(connectionTimeout);
-        originalOnOpen?.(event);
+        if (originalOnOpen && ws.current) {
+          originalOnOpen.call(ws.current, event);
+        }
       };
 
     } catch (error) {
       console.error('Failed to create WebSocket connection:', error);
       setConnectionStatus('error');
-      onError?.(error);
+      // Convert error to ErrorEvent for consistency
+      const errorEvent = new ErrorEvent('error', { error });
+      onError?.(errorEvent);
     }
   }, [url, reconnect, maxReconnectAttempts, reconnectInterval, maxReconnectInterval, onConnect, onMessage, onDisconnect, onError, clearReconnectTimeout, startHeartbeat, processMessageQueue]);
 
@@ -223,19 +227,19 @@ export const useWebSocket = (url: string, options: WebSocketOptions = {}): WebSo
   const disconnect = useCallback(() => {
     clearReconnectTimeout();
     clearHeartbeatTimeout();
-    
+
     if (ws.current) {
       ws.current.close(1000, 'Manual disconnect');
       ws.current = null;
     }
-    
+
     setIsConnected(false);
     setConnectionStatus('disconnected');
   }, [clearReconnectTimeout, clearHeartbeatTimeout]);
 
   useEffect(() => {
     connect();
-    
+
     return () => {
       disconnect();
     };

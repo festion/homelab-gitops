@@ -28,4 +28,9 @@ export default {
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx'],
   testTimeout: 10000,
+  globals: {
+    'ts-jest': {
+      isolatedModules: true,
+    },
+  },
 };
