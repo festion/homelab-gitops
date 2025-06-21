@@ -80,12 +80,23 @@ if [[ ! -f "gitops-update.zip" ]]; then
     exit 1
 fi
 
-unzip -q gitops-update.zip
+unzip -q -o gitops-update.zip
 EXTRACT_DIR="homelab-gitops-auditor-$BRANCH"
 
 # Install/Update
 log_info "Installing to $INSTALL_DIR..."
 mkdir -p "$INSTALL_DIR"
+
+# Clean existing node_modules to prevent conflicts
+if [[ -d "$INSTALL_DIR/api/node_modules" ]]; then
+    log_info "Cleaning existing API node_modules..."
+    rm -rf "$INSTALL_DIR/api/node_modules"
+fi
+if [[ -d "$INSTALL_DIR/dashboard/node_modules" ]]; then
+    log_info "Cleaning existing dashboard node_modules..."
+    rm -rf "$INSTALL_DIR/dashboard/node_modules"
+fi
+
 cp -r "$EXTRACT_DIR"/* "$INSTALL_DIR/"
 chmod +x "$INSTALL_DIR"/scripts/*.sh
 
@@ -129,7 +140,7 @@ if [[ -f "$INSTALL_DIR/api/server.js" && -f "$INSTALL_DIR/dashboard/dist/index.h
     log_success "GitOps Auditor deployment completed successfully!"
     log_info "API: http://localhost:3070"
     log_info "Dashboard: http://localhost (if nginx configured)"
-    
+
     if [[ "$ENABLE_MCP" == "true" ]]; then
         log_success "Phase 1 MCP Integration is active!"
         log_info "GitHub MCP: Ready for integration"
