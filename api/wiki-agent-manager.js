@@ -1,15 +1,15 @@
 /**
  * WikiJS AI Agent Manager
- * 
+ *
  * Manages the intelligent document discovery, processing, and upload pipeline
  * for converting Markdown documentation to WikiJS entries.
- * 
+ *
  * Features:
  * - Document lifecycle management (DISCOVERED → UPLOADED)
  * - Repository-first processing strategy
  * - SQLite database for state tracking
  * - Integration with WikiJS MCP server
- * 
+ *
  * Version: 1.0.0 (Phase 1A - Foundation)
  */
 
@@ -24,20 +24,20 @@ class WikiAgentManager {
     this.rootDir = rootDir;
     this.dbPath = path.join(rootDir, 'wiki-agent.db');
     this.db = null;
-    
+
     // Processing status constants
     this.STATUS = {
       DISCOVERED: 'DISCOVERED',
       ANALYZING: 'ANALYZING',
       READY: 'READY',
-      UPLOADING: 'UPLOADING', 
+      UPLOADING: 'UPLOADING',
       UPLOADED: 'UPLOADED',
       OUTDATED: 'OUTDATED',
       CONFLICTED: 'CONFLICTED',
       FAILED: 'FAILED',
       ARCHIVED: 'ARCHIVED'
     };
-    
+
     // Document type classifications
     this.DOC_TYPES = {
       README: 'readme',
@@ -49,10 +49,10 @@ class WikiAgentManager {
       CHANGELOG: 'changelog',
       UNKNOWN: 'unknown'
     };
-    
+
     // Source location classifications
     this.SOURCES = {
-      REPOS: 'repos',           // /repos/ directory 
+      REPOS: 'repos',           // /repos/ directory
       GIT_ROOT: 'git-root',     // /mnt/c/GIT/ directory
       EXTERNAL: 'external'      // Other configured paths
     };
@@ -69,7 +69,7 @@ class WikiAgentManager {
           reject(err);
           return;
         }
-        
+
         console.log('✅ Connected to wiki agent database');
         this.createTables()
           .then(() => resolve())
@@ -100,7 +100,7 @@ class WikiAgentManager {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )`,
-      
+
       // Processing batches for efficiency tracking
       `CREATE TABLE IF NOT EXISTS processing_batches (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -116,7 +116,7 @@ class WikiAgentManager {
         error_summary TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )`,
-      
+
       // Wiki agent configuration and settings
       `CREATE TABLE IF NOT EXISTS agent_config (
         key TEXT PRIMARY KEY,
@@ -124,7 +124,7 @@ class WikiAgentManager {
         description TEXT,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )`,
-      
+
       // Processing statistics for dashboard
       `CREATE TABLE IF NOT EXISTS agent_stats (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -152,7 +152,7 @@ class WikiAgentManager {
       for (const table of tables) {
         await this.runQuery(table);
       }
-      
+
       // Create indexes
       for (const index of indexes) {
         await this.runQuery(index);
@@ -160,7 +160,7 @@ class WikiAgentManager {
 
       // Insert default configuration
       await this.initializeDefaultConfig();
-      
+
       console.log('✅ Wiki agent database tables created successfully');
     } catch (error) {
       console.error('❌ Failed to create wiki agent tables:', error);
@@ -247,31 +247,31 @@ class WikiAgentManager {
   classifyDocumentType(filePath) {
     const fileName = path.basename(filePath).toLowerCase();
     const dirName = path.dirname(filePath).toLowerCase();
-    
+
     if (fileName === 'readme.md' || fileName === 'readme.txt') {
       return this.DOC_TYPES.README;
     }
-    
+
     if (dirName.includes('docs') || dirName.includes('documentation')) {
       return this.DOC_TYPES.DOCS;
     }
-    
+
     if (fileName.includes('api') || dirName.includes('api')) {
       return this.DOC_TYPES.API;
     }
-    
+
     if (fileName.includes('config') || fileName.includes('setup')) {
       return this.DOC_TYPES.CONFIG;
     }
-    
+
     if (fileName.includes('guide') || fileName.includes('tutorial')) {
       return this.DOC_TYPES.GUIDE;
     }
-    
+
     if (fileName.includes('changelog') || fileName.includes('changes')) {
       return this.DOC_TYPES.CHANGELOG;
     }
-    
+
     return this.DOC_TYPES.UNKNOWN;
   }
 
@@ -282,11 +282,11 @@ class WikiAgentManager {
     if (filePath.includes('/repos/')) {
       return this.SOURCES.REPOS;
     }
-    
+
     if (filePath.includes('/mnt/c/GIT/')) {
       return this.SOURCES.GIT_ROOT;
     }
-    
+
     return this.SOURCES.EXTERNAL;
   }
 
@@ -299,13 +299,13 @@ class WikiAgentManager {
       const repoMatch = filePath.match(/\/repos\/([^\/]+)/);
       return repoMatch ? repoMatch[1] : 'unknown';
     }
-    
+
     // For /mnt/c/GIT/ paths: /mnt/c/GIT/homelab-gitops-auditor/... → homelab-gitops-auditor
     if (filePath.includes('/mnt/c/GIT/')) {
       const repoMatch = filePath.match(/\/mnt\/c\/GIT\/([^\/]+)/);
       return repoMatch ? repoMatch[1] : 'unknown';
     }
-    
+
     return 'external';
   }
 
@@ -314,12 +314,12 @@ class WikiAgentManager {
    */
   calculatePriorityScore(filePath, documentType, repositoryName) {
     let score = 50; // Base score
-    
+
     // Repository-based priority
     if (repositoryName === 'homelab-gitops-auditor') {
       score += 50; // High priority for current project
     }
-    
+
     // Document type priority
     switch (documentType) {
       case this.DOC_TYPES.README:
@@ -337,7 +337,7 @@ class WikiAgentManager {
       default:
         score += 5;
     }
-    
+
     // File age penalty (newer files get higher priority)
     try {
       const stats = fs.statSync(filePath);
@@ -348,7 +348,7 @@ class WikiAgentManager {
     } catch (error) {
       // Ignore file stat errors
     }
-    
+
     return Math.max(0, Math.min(100, score)); // Clamp to 0-100
   }
 
@@ -360,26 +360,26 @@ class WikiAgentManager {
       const totalDocs = await this.getQuery(
         'SELECT COUNT(*) as count FROM wiki_documents'
       );
-      
+
       const statusCounts = await this.allQuery(`
-        SELECT sync_status, COUNT(*) as count 
-        FROM wiki_documents 
+        SELECT sync_status, COUNT(*) as count
+        FROM wiki_documents
         GROUP BY sync_status
       `);
-      
+
       const recentBatches = await this.allQuery(`
-        SELECT * FROM processing_batches 
-        ORDER BY created_at DESC 
+        SELECT * FROM processing_batches
+        ORDER BY created_at DESC
         LIMIT 5
       `);
-      
+
       const todayStats = await this.getQuery(`
-        SELECT * FROM agent_stats 
-        WHERE stat_date = DATE('now') 
-        ORDER BY created_at DESC 
+        SELECT * FROM agent_stats
+        WHERE stat_date = DATE('now')
+        ORDER BY created_at DESC
         LIMIT 1
       `);
-      
+
       return {
         totalDocuments: totalDocs?.count || 0,
         statusBreakdown: statusCounts.reduce((acc, row) => {
