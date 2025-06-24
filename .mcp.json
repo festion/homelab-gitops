@@ -1,0 +1,76 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/mnt/c/Users/Jeremy/OneDrive/Desktop",
+        "/mnt/c/GIT",
+        "/mnt/c/my-tools",
+        "/mnt/c/working",
+        "/mnt/c/Users/Jeremy/AppData/Roaming/Claude/logs"
+      ]
+    },
+    "network-fs": {
+      "command": "/mnt/c/my-tools/network-fs/.venv/bin/python3",
+      "args": [
+        "/mnt/c/my-tools/network-fs/run_server.py"
+      ]
+    },
+    "serena": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "/mnt/c/GIT/serena",
+        "serena-mcp-server",
+        "--transport",
+        "stdio"
+      ]
+    },
+    "hass-mcp": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "HA_URL=http://192.168.1.155:8123",
+        "-e",
+        "HA_TOKEN=<HA_LONG_LIVED_JWT_ROTATED_T8_see_Vikunja_1059>",
+        "voska/hass-mcp"
+      ]
+    },
+    "github": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "GITHUB_PERSONAL_ACCESS_TOKEN=${GITHUB_PERSONAL_ACCESS_TOKEN:-your_github_token_here}",
+        "ghcr.io/github/github-mcp-server"
+      ]
+    },
+    "wikijs-mcp": {
+      "command": "/mnt/c/GIT/mcp-servers/wikijs-mcp-server/venv/bin/python",
+      "args": [
+        "/mnt/c/GIT/mcp-servers/wikijs-mcp-server/run_server.py",
+        "/mnt/c/GIT/mcp-servers/wikijs-mcp-server/config/wikijs_mcp_config.json"
+      ],
+      "env": {
+        "PYTHONPATH": "/mnt/c/GIT/mcp-servers/wikijs-mcp-server/src"
+      }
+    },
+    "proxmox-mcp": {
+      "command": "/mnt/c/GIT/mcp-servers/proxmox-mcp-server/venv/bin/python",
+      "args": [
+        "/mnt/c/GIT/mcp-servers/proxmox-mcp-server/src/proxmox_mcp/cli.py"
+      ],
+      "env": {
+        "PROXMOX_CONFIG": "/mnt/c/GIT/mcp-servers/proxmox-mcp-server/config.json"
+      }
+    }
+  }
+}
