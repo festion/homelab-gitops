@@ -1,0 +1,25 @@
+
+# Template additions - Standard DevOps
+node_modules/
+.env
+.env.local
+*.log
+dist/
+build/
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.venv/
+venv/
+
+# Backups and temporary files
+*.backup
+*.tmp
+backups/

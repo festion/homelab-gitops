@@ -1,0 +1,35 @@
+# {{projectName}}
+
+{{projectDescription}}
+
+## Project Configuration
+
+This project has been standardized with the `standard-devops` template, providing:
+
+- MCP server integration for enhanced development workflow
+- Standardized directory structure
+- Git workflow automation
+- CI/CD pipeline foundations
+
+## MCP Servers
+
+The following MCP servers are configured for this project:
+
+- **filesystem**: File system access and manipulation
+- **serena**: Development workflow orchestration
+- **github**: GitHub API integration for repository operations
+
+## Development Workflow
+
+1. Use MCP-enabled tools for development tasks
+2. Follow Git workflow with automated branch management
+3. Leverage CI/CD pipelines for testing and deployment
+4. Maintain documentation and project standards
+
+## Template Information
+
+- **Template**: standard-devops v1.0.0
+- **Applied**: {{timestamp}}
+- **Template Version**: {{templateVersion}}
+
+For more information about this template system, see the Phase 1B implementation documentation.

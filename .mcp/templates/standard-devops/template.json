@@ -1,0 +1,58 @@
+{
+  "id": "standard-devops",
+  "name": "Standard DevOps Project Template",
+  "version": "1.0.0",
+  "description": "Comprehensive DevOps project template with GitOps, CI/CD, and MCP integration",
+  "type": "devops",
+  "tags": ["devops", "gitops", "mcp", "ci-cd"],
+  "requirements": {
+    "git": true,
+    "mcp": true,
+    "cicd": true
+  },
+  "files": [
+    {
+      "path": ".mcp.json",
+      "type": "merge",
+      "source": "mcp-config.json",
+      "merge_strategy": "merge_json",
+      "required": true
+    },
+    {
+      "path": "CLAUDE.md",
+      "type": "template",
+      "source": "CLAUDE.md.template",
+      "required": true
+    },
+    {
+      "path": ".gitignore",
+      "type": "merge",
+      "source": "gitignore.template",
+      "merge_strategy": "append",
+      "required": true
+    }
+  ],
+  "directories": [
+    {
+      "path": ".github/workflows",
+      "required": false
+    },
+    {
+      "path": "scripts",
+      "required": true
+    }
+  ],
+  "compliance": {
+    "required_files": [".mcp.json", "CLAUDE.md"],
+    "required_directories": ["scripts"],
+    "scoring_weights": {
+      "files": 0.6,
+      "directories": 0.2,
+      "content": 0.2
+    }
+  },
+  "metadata": {
+    "author": "Claude Code",
+    "created": "2025-06-28T15:50:00Z"
+  }
+}

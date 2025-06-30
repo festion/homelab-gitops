@@ -1,0 +1,37 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/mnt/c/Users/Jeremy/OneDrive/Desktop",
+        "/mnt/c/GIT",
+        "/mnt/c/my-tools",
+        "/mnt/c/working"
+      ]
+    },
+    "serena": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "/mnt/c/GIT/serena",
+        "serena-mcp-server",
+        "--transport",
+        "stdio"
+      ]
+    },
+    "github": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "GITHUB_PERSONAL_ACCESS_TOKEN=${GITHUB_PERSONAL_ACCESS_TOKEN:-your_github_token_here}",
+        "ghcr.io/github/github-mcp-server"
+      ]
+    }
+  }
+}

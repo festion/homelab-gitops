@@ -1,514 +1,374 @@
 #!/bin/bash
-
-# GitOps Template Application CLI Wrapper
 #
-# Comprehensive CLI interface for the Phase 1B Template Application Engine
-# providing easy access to template application, conflict resolution, backup
-# management, and batch processing capabilities.
-#
-# Usage: bash scripts/apply-template.sh [command] [options]
-#
-# Version: 1.0.0 (Phase 1B Implementation)
-# Dependencies: Python 3.8+, Phase 1B template system
-# License: MIT
+# Phase 1B: Template Application CLI Wrapper
+# Command-line interface for template application engine
+"""
 
 set -euo pipefail
 
-# Script configuration
+# Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 MCP_DIR="$PROJECT_ROOT/.mcp"
-PYTHON_CMD="python3"
+TEMPLATES_DIR="$MCP_DIR/templates"
 
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-PURPLE='\033[0;35m'
-CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-# Logging functions
-log_info() {
-    echo -e "${BLUE}ℹ️  $1${NC}"
+# Function to print colored output
+print_info() {
+    echo -e "${BLUE}[INFO]${NC} $1"
 }
 
-log_success() {
-    echo -e "${GREEN}✅ $1${NC}"
+print_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
 }
 
-log_warning() {
-    echo -e "${YELLOW}⚠️  $1${NC}"
+print_warning() {
+    echo -e "${YELLOW}[WARNING]${NC} $1"
 }
 
-log_error() {
-    echo -e "${RED}❌ $1${NC}"
+print_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
 }
 
-log_header() {
-    echo ""
-    echo -e "${PURPLE}📋 $1${NC}"
-    echo "=================================================="
-}
-
-# Show help message
-show_help() {
+# Function to show usage
+show_usage() {
     cat << EOF
-GitOps Template Application System - Phase 1B
+Usage: $0 [OPTIONS] TEMPLATE [REPOSITORIES...]
 
-USAGE:
-    bash scripts/apply-template.sh <command> [options]
+Apply a template to one or more repositories with comprehensive conflict resolution
+and backup management.
 
-COMMANDS:
-    apply           Apply template to single repository
-    batch           Batch process multiple repositories
-    list            List available templates or batch operations
-    validate        Validate template configuration
-    backup          Manage backups
-    conflicts       Analyze or resolve conflicts
-    status          Check system or batch status
-    help            Show this help message
+ARGUMENTS:
+    TEMPLATE        Template name or path to template.json file
+    REPOSITORIES    Repository paths or patterns (optional, defaults to auto-discovery)
 
-APPLY COMMAND:
-    apply --template <name> --repository <path> [options]
-
-    Options:
-        --template, -t      Template name (required)
-        --repository, -r    Repository path (required)
-        --variables, -v     Variables JSON file
-        --dry-run          Show what would be done
-        --force            Force application despite conflicts
-        --no-backup        Skip backup creation
-        --interactive      Interactive conflict resolution
-
-BATCH COMMAND:
-    batch <action> [options]
-
-    Actions:
-        create          Create new batch operation
-        execute         Execute batch operation
-        resume          Resume paused/failed batch
-        status          Show batch status
-        cancel          Cancel running batch
-        report          Generate batch report
-
-    Options:
-        --template, -t      Template name
-        --repositories      Space-separated repository paths
-        --batch-id          Batch operation ID
-        --workers           Number of parallel workers (default: 4)
-        --variables, -v     Variables JSON file
-        --dry-run          Dry run mode
-        --no-backup        Skip backup creation
-
-BACKUP COMMAND:
-    backup <action> [options]
-
-    Actions:
-        create          Create repository backup
-        list            List available backups
-        restore         Restore from backup
-        validate        Validate backup integrity
-        cleanup         Clean up expired backups
-
-    Options:
-        --repository, -r    Repository path
-        --backup-id         Backup ID
-        --target            Restore target path
-        --type              Backup type (full, incremental, snapshot)
+OPTIONS:
+    -d, --dry-run           Preview changes without applying (default)
+    -a, --apply             Actually apply changes (overrides dry-run)
+    -r, --root-dir DIR      Root directory for repository discovery (default: /mnt/c/GIT)
+    -o, --output FILE       Output results to JSON file
+    --no-backup             Skip backup creation
+    --no-git                Skip Git integration
+    --workers N             Number of parallel workers for batch processing (default: 4)
+    -v, --verbose           Verbose output
+    -h, --help              Show this help message
 
 EXAMPLES:
-    # Apply template to single repository
-    bash scripts/apply-template.sh apply -t gitops-standard -r /path/to/repo
+    # Dry run on all repositories
+    $0 standard-devops
 
-    # Dry run with custom variables
-    bash scripts/apply-template.sh apply -t mcp-integration -r ./my-repo --dry-run -v vars.json
+    # Apply template to specific repositories
+    $0 --apply standard-devops /path/to/repo1 /path/to/repo2
 
-    # Create batch operation
-    bash scripts/apply-template.sh batch create -t gitops-standard --repositories repo1 repo2 repo3
+    # Apply with custom settings
+    $0 --apply --workers 2 --output results.json standard-devops
 
-    # Execute batch with 8 workers
-    bash scripts/apply-template.sh batch execute --batch-id batch_gitops_20241201_143022 --workers 8
+    # Preview changes for specific pattern
+    $0 --dry-run standard-devops "project-*"
 
-    # List available templates
-    bash scripts/apply-template.sh list templates
+TEMPLATES:
+    standard-devops     Standard DevOps project template with CI/CD and MCP
+    node-application    Node.js application template (future)
+    python-service      Python service template (future)
+    documentation       Documentation project template (future)
 
-    # Create backup before template application
-    bash scripts/apply-template.sh backup create -r /path/to/repo --type snapshot
+FILES CREATED:
+    .mcp/                   Template infrastructure directory
+    backups/               Backup storage for rollback capability
 
-    # Validate template configuration
-    bash scripts/apply-template.sh validate -t gitops-standard
+SAFETY FEATURES:
+    - Automatic backup creation before any changes
+    - Git stash and branch management
+    - Comprehensive conflict detection and resolution
+    - Rollback capability for failed applications
+    - Dry-run mode as default for safety
 
-For more detailed information, see: docs/PHASE1B_TEMPLATE_SYSTEM.md
 EOF
 }
 
-# Check if Python and required modules are available
-check_dependencies() {
-    if ! command -v "$PYTHON_CMD" >/dev/null 2>&1; then
-        log_error "Python 3 not found. Please install Python 3.8 or later."
+# Function to validate prerequisites
+validate_prerequisites() {
+    local errors=0
+
+    print_info "Validating prerequisites..."
+
+    # Check Python
+    if ! command -v python3 &> /dev/null; then
+        print_error "Python 3 is required but not found"
+        ((errors++))
+    fi
+
+    # Check Git
+    if ! command -v git &> /dev/null; then
+        print_error "Git is required but not found"
+        ((errors++))
+    fi
+
+    # Check template infrastructure
+    if [ ! -d "$MCP_DIR" ]; then
+        print_error "Template infrastructure not found at $MCP_DIR"
+        print_info "Run Phase 1A setup first to create template infrastructure"
+        ((errors++))
+    fi
+
+    # Check template applicator
+    if [ ! -f "$MCP_DIR/template-applicator.py" ]; then
+        print_error "Template applicator not found at $MCP_DIR/template-applicator.py"
+        ((errors++))
+    fi
+
+    if [ $errors -gt 0 ]; then
+        print_error "Prerequisites validation failed with $errors errors"
         exit 1
     fi
 
-    if [[ ! -d "$MCP_DIR" ]]; then
-        log_error "MCP directory not found: $MCP_DIR"
-        log_info "Please ensure Phase 1B components are installed"
-        exit 1
-    fi
-
-    # Check if template applicator exists
-    if [[ ! -f "$MCP_DIR/template-applicator.py" ]]; then
-        log_error "Template applicator not found: $MCP_DIR/template-applicator.py"
-        log_info "Please ensure Phase 1B implementation is complete"
-        exit 1
-    fi
+    print_success "Prerequisites validation passed"
 }
 
-# Apply template to single repository
-apply_template() {
-    local template=""
-    local repository=""
-    local variables=""
-    local dry_run=false
-    local force=false
-    local no_backup=false
-    local interactive=false
+# Function to resolve template path
+resolve_template_path() {
+    local template="$1"
 
-    # Parse apply-specific arguments
+    # If it's already a path to a JSON file, use it
+    if [[ "$template" == *.json ]] && [ -f "$template" ]; then
+        echo "$template"
+        return 0
+    fi
+
+    # Look for template in templates directory
+    local template_path="$TEMPLATES_DIR/$template/template.json"
+    if [ -f "$template_path" ]; then
+        echo "$template_path"
+        return 0
+    fi
+
+    # Try with .json extension
+    if [ -f "$TEMPLATES_DIR/$template.json" ]; then
+        echo "$TEMPLATES_DIR/$template.json"
+        return 0
+    fi
+
+    print_error "Template '$template' not found"
+    print_info "Available templates:"
+    if [ -d "$TEMPLATES_DIR" ]; then
+        find "$TEMPLATES_DIR" -name "template.json" -exec dirname {} \; | xargs -I {} basename {} | sort
+    else
+        print_warning "No templates directory found at $TEMPLATES_DIR"
+    fi
+
+    return 1
+}
+
+# Function to create backup directory
+create_backup_dir() {
+    local backup_dir="$PROJECT_ROOT/backups/template-application-$(date +%Y%m%d-%H%M%S)"
+    mkdir -p "$backup_dir"
+    echo "$backup_dir"
+}
+
+# Function to run template application
+run_template_application() {
+    local template_path="$1"
+    local dry_run="$2"
+    local root_dir="$3"
+    local output_file="$4"
+    local no_backup="$5"
+    local workers="$6"
+    shift 6
+    local repositories=("$@")
+
+    local python_args=()
+
+    # Build Python command arguments
+    python_args+=("$MCP_DIR/template-applicator.py")
+    python_args+=("$template_path")
+    python_args+=("--root-dir" "$root_dir")
+    python_args+=("--workers" "$workers")
+
+    if [ "$dry_run" = "true" ]; then
+        python_args+=("--dry-run")
+    else
+        python_args+=("--apply")
+    fi
+
+    if [ -n "$output_file" ]; then
+        python_args+=("--output" "$output_file")
+    fi
+
+    if [ ${#repositories[@]} -gt 0 ]; then
+        python_args+=("--repos" "${repositories[@]}")
+    fi
+
+    print_info "Running template application..."
+    print_info "Template: $(basename "$template_path")"
+    print_info "Mode: $([ "$dry_run" = "true" ] && echo "DRY RUN" || echo "APPLY")"
+    print_info "Root directory: $root_dir"
+    print_info "Workers: $workers"
+
+    if [ ${#repositories[@]} -gt 0 ]; then
+        print_info "Target repositories: ${repositories[*]}"
+    else
+        print_info "Target: All Git repositories in $root_dir"
+    fi
+
+    # Run the template application
+    cd "$PROJECT_ROOT"
+    python3 "${python_args[@]}"
+    local exit_code=$?
+
+    if [ $exit_code -eq 0 ]; then
+        if [ "$dry_run" = "true" ]; then
+            print_success "Template application preview completed successfully"
+            print_info "To apply changes, run with --apply flag"
+        else
+            print_success "Template application completed successfully"
+        fi
+    else
+        print_error "Template application failed with exit code $exit_code"
+    fi
+
+    return $exit_code
+}
+
+# Main function
+main() {
+    local template=""
+    local dry_run="true"
+    local root_dir="/mnt/c/GIT"
+    local output_file=""
+    local no_backup="false"
+    local no_git="false"
+    local workers="4"
+    local verbose="false"
+    local repositories=()
+
+    # Parse command line arguments
     while [[ $# -gt 0 ]]; do
         case $1 in
-            --template|-t)
-                template="$2"
-                shift 2
-                ;;
-            --repository|-r)
-                repository="$2"
-                shift 2
-                ;;
-            --variables|-v)
-                variables="$2"
-                shift 2
-                ;;
-            --dry-run)
-                dry_run=true
+            -d|--dry-run)
+                dry_run="true"
                 shift
                 ;;
-            --force)
-                force=true
+            -a|--apply)
+                dry_run="false"
                 shift
+                ;;
+            -r|--root-dir)
+                root_dir="$2"
+                shift 2
+                ;;
+            -o|--output)
+                output_file="$2"
+                shift 2
                 ;;
             --no-backup)
-                no_backup=true
+                no_backup="true"
                 shift
                 ;;
-            --interactive)
-                interactive=true
+            --no-git)
+                no_git="true"
                 shift
+                ;;
+            --workers)
+                workers="$2"
+                shift 2
+                ;;
+            -v|--verbose)
+                verbose="true"
+                shift
+                ;;
+            -h|--help)
+                show_usage
+                exit 0
+                ;;
+            -*)
+                print_error "Unknown option: $1"
+                show_usage
+                exit 1
                 ;;
             *)
-                log_error "Unknown apply option: $1"
-                exit 1
+                if [ -z "$template" ]; then
+                    template="$1"
+                else
+                    repositories+=("$1")
+                fi
+                shift
                 ;;
         esac
     done
 
     # Validate required arguments
-    if [[ -z "$template" ]]; then
-        log_error "Template name is required (--template)"
+    if [ -z "$template" ]; then
+        print_error "Template argument is required"
+        show_usage
         exit 1
     fi
 
-    if [[ -z "$repository" ]]; then
-        log_error "Repository path is required (--repository)"
+    # Validate prerequisites
+    validate_prerequisites
+
+    # Resolve template path
+    local template_path
+    if ! template_path=$(resolve_template_path "$template"); then
         exit 1
     fi
 
-    log_header "Applying Template: $template"
-    log_info "Repository: $repository"
-    log_info "Dry Run: $dry_run"
-    log_info "Force: $force"
-    log_info "Create Backup: $([ "$no_backup" = true ] && echo "false" || echo "true")"
+    print_success "Using template: $template_path"
 
-    # Build Python command
-    local cmd_args=("apply" "--template" "$template" "--repository" "$repository")
-
-    if [[ -n "$variables" ]]; then
-        cmd_args+=("--variables" "$variables")
+    # Create output file path if not specified
+    if [ -z "$output_file" ]; then
+        local timestamp=$(date +%Y%m%d-%H%M%S)
+        output_file="$PROJECT_ROOT/output/template-application-$timestamp.json"
+        mkdir -p "$(dirname "$output_file")"
     fi
 
-    if [[ "$dry_run" = true ]]; then
-        cmd_args+=("--dry-run")
-    fi
+    # Create backup directory for this operation
+    local backup_dir
+    backup_dir=$(create_backup_dir)
+    export TEMPLATE_APPLICATION_BACKUP_DIR="$backup_dir"
 
-    if [[ "$force" = true ]]; then
-        cmd_args+=("--force")
-    fi
+    print_info "Backup directory: $backup_dir"
+    print_info "Results will be saved to: $output_file"
 
-    if [[ "$interactive" = true ]]; then
-        export TEMPLATE_INTERACTIVE_MODE=true
-    fi
+    # Run template application
+    if run_template_application "$template_path" "$dry_run" "$root_dir" "$output_file" "$no_backup" "$workers" "${repositories[@]}"; then
+        print_success "Template application completed"
 
-    # Execute template application
-    cd "$PROJECT_ROOT"
-    if "$PYTHON_CMD" "$MCP_DIR/template-applicator.py" "${cmd_args[@]}"; then
-        log_success "Template application completed successfully"
-    else
-        log_error "Template application failed"
-        exit 1
-    fi
-}
+        if [ -f "$output_file" ]; then
+            print_info "Results available at: $output_file"
 
-# Handle batch operations
-batch_operations() {
-    local action="$1"
-    shift
-
-    case "$action" in
-        create|execute|resume|status|cancel|report)
-            # Delegate to batch processor
-            cd "$PROJECT_ROOT"
-            if "$PYTHON_CMD" "$MCP_DIR/batch-processor.py" "$action" "$@"; then
-                log_success "Batch operation completed successfully"
-            else
-                log_error "Batch operation failed"
-                exit 1
+            # Show summary if verbose
+            if [ "$verbose" = "true" ]; then
+                print_info "Summary:"
+                python3 -c "
+import json
+try:
+    with open('$output_file', 'r') as f:
+        data = json.load(f)
+    summary = data.get('summary', {})
+    print(f\"  Total repositories: {summary.get('total', 0)}\")
+    print(f\"  Successful: {summary.get('successful', 0)}\")
+    print(f\"  Failed: {summary.get('failed', 0)}\")
+    print(f\"  Conflicts resolved: {summary.get('conflicts_resolved', 0)}\")
+    print(f\"  Backups created: {summary.get('backups_created', 0)}\")
+except Exception as e:
+    print(f\"  Could not parse results: {e}\")
+"
             fi
-            ;;
-        *)
-            log_error "Unknown batch action: $action"
-            log_info "Available actions: create, execute, resume, status, cancel, report"
-            exit 1
-            ;;
-    esac
-}
-
-# List available templates or batch operations
-list_items() {
-    local item_type="${1:-templates}"
-
-    case "$item_type" in
-        templates)
-            log_header "Available Templates"
-            cd "$PROJECT_ROOT"
-            "$PYTHON_CMD" "$MCP_DIR/template-applicator.py" list
-            ;;
-        batches)
-            log_header "Batch Operations"
-            cd "$PROJECT_ROOT"
-            "$PYTHON_CMD" "$MCP_DIR/batch-processor.py" list
-            ;;
-        backups)
-            log_header "Available Backups"
-            cd "$PROJECT_ROOT"
-            "$PYTHON_CMD" "$MCP_DIR/backup-manager.py" list
-            ;;
-        *)
-            log_error "Unknown list type: $item_type"
-            log_info "Available types: templates, batches, backups"
-            exit 1
-            ;;
-    esac
-}
-
-# Validate template configuration
-validate_template() {
-    local template=""
-
-    # Parse arguments
-    while [[ $# -gt 0 ]]; do
-        case $1 in
-            --template|-t)
-                template="$2"
-                shift 2
-                ;;
-            *)
-                log_error "Unknown validate option: $1"
-                exit 1
-                ;;
-        esac
-    done
-
-    if [[ -z "$template" ]]; then
-        log_error "Template name is required (--template)"
-        exit 1
-    fi
-
-    log_header "Validating Template: $template"
-
-    cd "$PROJECT_ROOT"
-    if "$PYTHON_CMD" "$MCP_DIR/template-applicator.py" validate --template "$template"; then
-        log_success "Template validation passed"
-    else
-        log_error "Template validation failed"
-        exit 1
-    fi
-}
-
-# Handle backup operations
-backup_operations() {
-    local action="$1"
-    shift
-
-    case "$action" in
-        create|list|restore|validate|cleanup)
-            # Delegate to backup manager
-            cd "$PROJECT_ROOT"
-            if "$PYTHON_CMD" "$MCP_DIR/backup-manager.py" "$action" "$@"; then
-                log_success "Backup operation completed successfully"
-            else
-                log_error "Backup operation failed"
-                exit 1
-            fi
-            ;;
-        *)
-            log_error "Unknown backup action: $action"
-            log_info "Available actions: create, list, restore, validate, cleanup"
-            exit 1
-            ;;
-    esac
-}
-
-# Handle conflict analysis and resolution
-conflict_operations() {
-    local action="${1:-analyze}"
-    shift
-
-    case "$action" in
-        analyze)
-            log_header "Conflict Analysis"
-            cd "$PROJECT_ROOT"
-            "$PYTHON_CMD" "$MCP_DIR/conflict-resolver.py" --analyze "$@"
-            ;;
-        *)
-            log_error "Unknown conflict action: $action"
-            log_info "Available actions: analyze"
-            exit 1
-            ;;
-    esac
-}
-
-# Show system status
-show_status() {
-    log_header "Template Application System Status"
-
-    # Check dependencies
-    log_info "Checking system dependencies..."
-
-    if command -v "$PYTHON_CMD" >/dev/null 2>&1; then
-        python_version=$("$PYTHON_CMD" --version 2>&1)
-        log_success "Python: $python_version"
-    else
-        log_error "Python not found"
-    fi
-
-    # Check MCP components
-    log_info "Checking Phase 1B components..."
-
-    local components=(
-        "template-applicator.py:Template Application Engine"
-        "conflict-resolver.py:Conflict Resolution System"
-        "backup-manager.py:Backup Management System"
-        "batch-processor.py:Batch Processing System"
-    )
-
-    for component in "${components[@]}"; do
-        IFS=':' read -r file description <<< "$component"
-        if [[ -f "$MCP_DIR/$file" ]]; then
-            log_success "$description"
-        else
-            log_error "$description - Missing: $MCP_DIR/$file"
         fi
-    done
 
-    # Check template directory
-    if [[ -d "$MCP_DIR/templates" ]]; then
-        template_count=$(find "$MCP_DIR/templates" -name "template.json" | wc -l)
-        log_success "Templates directory: $template_count templates found"
-    else
-        log_warning "Templates directory not found: $MCP_DIR/templates"
-    fi
-
-    # Check backup directory
-    if [[ -d "$MCP_DIR/backups" ]]; then
-        backup_count=$(find "$MCP_DIR/backups" -name "*.tar.gz" -o -name "*.zip" | wc -l)
-        log_success "Backups directory: $backup_count backups found"
-    else
-        log_info "Backups directory not found (will be created on first backup)"
-    fi
-
-    # Check checkpoint directory
-    if [[ -d "$MCP_DIR/checkpoints" ]]; then
-        checkpoint_count=$(find "$MCP_DIR/checkpoints" -name "batch_*.json" | wc -l)
-        log_success "Checkpoints directory: $checkpoint_count batch operations found"
-    else
-        log_info "Checkpoints directory not found (will be created on first batch operation)"
-    fi
-}
-
-# Main execution
-main() {
-    # Show header
-    echo -e "${CYAN}🚀 GitOps Template Application System - Phase 1B${NC}"
-    echo -e "${CYAN}=====================================================${NC}"
-
-    # Check dependencies first
-    check_dependencies
-
-    # Parse main command
-    if [[ $# -eq 0 ]]; then
-        show_help
         exit 0
+    else
+        print_error "Template application failed"
+        exit 1
     fi
-
-    local command="$1"
-    shift
-
-    case "$command" in
-        apply)
-            apply_template "$@"
-            ;;
-        batch)
-            if [[ $# -eq 0 ]]; then
-                log_error "Batch action required"
-                log_info "Available actions: create, execute, resume, status, cancel, report"
-                exit 1
-            fi
-            batch_operations "$@"
-            ;;
-        list)
-            list_items "$@"
-            ;;
-        validate)
-            validate_template "$@"
-            ;;
-        backup)
-            if [[ $# -eq 0 ]]; then
-                log_error "Backup action required"
-                log_info "Available actions: create, list, restore, validate, cleanup"
-                exit 1
-            fi
-            backup_operations "$@"
-            ;;
-        conflicts)
-            conflict_operations "$@"
-            ;;
-        status)
-            show_status
-            ;;
-        help|--help|-h)
-            show_help
-            ;;
-        *)
-            log_error "Unknown command: $command"
-            echo ""
-            show_help
-            exit 1
-            ;;
-    esac
 }
 
-# Run main function if script is executed directly
-if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    main "$@"
-fi
+# Run main function with all arguments
+main "$@"
