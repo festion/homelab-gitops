@@ -123,6 +123,86 @@ git reset --hard <commit-hash>
 ./scripts/deploy-production.sh
 ```
 
+## 3-Tier Environment Architecture
+
+The GitOps auditor now supports a comprehensive 3-tier deployment architecture:
+
+### LXC 128 - Enhanced Development Environment
+**Primary Features:**
+- Home Assistant Core integration for IoT configuration validation
+- ESPHome development tools for device firmware development
+- Live reload and hot-swapping for rapid development
+- Comprehensive logging and debugging tools
+- Development-specific testing frameworks
+
+**Provisioning:**
+```bash
+# Enhanced development environment with Home Assistant tools
+./scripts/provision-lxc-dev-enhanced.sh
+```
+
+**Access:**
+- Dashboard: `http://LXC-128-IP:3001`
+- API: `http://LXC-128-IP:3000`
+- Home Assistant Core: `http://LXC-128-IP:8123`
+- Development Tools: Available via SSH
+
+**Key Capabilities:**
+- Real-time GitOps configuration validation
+- Home Assistant YAML syntax checking
+- ESPHome device configuration testing
+- Automated development environment setup
+- Live configuration reloading
+
+### LXC 129 - QA/Testing Environment
+**Primary Features:**
+- Comprehensive testing framework (Jest, Cypress, Artillery)
+- Security scanning tools (Bandit, Safety)
+- Performance testing with Lighthouse auditing
+- Load testing capabilities
+- Automated QA workflow management
+
+**Provisioning:**
+```bash
+# QA environment with comprehensive testing suite
+./scripts/provision-lxc-qa.sh
+```
+
+**Access:**
+- Dashboard: `http://LXC-129-IP`
+- API: `http://LXC-129-IP:3070`
+- Health Check: `http://LXC-129-IP/health`
+- QA Tools: `gitops-qa-workflow` command
+
+**Testing Suites:**
+```bash
+# Run all QA tests
+gitops-qa-workflow test all
+
+# Individual test suites
+gitops-qa-workflow test functional
+gitops-qa-workflow test security
+gitops-qa-workflow test performance
+```
+
+### Production Environment
+**Primary Features:**
+- Optimized for performance and reliability
+- Comprehensive monitoring and alerting
+- Automated backup and disaster recovery
+- Production-grade security hardening
+
+**Deployment Flow:**
+```bash
+Development (LXC 128) → QA (LXC 129) → Production
+```
+
+**Environment Validation:**
+Each tier includes validation checkpoints:
+1. **Development**: Code quality, Home Assistant validation
+2. **QA**: Security scanning, performance testing, functional validation
+3. **Production**: Health checks, monitoring, rollback readiness
+
 ## Environment-Specific Considerations
 
 ### Development Environment
