@@ -3,6 +3,8 @@
     "chokidar": "^4.0.3",
     "express": "^5.1.0",
     "express-ws": "^5.0.2",
+    "node-fetch": "^2.7.0",
+    "sqlite3": "^5.1.7",
     "ws": "^8.18.2"
   },
   "devDependencies": {

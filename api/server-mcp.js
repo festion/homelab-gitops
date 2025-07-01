@@ -15,8 +15,9 @@ const { exec } = require('child_process');
 // Load configuration and GitHub MCP manager
 const ConfigLoader = require('./config-loader');
 const GitHubMCPManager = require('./github-mcp-manager');
+const WikiAgentManager = require('./wiki-agent-manager');
 
-const config = ConfigLoader;
+const config = new ConfigLoader();
 const githubMCP = new GitHubMCPManager(config);
 
 // Parse command line arguments
@@ -27,6 +28,9 @@ const portFromArg = portArg ? parseInt(portArg.split('=')[1]) : null;
 // Environment detection
 const isDev = process.env.NODE_ENV === 'development';
 const rootDir = isDev ? process.cwd() : '/opt/gitops';
+
+// Initialize WikiJS Agent after rootDir is available
+const wikiAgent = new WikiAgentManager(config, rootDir);
 
 // Configuration
 const PORT = portFromArg || process.env.PORT || 3070;
@@ -61,6 +65,277 @@ app.use((req, res, next) => {
   }
   next();
 });
+
+// ===============================
+// WikiJS Agent API Endpoints
+// ===============================
+
+// Get wiki agent status and statistics
+app.get('/wiki-agent/status', async (req, res) => {
+  try {
+    const stats = await wikiAgent.getAgentStats();
+    res.json({
+      status: 'active',
+      agent: 'WikiJS AI Agent',
+      version: '1.0.0',
+      statistics: stats
+    });
+  } catch (error) {
+    console.error('❌ Failed to get wiki agent status:', error);
+    res.status(500).json({ 
+      error: 'Failed to get agent status', 
+      details: error.message 
+    });
+  }
+});
+
+// Manual initialization trigger
+app.post('/wiki-agent/initialize', async (req, res) => {
+  try {
+    await wikiAgent.initialize();
+    res.json({ 
+      success: true, 
+      message: 'WikiJS Agent initialized successfully' 
+    });
+  } catch (error) {
+    console.error('❌ Failed to initialize wiki agent:', error);
+    res.status(500).json({ 
+      error: 'Failed to initialize agent', 
+      details: error.message 
+    });
+  }
+});
+
+// Get agent configuration
+app.get('/wiki-agent/config', async (req, res) => {
+  try {
+    const config = await wikiAgent.runQuery('SELECT * FROM agent_config ORDER BY id DESC LIMIT 1');
+    if (config.length === 0) {
+      return res.status(404).json({ error: 'No configuration found' });
+    }
+    
+    const configData = config[0];
+    res.json({
+      auto_discovery_enabled: configData.auto_discovery_enabled === 1,
+      batch_size: configData.batch_size,
+      priority_threshold: configData.priority_threshold,
+      wikijs_url: configData.wikijs_url,
+      wikijs_enabled: configData.wikijs_enabled === 1,
+      last_updated: configData.updated_at
+    });
+  } catch (error) {
+    console.error('❌ Failed to get wiki agent config:', error);
+    res.status(500).json({ 
+      error: 'Failed to get configuration', 
+      details: error.message 
+    });
+  }
+});
+
+// Update agent configuration
+app.post('/wiki-agent/config', async (req, res) => {
+  try {
+    const {
+      auto_discovery_enabled,
+      batch_size,
+      priority_threshold,
+      wikijs_url,
+      wikijs_enabled
+    } = req.body;
+
+    // Update configuration in database
+    await wikiAgent.runQuery(`
+      INSERT OR REPLACE INTO agent_config 
+      (id, auto_discovery_enabled, batch_size, priority_threshold, wikijs_url, wikijs_enabled, updated_at)
+      VALUES (1, ?, ?, ?, ?, ?, datetime('now'))
+    `, [
+      auto_discovery_enabled ? 1 : 0,
+      batch_size || 10,
+      priority_threshold || 50,
+      wikijs_url || '',
+      wikijs_enabled ? 1 : 0
+    ]);
+
+    res.json({ 
+      success: true, 
+      message: 'Configuration updated successfully' 
+    });
+  } catch (error) {
+    console.error('❌ Failed to update wiki agent config:', error);
+    res.status(500).json({ 
+      error: 'Failed to update configuration', 
+      details: error.message 
+    });
+  }
+});
+
+// Test WikiJS connectivity
+app.get('/wiki-agent/test-wikijs', async (req, res) => {
+  try {
+    // Get current configuration
+    const configResult = await wikiAgent.runQuery('SELECT * FROM agent_config ORDER BY id DESC LIMIT 1');
+    if (configResult.length === 0) {
+      return res.status(400).json({ 
+        error: 'No WikiJS configuration found',
+        success: false 
+      });
+    }
+
+    const config = configResult[0];
+    if (!config.wikijs_url) {
+      return res.status(400).json({ 
+        error: 'WikiJS URL not configured',
+        success: false 
+      });
+    }
+
+    // Test WikiJS connection using the real implementation
+    const testResult = await wikiAgent.testWikiJSConnection();
+    res.json(testResult);
+  } catch (error) {
+    console.error('❌ Failed to test WikiJS connection:', error);
+    res.status(500).json({ 
+      error: 'Failed to test WikiJS connection', 
+      details: error.message,
+      success: false 
+    });
+  }
+});
+
+// Document discovery endpoints
+app.post('/wiki-agent/discover', async (req, res) => {
+  try {
+    const result = await wikiAgent.runProjectDiscovery();
+    res.json({
+      success: true,
+      message: 'Document discovery completed',
+      discovered: result.discovered,
+      processed: result.processed
+    });
+  } catch (error) {
+    console.error('❌ Document discovery failed:', error);
+    res.status(500).json({
+      error: 'Document discovery failed',
+      details: error.message
+    });
+  }
+});
+
+// Get discovered documents
+app.get('/wiki-agent/documents', async (req, res) => {
+  try {
+    const { status, limit = 50, offset = 0 } = req.query;
+    
+    let query = 'SELECT * FROM wiki_documents';
+    let params = [];
+    
+    if (status) {
+      query += ' WHERE sync_status = ?';
+      params.push(status);
+    }
+    
+    query += ' ORDER BY priority_score DESC, updated_at DESC LIMIT ? OFFSET ?';
+    params.push(parseInt(limit), parseInt(offset));
+    
+    const documents = await wikiAgent.allQuery(query, params);
+    
+    // Get total count
+    let countQuery = 'SELECT COUNT(*) as total FROM wiki_documents';
+    let countParams = [];
+    if (status) {
+      countQuery += ' WHERE sync_status = ?';
+      countParams.push(status);
+    }
+    
+    const totalResult = await wikiAgent.getQuery(countQuery, countParams);
+    
+    res.json({
+      documents,
+      total: totalResult?.total || 0,
+      limit: parseInt(limit),
+      offset: parseInt(offset)
+    });
+  } catch (error) {
+    console.error('❌ Failed to get documents:', error);
+    res.status(500).json({
+      error: 'Failed to get documents',
+      details: error.message
+    });
+  }
+});
+
+// Upload documents to WikiJS
+app.post('/wiki-agent/upload/:documentId', async (req, res) => {
+  try {
+    const documentId = parseInt(req.params.documentId);
+    
+    if (isNaN(documentId)) {
+      return res.status(400).json({ error: 'Invalid document ID' });
+    }
+    
+    const result = await wikiAgent.uploadToWikiJS(documentId);
+    res.json(result);
+  } catch (error) {
+    console.error('❌ Document upload failed:', error);
+    res.status(500).json({
+      error: 'Document upload failed',
+      details: error.message
+    });
+  }
+});
+
+// Get production status and configuration
+app.get('/wiki-agent/production-status', async (req, res) => {
+  try {
+    const status = {
+      environment: wikiAgent.environment,
+      isProduction: wikiAgent.isProduction,
+      configuration: {
+        maxRetries: wikiAgent.productionConfig.maxRetries,
+        initialRetryDelay: wikiAgent.productionConfig.initialRetryDelay,
+        batchSize: wikiAgent.productionConfig.batchSize,
+        enableDetailedLogging: wikiAgent.productionConfig.enableDetailedLogging,
+        wikijsConfigured: !!wikiAgent.productionConfig.wikijsToken
+      },
+      databasePath: wikiAgent.dbPath,
+      serverStartTime: process.uptime(),
+      nodeVersion: process.version,
+      platform: process.platform
+    };
+    
+    res.json(status);
+  } catch (error) {
+    console.error('❌ Failed to get production status:', error);
+    res.status(500).json({
+      error: 'Failed to get production status',
+      details: error.message
+    });
+  }
+});
+
+// Batch upload documents
+app.post('/wiki-agent/upload/batch', async (req, res) => {
+  try {
+    const { documentIds } = req.body;
+    
+    if (!Array.isArray(documentIds) || documentIds.length === 0) {
+      return res.status(400).json({ error: 'documentIds array is required' });
+    }
+    
+    const results = await wikiAgent.batchUploadToWikiJS(documentIds);
+    res.json(results);
+  } catch (error) {
+    console.error('❌ Batch upload failed:', error);
+    res.status(500).json({
+      error: 'Batch upload failed',
+      details: error.message
+    });
+  }
+});
+
+// ===============================
+// Audit API Endpoints
+// ===============================
 
 // Load latest audit report
 app.get('/audit', (req, res) => {
@@ -411,22 +686,33 @@ app.get('/audit/diff/:repo', async (req, res) => {
 });
 
 // Start server
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, '0.0.0.0', async () => {
   console.log('🚀 GitOps Auditor API Server started!');
   console.log(`📡 Server running on http://0.0.0.0:${PORT}`);
   console.log(`🔧 Environment: ${isDev ? 'Development' : 'Production'}`);
   console.log(`📂 Root directory: ${rootDir}`);
   console.log(`🔗 GitHub MCP: ${githubMCP.mcpAvailable ? 'Active' : 'Fallback mode'}`);
+  
+  // Initialize WikiJS Agent
+  try {
+    await wikiAgent.initialize();
+    console.log('📚 WikiJS Agent: Initialized');
+  } catch (error) {
+    console.error('❌ WikiJS Agent initialization failed:', error.message);
+  }
+  
   console.log(`🎯 Ready to serve GitOps audit operations!`);
 });
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
   console.log('🛑 Received SIGTERM signal, shutting down gracefully...');
+  await wikiAgent.close();
   process.exit(0);
 });
 
-process.on('SIGINT', () => {
+process.on('SIGINT', async () => {
   console.log('🛑 Received SIGINT signal, shutting down gracefully...');
+  await wikiAgent.close();
   process.exit(0);
 });
