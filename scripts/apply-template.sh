@@ -1,8 +1,8 @@
 #!/bin/bash
+#!/bin/bash
 #
 # Phase 1B: Template Application CLI Wrapper
 # Command-line interface for template application engine
-"""
 
 set -euo pipefail
 

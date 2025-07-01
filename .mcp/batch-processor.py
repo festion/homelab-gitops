@@ -24,6 +24,14 @@ import logging
 import signal
 import time
 
+
+class EnumJSONEncoder(json.JSONEncoder):
+    """Custom JSON encoder that handles Enum values"""
+    def default(self, obj):
+        if isinstance(obj, Enum):
+            return obj.value
+        return super().default(obj)
+
 # Import Phase 1B components
 try:
     from .template_applicator import TemplateApplicator, ApplicationResult
@@ -686,7 +694,7 @@ class BatchProcessor:
                     task["result"] = asdict(task["result"])
 
         with open(checkpoint_file, "w") as f:
-            json.dump(data, f, indent=2)
+            json.dump(data, f, indent=2, cls=EnumJSONEncoder)
 
         batch_operation.checkpoint_path = str(checkpoint_file)
 

@@ -1,8 +1,8 @@
 #!/bin/bash
-"""
-Phase 1B: Batch Template Application Script
-Enhanced batch processing with comprehensive monitoring and error handling
-"""
+#!/bin/bash
+#
+# Phase 1B: Batch Template Application Script
+# Enhanced batch processing with comprehensive monitoring and error handling
 
 set -euo pipefail
 

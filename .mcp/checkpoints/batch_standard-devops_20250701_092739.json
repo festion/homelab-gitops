@@ -1,0 +1,69 @@
+{
+  "batch_id": "batch_standard-devops_20250701_092739",
+  "template_name": "standard-devops",
+  "creation_time": "2025-07-01T09:27:39.101577",
+  "status": "failed",
+  "total_repositories": 2,
+  "completed_repositories": 0,
+  "failed_repositories": 2,
+  "skipped_repositories": 0,
+  "conflicted_repositories": 0,
+  "config": {
+    "max_workers": 4,
+    "dry_run": true,
+    "create_backups": true,
+    "auto_resolve_conflicts": true,
+    "interactive_conflicts": false,
+    "retry_failed": true,
+    "max_retries": 3,
+    "retry_delay": 5.0,
+    "progress_callback": null,
+    "checkpoint_interval": 10,
+    "timeout_per_repo": 300
+  },
+  "tasks": [
+    {
+      "repository_path": "/home/dev/workspace/serena",
+      "template_name": "standard-devops",
+      "variables": {
+        "projectName": "serena",
+        "projectPath": "/home/dev/workspace/serena",
+        "repositoryIndex": "0",
+        "totalRepositories": "2"
+      },
+      "priority": 50,
+      "status": "failed",
+      "start_time": "2025-07-01T09:27:48.415337",
+      "end_time": "2025-07-01T09:27:48.418445",
+      "result": null,
+      "error_message": "Template applicator not available",
+      "backup_id": null,
+      "conflicts": null,
+      "retry_count": 0,
+      "max_retries": 3
+    },
+    {
+      "repository_path": "/home/dev/workspace/mcp-servers/mcp-servers",
+      "template_name": "standard-devops",
+      "variables": {
+        "projectName": "mcp-servers",
+        "projectPath": "/home/dev/workspace/mcp-servers/mcp-servers",
+        "repositoryIndex": "1",
+        "totalRepositories": "2"
+      },
+      "priority": 50,
+      "status": "failed",
+      "start_time": "2025-07-01T09:27:48.417684",
+      "end_time": "2025-07-01T09:27:48.418547",
+      "result": null,
+      "error_message": "Template applicator not available",
+      "backup_id": null,
+      "conflicts": null,
+      "retry_count": 0,
+      "max_retries": 3
+    }
+  ],
+  "start_time": "2025-07-01T09:27:48.415145",
+  "end_time": "2025-07-01T09:27:48.418594",
+  "checkpoint_path": null
+}

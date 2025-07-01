@@ -1,0 +1,36 @@
+name: "Python CI/CD Pipeline"
+version: "1.0"
+description: "Standard CI/CD pipeline for Python applications"
+
+stages:
+  - name: "Quality Check"
+    parallel: true
+    jobs:
+      - name: "Black Formatter"
+        script: "black --check ."
+      
+      - name: "Flake8 Linter"
+        mcp: "code-linter"
+        linter: "flake8"
+      
+      - name: "MyPy Type Check"
+        script: "mypy ."
+        condition: "exists('mypy.ini')"
+
+  - name: "Test"
+    jobs:
+      - name: "Pytest"
+        script: "pytest --cov=. --cov-report=xml"
+        coverage:
+          threshold: 85
+          report: "coverage.xml"
+
+  - name: "Package"
+    condition: "tag =~ /^v/"
+    jobs:
+      - name: "Build Package"
+        script: "python setup.py sdist bdist_wheel"
+      
+      - name: "Publish to PyPI"
+        script: "twine upload dist/*"
+        secrets: ["PYPI_TOKEN"]

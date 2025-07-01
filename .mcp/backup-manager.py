@@ -786,12 +786,14 @@ class BackupManager:
 
     def _should_exclude(self, file_path: Path, excludes: set) -> bool:
         """Check if file should be excluded from backup"""
+        import fnmatch
 
         # Check against exclude patterns
         for pattern in excludes:
-            if file_path.match(pattern) or any(
-                part.match(pattern) for part in file_path.parts
-            ):
+            # Use string matching for pattern matching
+            if fnmatch.fnmatch(str(file_path), pattern) or \
+               fnmatch.fnmatch(file_path.name, pattern) or \
+               any(fnmatch.fnmatch(part, pattern) for part in file_path.parts):
                 return True
 
         return False
