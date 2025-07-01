@@ -14,6 +14,9 @@ const { handleEmailSummary } = require('./email-notifications');
 // v1.2.0 WebSocket Feature import
 const WebSocketManager = require('./websocket-server');
 
+// Phase 2 API Endpoints
+const phase2Router = require('./phase2-endpoints');
+
 // Parse command line arguments for port
 const args = process.argv.slice(2);
 let portArg = args.find((arg) => arg.startsWith('--port='));
@@ -53,6 +56,9 @@ if (isDev) {
 }
 
 app.use(express.json());
+
+// Mount Phase 2 routes
+app.use('/api/v2', phase2Router);
 
 // Load latest audit report
 app.get('/audit', (req, res) => {

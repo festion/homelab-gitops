@@ -6,12 +6,23 @@ import {
   Home as HomeIcon,
   FileSearch as AuditIcon,
   ListTodo as RoadmapIcon,
+  FileText as TemplatesIcon,
+  GitBranch as PipelinesIcon,
+  Network as DependenciesIcon,
+  Shield as QualityIcon,
 } from 'lucide-react';
 
 const navItems = [
-  { label: 'Dashboard', icon: <HomeIcon size={18} />, to: '/' },
-  { label: 'Audit', icon: <AuditIcon size={18} />, to: '/audit' },
-  { label: 'Roadmap', icon: <RoadmapIcon size={18} />, to: '/roadmap' },
+  { label: 'Dashboard', icon: <HomeIcon size={18} />, to: '/', section: 'core' },
+  { label: 'Audit', icon: <AuditIcon size={18} />, to: '/audit', section: 'core' },
+  { label: 'Roadmap', icon: <RoadmapIcon size={18} />, to: '/roadmap', section: 'core' },
+];
+
+const phase2Items = [
+  { label: 'Templates', icon: <TemplatesIcon size={18} />, to: '/templates', section: 'devops' },
+  { label: 'Pipelines', icon: <PipelinesIcon size={18} />, to: '/pipelines', section: 'devops' },
+  { label: 'Dependencies', icon: <DependenciesIcon size={18} />, to: '/dependencies', section: 'devops' },
+  { label: 'Quality Gates', icon: <QualityIcon size={18} />, to: '/quality', section: 'devops' },
 ];
 
 const SidebarLayout = () => {
@@ -35,7 +46,8 @@ const SidebarLayout = () => {
           </button>
         </div>
 
-        <nav className="space-y-2">
+        <nav className="space-y-1">
+          {/* Core Features */}
           {navItems.map((item) => (
             <Link
               key={item.to}
@@ -48,6 +60,40 @@ const SidebarLayout = () => {
               {!collapsed && <span>{item.label}</span>}
             </Link>
           ))}
+          
+          {/* DevOps Platform Section */}
+          {!collapsed && (
+            <div className="pt-4 pb-2">
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-2">
+                DevOps Platform
+              </h3>
+            </div>
+          )}
+          
+          {phase2Items.map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              className={`flex items-center gap-2 px-2 py-2 rounded hover:bg-gray-700 transition ${
+                location.pathname === item.to ? 'bg-gray-800 font-bold' : ''
+              }`}
+            >
+              {item.icon}
+              {!collapsed && <span>{item.label}</span>}
+            </Link>
+          ))}
+          
+          {/* Status Indicator */}
+          {!collapsed && (
+            <div className="pt-4">
+              <div className="px-2 py-2 text-xs text-gray-400">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span>Phase 2 Active</span>
+                </div>
+              </div>
+            </div>
+          )}
         </nav>
       </aside>
 

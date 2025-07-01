@@ -1,0 +1,62 @@
+name: "Node.js CI/CD Pipeline"
+version: "1.0"
+description: "Standard CI/CD pipeline for Node.js applications"
+
+triggers:
+  - push:
+      branches: [main, develop]
+  - pull_request:
+      types: [opened, synchronize]
+
+stages:
+  - name: "Quality Check"
+    parallel: true
+    jobs:
+      - name: "ESLint"
+        mcp: "code-linter"
+        config: ".eslintrc.js"
+      
+      - name: "Prettier Check"
+        script: "npx prettier --check ."
+      
+      - name: "Security Audit"
+        script: "npm audit --audit-level=moderate"
+
+  - name: "Build"
+    jobs:
+      - name: "Install Dependencies"
+        script: "npm ci"
+        cache:
+          key: "node-modules-{{ checksum 'package-lock.json' }}"
+          paths:
+            - node_modules
+      
+      - name: "Compile TypeScript"
+        script: "npm run build"
+        condition: "exists('tsconfig.json')"
+
+  - name: "Test"
+    parallel: true
+    jobs:
+      - name: "Unit Tests"
+        script: "npm test"
+        coverage:
+          threshold: 80
+          report: "coverage/lcov.info"
+      
+      - name: "Integration Tests"
+        script: "npm run test:integration"
+        condition: "exists('tests/integration')"
+
+  - name: "Deploy"
+    condition: "branch == 'main' && status == 'success'"
+    jobs:
+      - name: "Build Docker Image"
+        script: |
+          docker build -t $REPO_NAME:$GIT_SHA .
+          docker tag $REPO_NAME:$GIT_SHA $REPO_NAME:latest
+      
+      - name: "Deploy to Production"
+        mcp: "github"
+        action: "create-deployment"
+        environment: "production"

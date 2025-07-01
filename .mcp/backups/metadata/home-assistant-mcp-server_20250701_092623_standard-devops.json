@@ -1,0 +1,14 @@
+{
+  "backup_id": "home-assistant-mcp-server_20250701_092623_standard-devops",
+  "repository_path": "/home/dev/workspace/home-assistant-mcp-server",
+  "backup_path": "/home/dev/workspace/homelab-gitops-auditor/.mcp/backups/home-assistant-mcp-server_20250701_092623_standard-devops/backup.tar.gz",
+  "creation_time": "2025-07-01T09:26:23.527324",
+  "template_name": "standard-devops",
+  "backup_type": "full",
+  "file_count": 19,
+  "total_size": 35779,
+  "verification_hash": "dea6df98e93774381b683da97cd0bbf5cc6403af100c329fe2aae29d48a38765",
+  "retention_until": "2025-07-31T09:26:23.502638",
+  "tags": [],
+  "description": ""
+}
