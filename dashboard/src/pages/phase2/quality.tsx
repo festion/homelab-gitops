@@ -7,8 +7,16 @@ const QualityPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'gates' | 'results' | 'config'>('gates');
 
   useEffect(() => {
-    // Mock data for demonstration
-    setGates([
+    // Fetch quality gates from API
+    fetch('/api/v2/quality/gates')
+      .then(r => r.json())
+      .then(data => {
+        setGates(data.gates || []);
+        setLoading(false);
+      })
+      .catch(() => {
+        // Fallback to mock data
+        setGates([
       {
         name: 'Code Linting',
         type: 'pre_commit',
@@ -32,6 +40,7 @@ const QualityPage: React.FC = () => {
       }
     ]);
     setLoading(false);
+      });
   }, []);
 
   const getStatusIcon = (status: string) => {

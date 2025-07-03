@@ -7,8 +7,16 @@ const DependenciesPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'graph' | 'analysis' | 'coordination'>('graph');
 
   useEffect(() => {
-    // Mock data for demonstration
-    setDependencies([
+    // Fetch dependency graph from API
+    fetch('/api/v2/dependencies/graph')
+      .then(r => r.json())
+      .then(data => {
+        setDependencies(data.edges || []);
+        setLoading(false);
+      })
+      .catch(() => {
+        // Fallback to mock data
+        setDependencies([
       {
         source: 'homelab-gitops-auditor',
         target: 'shared-config',
@@ -23,6 +31,7 @@ const DependenciesPage: React.FC = () => {
       }
     ]);
     setLoading(false);
+      });
   }, []);
 
   return (
