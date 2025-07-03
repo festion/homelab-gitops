@@ -19,10 +19,10 @@ const navItems = [
 ];
 
 const phase2Items = [
-  { label: 'Templates', icon: <TemplatesIcon size={18} />, to: '/templates', section: 'devops' },
-  { label: 'Pipelines', icon: <PipelinesIcon size={18} />, to: '/pipelines', section: 'devops' },
-  { label: 'Dependencies', icon: <DependenciesIcon size={18} />, to: '/dependencies', section: 'devops' },
-  { label: 'Quality Gates', icon: <QualityIcon size={18} />, to: '/quality', section: 'devops' },
+  { label: 'Templates', icon: <TemplatesIcon size={18} />, to: '/phase2/templates', section: 'devops' },
+  { label: 'Pipelines', icon: <PipelinesIcon size={18} />, to: '/phase2/pipelines', section: 'devops' },
+  { label: 'Dependencies', icon: <DependenciesIcon size={18} />, to: '/phase2/dependencies', section: 'devops' },
+  { label: 'Quality Gates', icon: <QualityIcon size={18} />, to: '/phase2/quality', section: 'devops' },
 ];
 
 const SidebarLayout = () => {

@@ -11,17 +11,22 @@ const TemplatesPage: React.FC = () => {
   useEffect(() => {
     // Fetch templates and repositories
     Promise.all([
-      fetch('/api/templates').then(r => r.json()),
-      fetch('/api/audit').then(r => r.json())
+      fetch('/api/v2/templates').then(r => r.json()).catch(() => ({ templates: ['standard-devops'] })),
+      fetch('/audit').then(r => r.json()).catch(() => ({ repos: [] }))
     ]).then(([templatesData, auditData]) => {
       setTemplates(templatesData.templates || ['standard-devops']);
-      setRepositories(auditData.repositories?.map((r: any) => r.name) || []);
+      setRepositories(auditData.repos?.map((r: any) => r.name) || []);
+      setLoading(false);
+    }).catch((error) => {
+      console.error('Failed to load templates data:', error);
+      setTemplates(['standard-devops']);
+      setRepositories([]);
       setLoading(false);
     });
   }, []);
 
   const handleApplyTemplate = async (template: string, repos: string[], options: any) => {
-    const response = await fetch('/api/templates/batch-apply', {
+    const response = await fetch('/api/v2/templates/apply', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
