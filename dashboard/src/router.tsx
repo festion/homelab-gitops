@@ -21,8 +21,13 @@ import PipelinesPage from './pages/phase2/pipelines';
 import DependenciesPage from './pages/phase2/dependencies';
 import QualityPage from './pages/phase2/quality';
 import SimpleTest from './pages/SimpleTest';
+import TestPipelineDesigner from './pages/test/pipeline-designer';
 
 const router = createBrowserRouter([
+  {
+    path: '/direct-test',
+    element: <div><h1>DIRECT TEST WORKING!</h1></div>
+  },
   {
     path: '/',
     element: <SidebarLayout />,
@@ -32,11 +37,11 @@ const router = createBrowserRouter([
       { path: 'audit', element: <AuditPage /> },
       { path: 'audit/:repo', element: <AuditPage /> },
       { path: 'roadmap', element: <Roadmap /> },
-      // Phase 2 routes
-      { path: 'phase2/templates', element: <TemplatesSimpleWorking /> },
-      { path: 'phase2/pipelines', element: <PipelinesPage /> },
-      { path: 'phase2/dependencies', element: <DependenciesPage /> },
-      { path: 'phase2/quality', element: <QualityPage /> },
+      // Phase 2 routes - temporarily disabled due to syntax errors
+      { path: 'phase2/templates', element: <div className="p-6"><h1>Templates - Under Development</h1></div> },
+      { path: 'phase2/pipelines', element: <div className="p-6"><h1>Pipelines - Under Development</h1></div> },
+      { path: 'phase2/dependencies', element: <div className="p-6"><h1>Dependencies - Under Development</h1></div> },
+      { path: 'phase2/quality', element: <div className="p-6"><h1>Quality - Under Development</h1></div> },
       // Legacy redirects for old navigation links  
       { path: 'templates', element: <TemplatesSimple /> },
       { path: 'templates-full', element: <TemplatesPage /> },
@@ -52,6 +57,7 @@ const router = createBrowserRouter([
       { path: 'quality', element: <QualityPage /> },
       // Test routes
       { path: 'test', element: <div className="p-6"><h1>Test Route Working!</h1></div> },
+      { path: 'test/pipeline-designer', element: <TestPipelineDesigner /> },
       { path: 'simple', element: <SimpleTest /> },
     ],
   },
