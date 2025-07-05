@@ -10,6 +10,8 @@ const { v4: uuidv4 } = require('uuid');
 // Create Phase 2 router
 const phase2Router = express.Router();
 
+module.exports = phase2Router;
+
 // Helper function to emit WebSocket events
 function emitWSEvent(req, channel, event, data) {
   const phase2WS = req.app.locals.phase2WS;

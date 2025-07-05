@@ -3,7 +3,9 @@
     "express": "^4.18.2",
     "uuid": "^9.0.0",
     "ws": "^8.16.0",
-    "chokidar": "^3.5.3"
+    "chokidar": "^3.5.3",
+    "sqlite3": "^5.1.6",
+    "express-ws": "^5.0.2"
   },
   "devDependencies": {
     "jest": "^29.7.0",

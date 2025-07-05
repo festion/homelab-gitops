@@ -4,7 +4,7 @@
  * Enhanced with GitHub MCP server integration for repository operations.
  * All git operations are coordinated through Serena MCP orchestration.
  * 
- * Version: 1.1.0 (Phase 1 MCP Integration)
+ * Version: 2.0.0 (Phase 2: Advanced DevOps Platform)
  */
 
 const express = require('express');
@@ -16,6 +16,13 @@ const { exec } = require('child_process');
 const ConfigLoader = require('./config-loader');
 const GitHubMCPManager = require('./github-mcp-manager');
 const WikiAgentManager = require('./wiki-agent-manager');
+
+// Phase 2 API Endpoints
+const phase2Router = require('./phase2-endpoints');
+
+// WebSocket Support
+const WebSocketManager = require('./websocket-server');
+const Phase2WebSocketExtension = require('./phase2-websocket');
 
 const config = new ConfigLoader();
 const githubMCP = new GitHubMCPManager(config);
@@ -332,6 +339,13 @@ app.post('/wiki-agent/upload/batch', async (req, res) => {
     });
   }
 });
+
+// ===============================
+// Phase 2 Advanced DevOps Platform Routes
+// ===============================
+
+// Mount Phase 2 endpoints
+app.use('/api/v2', phase2Router);
 
 // ===============================
 // Audit API Endpoints
@@ -701,18 +715,66 @@ app.listen(PORT, '0.0.0.0', async () => {
     console.error('❌ WikiJS Agent initialization failed:', error.message);
   }
   
+  // Initialize WebSocket Manager
+  const auditDataPath = path.join(HISTORY_DIR, 'latest.json');
+  const wsManager = new WebSocketManager(app, auditDataPath, {
+    maxConnections: 100,
+    debounceDelay: 1000
+  });
+  
+  // Initialize Phase 2 WebSocket Extensions
+  const phase2WS = new Phase2WebSocketExtension(wsManager);
+  
+  // Make WebSocket manager available to Phase 2 endpoints
+  app.locals.wsManager = wsManager;
+  app.locals.phase2WS = phase2WS;
+  
+  // Initialize MCP integration with real MCP servers
+  const SerenaOrchestrator = require('./serena-orchestrator');
+  const MCPConnector = require('./mcp-connector');
+  
+  // Initialize real MCP connections
+  const mcpConnector = new MCPConnector();
+  await mcpConnector.initialize();
+  const mcpServers = mcpConnector.getMCPServers();
+  
+  // Create and configure SerenaOrchestrator
+  const orchestrator = new SerenaOrchestrator(mcpServers);
+  
+  // Set MCP servers and orchestrator on GitHubMCPManager
+  githubMCP.setMCPServers(mcpServers);
+  githubMCP.setOrchestrator(orchestrator);
+  
+  // Make GitHub MCP manager available to endpoints
+  app.locals.githubMCP = githubMCP;
+  app.locals.orchestrator = orchestrator;
+  
+  console.log('🔌 WebSocket server initialized with Phase 2 extensions');
+  
   console.log(`🎯 Ready to serve GitOps audit operations!`);
 });
 
 // Graceful shutdown
 process.on('SIGTERM', async () => {
   console.log('🛑 Received SIGTERM signal, shutting down gracefully...');
+  
+  // Clean up WebSocket connections
+  if (app.locals.wsManager) {
+    app.locals.wsManager.cleanup();
+  }
+  
   await wikiAgent.close();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
   console.log('🛑 Received SIGINT signal, shutting down gracefully...');
+  
+  // Clean up WebSocket connections
+  if (app.locals.wsManager) {
+    app.locals.wsManager.cleanup();
+  }
+  
   await wikiAgent.close();
   process.exit(0);
 });
