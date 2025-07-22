@@ -15,7 +15,8 @@
     "start": "node server.js",
     "test": "jest",
     "test:watch": "jest --watch",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "lint": "echo 'No linting configured for API'"
   },
   "name": "api",
   "version": "1.0.3",
