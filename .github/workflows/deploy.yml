@@ -47,7 +47,10 @@ jobs:
     
     - name: Create deployment package
       run: |
-        # Wait for any pending file operations to complete
+        # Wait for all npm processes to complete and file handles to close
+        sleep 5
+        # Kill any remaining npm processes that might hold file locks
+        pkill -f npm || true
         sleep 2
         # Create deployment package excluding development files
         tar -czf homelab-gitops-auditor-${{ github.sha }}.tar.gz \
@@ -58,6 +61,7 @@ jobs:
           --exclude='*.log' \
           --exclude='coverage' \
           --exclude='*.test.*' \
+          --exclude='dist/.vite' \
           .
     
     - name: Upload deployment artifact
