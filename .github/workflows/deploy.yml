@@ -47,10 +47,17 @@ jobs:
     
     - name: Create deployment package
       run: |
+        # Wait for any pending file operations to complete
+        sleep 2
+        # Create deployment package excluding development files
         tar -czf homelab-gitops-auditor-${{ github.sha }}.tar.gz \
           --exclude='.git' \
           --exclude='node_modules' \
           --exclude='*.tar.gz' \
+          --exclude='.github' \
+          --exclude='*.log' \
+          --exclude='coverage' \
+          --exclude='*.test.*' \
           .
     
     - name: Upload deployment artifact
