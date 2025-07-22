@@ -101,6 +101,22 @@ export default function App() {
 
   // Data state monitoring removed for production
 
+  // Create summary data for charts (memoized) - moved before early return
+  const summaryData = useMemo(() => {
+    if (!data?.summary) return [];
+    return Object.entries(data.summary)
+      .filter(([key]) => key !== "total")
+      .map(([name, value]) => ({ name, value }));
+  }, [data?.summary]);
+
+  // Filter repos based on search query (memoized) - moved before early return  
+  const filteredRepos = useMemo(() => {
+    if (!data?.repos) return [];
+    return data.repos.filter((repo) =>
+      repo.name.toLowerCase().includes(query.toLowerCase())
+    );
+  }, [data?.repos, query]);
+
   // Show loading state if data isn't loaded yet
   if (isLoading || !data) {
     return (
@@ -139,22 +155,6 @@ export default function App() {
       </WebSocketErrorBoundary>
     );
   }
-
-  // Create summary data for charts (memoized)
-  const summaryData = useMemo(() =>
-    Object.entries(data.summary)
-      .filter(([key]) => key !== "total")
-      .map(([name, value]) => ({ name, value })),
-    [data.summary]
-  );
-
-  // Filter repos based on search query (memoized)
-  const filteredRepos = useMemo(() =>
-    data.repos.filter((repo) =>
-      repo.name.toLowerCase().includes(query.toLowerCase())
-    ),
-    [data.repos, query]
-  );
 
   return (
     <WebSocketErrorBoundary
