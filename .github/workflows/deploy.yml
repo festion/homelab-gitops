@@ -47,22 +47,23 @@ jobs:
     
     - name: Create deployment package
       run: |
-        # Wait for all npm processes to complete and file handles to close
-        sleep 5
-        # Kill any remaining npm processes that might hold file locks
-        pkill -f npm || true
-        sleep 2
-        # Create deployment package excluding development files
-        tar -czf homelab-gitops-auditor-${{ github.sha }}.tar.gz \
-          --exclude='.git' \
-          --exclude='node_modules' \
-          --exclude='*.tar.gz' \
-          --exclude='.github' \
-          --exclude='*.log' \
-          --exclude='coverage' \
-          --exclude='*.test.*' \
-          --exclude='dist/.vite' \
-          .
+        # Create a clean directory for deployment files
+        mkdir -p deploy-staging
+        
+        # Copy only the files we need for deployment
+        cp -r api deploy-staging/
+        cp -r dashboard/dist deploy-staging/dashboard
+        cp package.json deploy-staging/
+        cp README.md deploy-staging/ || true
+        cp -r scripts deploy-staging/ || true
+        
+        # Remove any node_modules from staging area
+        find deploy-staging -name "node_modules" -type d -exec rm -rf {} + || true
+        find deploy-staging -name "*.test.*" -type f -delete || true
+        find deploy-staging -name "*.log" -type f -delete || true
+        
+        # Create deployment package from staging directory
+        tar -czf homelab-gitops-auditor-${{ github.sha }}.tar.gz -C deploy-staging .
     
     - name: Upload deployment artifact
       uses: actions/upload-artifact@v4
