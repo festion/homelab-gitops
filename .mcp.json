@@ -14,7 +14,7 @@
         "/home/dev/workspace/mcp-servers/network-mcp-server/run_server.py"
       ]
     },
-    "serena": {
+    "serena-enhanced": {
       "command": "uv",
       "args": [
         "run",
@@ -25,17 +25,10 @@
         "stdio"
       ]
     },
-    "hass-mcp": {
-      "command": "docker",
+    "home-assistant": {
+      "command": "bash",
       "args": [
-        "run",
-        "-i",
-        "--rm",
-        "-e",
-        "HA_URL=http://192.168.1.155:8123",
-        "-e",
-        "HA_TOKEN=<HA_LONG_LIVED_JWT_ROTATED_T8_see_Vikunja_1059>",
-        "voska/hass-mcp"
+        "/home/dev/workspace/wrappers/home-assistant.sh"
       ]
     },
     "github": {
@@ -49,24 +42,35 @@
         "ghcr.io/github/github-mcp-server"
       ]
     },
-    "wikijs-mcp": {
-      "command": "/home/dev/workspace/mcp-servers/wikijs-mcp-server/venv/bin/python",
+    "code-linter": {
+      "command": "bash",
       "args": [
-        "/home/dev/workspace/mcp-servers/wikijs-mcp-server/run_server.py",
-        "/home/dev/workspace/mcp-servers/wikijs-mcp-server/config/wikijs_mcp_config.json"
-      ],
-      "env": {
-        "PYTHONPATH": "/home/dev/workspace/mcp-servers/wikijs-mcp-server/src"
-      }
+        "/home/dev/workspace/wrappers/code-linter.sh"
+      ]
+    },
+    "directory-polling": {
+      "command": "bash",
+      "args": [
+        "/home/dev/workspace/wrappers/directory-polling.sh"
+      ]
+    },
+    "truenas": {
+      "command": "bash",
+      "args": [
+        "/home/dev/workspace/wrappers/truenas.sh"
+      ]
+    },
+    "wikijs-mcp": {
+      "command": "bash",
+      "args": [
+        "/home/dev/workspace/wrappers/wikijs.sh"
+      ]
     },
     "proxmox-mcp": {
-      "command": "/home/dev/workspace/mcp-servers/proxmox-mcp-server/venv/bin/python",
+      "command": "bash",
       "args": [
-        "/home/dev/workspace/mcp-servers/proxmox-mcp-server/src/proxmox_mcp/cli.py"
-      ],
-      "env": {
-        "PROXMOX_CONFIG": "/home/dev/workspace/mcp-servers/proxmox-mcp-server/config.json"
-      }
+        "/home/dev/workspace/wrappers/proxmox.sh"  
+      ]
     }
   }
 }
