@@ -1,0 +1,67 @@
+{
+  "standardMcpServers": {
+    "filesystem": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "/home/dev/workspace/node_modules/@modelcontextprotocol/server-filesystem/dist/index.js",
+        "/home/dev/workspace"
+      ],
+      "env": {}
+    },
+    "network-fs": {
+      "type": "stdio", 
+      "command": "bash",
+      "args": ["/home/dev/workspace/network-mcp-wrapper.sh"],
+      "env": {}
+    },
+    "serena-enhanced": {
+      "type": "stdio",
+      "command": "bash", 
+      "args": ["/home/dev/workspace/serena-enhanced-wrapper.sh"],
+      "env": {}
+    },
+    "home-assistant": {
+      "type": "stdio",
+      "command": "bash",
+      "args": ["/home/dev/workspace/hass-mcp-wrapper.sh"], 
+      "env": {}
+    },
+    "proxmox": {
+      "type": "stdio",
+      "command": "bash",
+      "args": ["/home/dev/workspace/proxmox-mcp-wrapper.sh"],
+      "env": {}
+    },
+    "truenas": {
+      "type": "stdio", 
+      "command": "bash",
+      "args": ["/home/dev/workspace/truenas-mcp-wrapper.sh"],
+      "env": {}
+    },
+    "github": {
+      "type": "stdio",
+      "command": "bash",
+      "args": ["/home/dev/workspace/github-wrapper.sh"],
+      "env": {}
+    },
+    "wikijs": {
+      "type": "stdio",
+      "command": "bash", 
+      "args": ["/home/dev/workspace/wikijs-mcp-wrapper.sh"],
+      "env": {}
+    },
+    "code-linter": {
+      "type": "stdio",
+      "command": "bash",
+      "args": ["/home/dev/workspace/code-linter-wrapper.sh"],
+      "env": {}
+    },
+    "directory-polling": {
+      "type": "stdio",
+      "command": "bash",
+      "args": ["/home/dev/workspace/directory-polling-wrapper.sh"], 
+      "env": {}
+    }
+  }
+}

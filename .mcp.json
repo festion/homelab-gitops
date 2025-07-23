@@ -5,17 +5,13 @@
       "args": [
         "-y",
         "@modelcontextprotocol/server-filesystem",
-        "/mnt/c/Users/Jeremy/OneDrive/Desktop",
-        "/mnt/c/GIT",
-        "/mnt/c/my-tools",
-        "/mnt/c/working",
-        "/mnt/c/Users/Jeremy/AppData/Roaming/Claude/logs"
+        "/home/dev/workspace"
       ]
     },
     "network-fs": {
-      "command": "/mnt/c/my-tools/network-fs/.venv/bin/python3",
+      "command": "/home/dev/workspace/mcp-servers/network-mcp-server/.venv/bin/python3",
       "args": [
-        "/mnt/c/my-tools/network-fs/run_server.py"
+        "/home/dev/workspace/mcp-servers/network-mcp-server/run_server.py"
       ]
     },
     "serena": {
@@ -23,7 +19,7 @@
       "args": [
         "run",
         "--directory",
-        "/mnt/c/GIT/serena",
+        "/home/dev/workspace/serena",
         "serena-mcp-server",
         "--transport",
         "stdio"
@@ -54,22 +50,22 @@
       ]
     },
     "wikijs-mcp": {
-      "command": "/mnt/c/GIT/mcp-servers/wikijs-mcp-server/venv/bin/python",
+      "command": "/home/dev/workspace/mcp-servers/wikijs-mcp-server/venv/bin/python",
       "args": [
-        "/mnt/c/GIT/mcp-servers/wikijs-mcp-server/run_server.py",
-        "/mnt/c/GIT/mcp-servers/wikijs-mcp-server/config/wikijs_mcp_config.json"
+        "/home/dev/workspace/mcp-servers/wikijs-mcp-server/run_server.py",
+        "/home/dev/workspace/mcp-servers/wikijs-mcp-server/config/wikijs_mcp_config.json"
       ],
       "env": {
-        "PYTHONPATH": "/mnt/c/GIT/mcp-servers/wikijs-mcp-server/src"
+        "PYTHONPATH": "/home/dev/workspace/mcp-servers/wikijs-mcp-server/src"
       }
     },
     "proxmox-mcp": {
-      "command": "/mnt/c/GIT/mcp-servers/proxmox-mcp-server/venv/bin/python",
+      "command": "/home/dev/workspace/mcp-servers/proxmox-mcp-server/venv/bin/python",
       "args": [
-        "/mnt/c/GIT/mcp-servers/proxmox-mcp-server/src/proxmox_mcp/cli.py"
+        "/home/dev/workspace/mcp-servers/proxmox-mcp-server/src/proxmox_mcp/cli.py"
       ],
       "env": {
-        "PROXMOX_CONFIG": "/mnt/c/GIT/mcp-servers/proxmox-mcp-server/config.json"
+        "PROXMOX_CONFIG": "/home/dev/workspace/mcp-servers/proxmox-mcp-server/config.json"
       }
     }
   }
