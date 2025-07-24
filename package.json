@@ -15,7 +15,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@modelcontextprotocol/server-filesystem": "^2025.3.28",
+    "@modelcontextprotocol/server-filesystem": "^2025.7.1",
     "@modelcontextprotocol/server-github": "^2025.4.8",
     "glob": "^10.4.5"
   }
