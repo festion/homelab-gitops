@@ -14,7 +14,7 @@ LOG_FILE="$LOG_DIR/wikijs-mcp-wrapper.log"
 HEALTH_CHECK_FILE="/home/dev/.wikijs_mcp/health_status"
 RETRY_MAX=3
 RETRY_DELAY=2
-STARTUP_TIMEOUT=30
+STARTUP_TIMEOUT=60
 
 # Create necessary directories
 mkdir -p "$LOG_DIR" "/home/dev/.wikijs_mcp"
@@ -152,12 +152,17 @@ start_mcp_server() {
     for method in "${startup_methods[@]}"; do
         log_message "INFO" "Attempting startup method: $method"
         
-        if timeout $STARTUP_TIMEOUT bash -c "$method" 2>&1 | tee -a "$LOG_FILE"; then
-            log_message "INFO" "WikiJS MCP server started successfully"
-            return 0
+        if [ "$method" = "python3 run_server.py" ]; then
+            log_message "INFO" "Executing WikiJS MCP server: $method"
+            exec python3 run_server.py
         else
-            local exit_code=$?
-            log_message "WARN" "Startup method failed (exit code: $exit_code): $method"
+            if timeout $STARTUP_TIMEOUT bash -c "$method" 2>&1 | tee -a "$LOG_FILE"; then
+                log_message "INFO" "WikiJS MCP server started successfully"
+                return 0
+            else
+                local exit_code=$?
+                log_message "WARN" "Startup method failed (exit code: $exit_code): $method"
+            fi
         fi
     done
     
@@ -229,35 +234,27 @@ health_check() {
 main() {
     log_message "INFO" "WikiJS MCP Wrapper starting (PID: $$)"
     
-    # Change to workspace directory
-    cd "$WORKSPACE_DIR" || {
-        log_message "ERROR" "Cannot change to workspace directory: $WORKSPACE_DIR"
+    # Change to server directory and execute directly
+    cd "$MCP_SERVER_DIR" || {
+        log_message "ERROR" "Cannot change to MCP server directory: $MCP_SERVER_DIR"
         exit 1
     }
     
-    # Perform health check
-    if health_check; then
-        log_message "INFO" "Health check passed, starting MCP server"
-        
-        if start_mcp_server; then
-            update_health_status "RUNNING" "WikiJS MCP server running successfully"
-            log_message "INFO" "WikiJS MCP server is running"
-        else
-            log_message "ERROR" "Failed to start WikiJS MCP server"
-            
-            # Try graceful degradation
-            if graceful_degradation; then
-                log_message "INFO" "Operating in degraded mode"
-                exit 2  # Degraded but functional
-            else
-                update_health_status "FAILED" "WikiJS MCP server startup failed"
-                exit 1
-            fi
-        fi
-    else
-        log_message "ERROR" "Health check failed"
-        update_health_status "FAILED" "Health check failed"
+    # Load credentials for the Python server
+    load_credentials || {
+        log_message "ERROR" "Failed to load credentials"
         exit 1
+    }
+    
+    log_message "INFO" "Executing WikiJS MCP server with virtual environment"
+    
+    # Activate virtual environment and run server
+    if [ -f "venv/bin/activate" ]; then
+        source venv/bin/activate
+        exec python3 run_server.py
+    else
+        log_message "WARN" "Virtual environment not found, trying system Python"
+        exec python3 run_server.py
     fi
 }
 
