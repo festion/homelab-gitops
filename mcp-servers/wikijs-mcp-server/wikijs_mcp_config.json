@@ -1,0 +1,35 @@
+{
+  "wikijs": {
+    "url": "http://192.168.1.105:3000",
+    "api_key": "wiki_api_key_prod_2025",
+    "default_locale": "en",
+    "default_editor": "markdown",
+    "default_tags": [],
+    "timeout": 30,
+    "retry_attempts": 3
+  },
+  "document_discovery": {
+    "search_paths": ["/home/dev/workspace"],
+    "include_patterns": ["*.md", "*.txt"],
+    "exclude_patterns": ["node_modules/**", ".git/**", "**/.git/**", "**/node_modules/**"],
+    "max_file_size": "10MB",
+    "max_files_per_scan": 1000,
+    "follow_symlinks": false,
+    "extract_frontmatter": true,
+    "extract_links": true
+  },
+  "security": {
+    "allowed_extensions": [".md", ".txt", ".json", ".yaml", ".yml"],
+    "blocked_paths": ["/etc", "/usr", "/bin", "/sbin", "/sys", "/proc"],
+    "max_path_depth": 20,
+    "sandbox_mode": true
+  },
+  "ai_processing": {
+    "enable_content_enhancement": false,
+    "enable_metadata_extraction": false,
+    "enable_topic_classification": false,
+    "max_content_length": 50000,
+    "temperature": 0.3,
+    "max_tokens": 4000
+  }
+}

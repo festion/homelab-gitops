@@ -1,0 +1,17 @@
+README.md
+setup.py
+src/wikijs_mcp/__init__.py
+src/wikijs_mcp/ai_processor.py
+src/wikijs_mcp/cli.py
+src/wikijs_mcp/config.py
+src/wikijs_mcp/document_scanner.py
+src/wikijs_mcp/exceptions.py
+src/wikijs_mcp/security.py
+src/wikijs_mcp/server.py
+src/wikijs_mcp/wikijs_client.py
+src/wikijs_mcp_server.egg-info/PKG-INFO
+src/wikijs_mcp_server.egg-info/SOURCES.txt
+src/wikijs_mcp_server.egg-info/dependency_links.txt
+src/wikijs_mcp_server.egg-info/entry_points.txt
+src/wikijs_mcp_server.egg-info/requires.txt
+src/wikijs_mcp_server.egg-info/top_level.txt
