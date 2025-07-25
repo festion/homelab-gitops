@@ -37,6 +37,8 @@ class WikiJSMCPServer:
         
         # Initialize AI processor
         ai_config = getattr(config, 'ai_processing', DEFAULT_AI_CONFIG)
+        if hasattr(ai_config, 'model_dump'):
+            ai_config = ai_config.model_dump()
         self.ai_processor = AIContentProcessor(ai_config)
         
         self._setup_logging()
