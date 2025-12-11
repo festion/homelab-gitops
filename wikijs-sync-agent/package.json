@@ -27,7 +27,7 @@
     "axios": "^1.6.0",
     "chokidar": "^3.5.3",
     "commander": "^11.1.0",
-    "js-yaml": "^4.1.0"
+    "js-yaml": "^4.1.1"
   },
   "devDependencies": {
     "eslint": "^8.52.0",
