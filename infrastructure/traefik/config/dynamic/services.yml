@@ -261,7 +261,7 @@ http:
     vault-service:
       loadBalancer:
         servers:
-        - url: http://192.168.1.140:8000
+        - url: http://192.168.1.230:8000
         healthCheck:
           path: /alive
           interval: 30s
