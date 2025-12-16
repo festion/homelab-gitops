@@ -33,6 +33,17 @@ http:
         certResolver: cloudflare
         domains:
         - main: '*.internal.lakehouse.wtf'
+    uptime-kuma-router:
+      rule: Host(`uptime-kuma.internal.lakehouse.wtf`)
+      service: uptime-service
+      entryPoints:
+      - websecure
+      middlewares:
+      - secure-headers
+      tls:
+        certResolver: cloudflare
+        domains:
+        - main: '*.internal.lakehouse.wtf'
     birdnet-router:
       rule: Host(`birdnet.internal.lakehouse.wtf`)
       service: birdnet-service
@@ -55,8 +66,31 @@ http:
         certResolver: cloudflare
         domains:
         - main: '*.internal.lakehouse.wtf'
+    hass-router:
+      rule: Host(`hass.internal.lakehouse.wtf`)
+      service: homeassistant-service
+      entryPoints:
+      - websecure
+      middlewares:
+      - secure-headers
+      tls:
+        certResolver: cloudflare
+        domains:
+        - main: '*.internal.lakehouse.wtf'
     influx-router:
       rule: Host(`influx.internal.lakehouse.wtf`)
+      service: influx-service
+      entryPoints:
+      - websecure
+      middlewares:
+      - internal-whitelist
+      - secure-headers
+      tls:
+        certResolver: cloudflare
+        domains:
+        - main: '*.internal.lakehouse.wtf'
+    influxdb-router:
+      rule: Host(`influxdb.internal.lakehouse.wtf`)
       service: influx-service
       entryPoints:
       - websecure
@@ -138,6 +172,18 @@ http:
         certResolver: cloudflare
         domains:
         - main: '*.internal.lakehouse.wtf'
+    proxmox1-router:
+      rule: Host(`proxmox1.internal.lakehouse.wtf`)
+      service: proxmox-service
+      entryPoints:
+      - websecure
+      middlewares:
+      - internal-whitelist
+      - secure-headers
+      tls:
+        certResolver: cloudflare
+        domains:
+        - main: '*.internal.lakehouse.wtf'
     proxmox2-router:
       rule: Host(`proxmox2.internal.lakehouse.wtf`)
       service: proxmox2-service
@@ -169,6 +215,17 @@ http:
       - websecure
       middlewares:
       - internal-whitelist
+      - secure-headers
+      tls:
+        certResolver: cloudflare
+        domains:
+        - main: '*.internal.lakehouse.wtf'
+    stork-router:
+      rule: Host(`stork.internal.lakehouse.wtf`)
+      service: stork-service
+      entryPoints:
+      - websecure
+      middlewares:
       - secure-headers
       tls:
         certResolver: cloudflare
@@ -219,8 +276,30 @@ http:
         certResolver: cloudflare
         domains:
         - main: '*.internal.lakehouse.wtf'
+    zigbee2mqtt-router:
+      rule: Host(`zigbee2mqtt.internal.lakehouse.wtf`)
+      service: z2m-service
+      entryPoints:
+      - websecure
+      middlewares:
+      - secure-headers
+      tls:
+        certResolver: cloudflare
+        domains:
+        - main: '*.internal.lakehouse.wtf'
     zwave-js-ui-router:
       rule: Host(`zwave-js-ui.internal.lakehouse.wtf`)
+      service: zwave-js-ui-service
+      entryPoints:
+      - websecure
+      middlewares:
+      - secure-headers
+      tls:
+        certResolver: cloudflare
+        domains:
+        - main: '*.internal.lakehouse.wtf'
+    zwave-router:
+      rule: Host(`zwave.internal.lakehouse.wtf`)
       service: zwave-js-ui-service
       entryPoints:
       - websecure
@@ -273,6 +352,140 @@ http:
       - websecure
       middlewares:
       - internal-whitelist
+      - secure-headers
+      tls:
+        certResolver: cloudflare
+        domains:
+        - main: '*.internal.lakehouse.wtf'
+    grafana-router:
+      rule: Host(`grafana.internal.lakehouse.wtf`)
+      service: grafana-service
+      entryPoints:
+      - websecure
+      middlewares:
+      - secure-headers
+      tls:
+        certResolver: cloudflare
+        domains:
+        - main: '*.internal.lakehouse.wtf'
+    hoarder-router:
+      rule: Host(`hoarder.internal.lakehouse.wtf`)
+      service: hoarder-service
+      entryPoints:
+      - websecure
+      middlewares:
+      - secure-headers
+      tls:
+        certResolver: cloudflare
+        domains:
+        - main: '*.internal.lakehouse.wtf'
+    memos-router:
+      rule: Host(`memos.internal.lakehouse.wtf`)
+      service: memos-service
+      entryPoints:
+      - websecure
+      middlewares:
+      - secure-headers
+      tls:
+        certResolver: cloudflare
+        domains:
+        - main: '*.internal.lakehouse.wtf'
+    memo-router:
+      rule: Host(`memo.internal.lakehouse.wtf`)
+      service: memos-service
+      entryPoints:
+      - websecure
+      middlewares:
+      - secure-headers
+      tls:
+        certResolver: cloudflare
+        domains:
+        - main: '*.internal.lakehouse.wtf'
+    gitops-router:
+      rule: Host(`gitops.internal.lakehouse.wtf`)
+      service: gitops-service
+      entryPoints:
+      - websecure
+      middlewares:
+      - internal-whitelist
+      - secure-headers
+      tls:
+        certResolver: cloudflare
+        domains:
+        - main: '*.internal.lakehouse.wtf'
+    homepage-router:
+      rule: Host(`homepage.internal.lakehouse.wtf`)
+      service: homepage-service
+      entryPoints:
+      - websecure
+      middlewares:
+      - secure-headers
+      tls:
+        certResolver: cloudflare
+        domains:
+        - main: '*.internal.lakehouse.wtf'
+    infisical-router:
+      rule: Host(`infisical.internal.lakehouse.wtf`)
+      service: infisical-service
+      entryPoints:
+      - websecure
+      middlewares:
+      - secure-headers
+      tls:
+        certResolver: cloudflare
+        domains:
+        - main: '*.internal.lakehouse.wtf'
+    tandoor-router:
+      rule: Host(`tandoor.internal.lakehouse.wtf`)
+      service: tandoor-service
+      entryPoints:
+      - websecure
+      middlewares:
+      - secure-headers
+      tls:
+        certResolver: cloudflare
+        domains:
+        - main: '*.internal.lakehouse.wtf'
+    vikunja-router:
+      rule: Host(`todo.internal.lakehouse.wtf`) || Host(`vikunja.internal.lakehouse.wtf`)
+      service: vikunja-service
+      entryPoints:
+      - websecure
+      middlewares:
+      - secure-headers
+      tls:
+        certResolver: cloudflare
+        domains:
+        - main: '*.internal.lakehouse.wtf'
+    pdm-router:
+      rule: Host(`pdm.internal.lakehouse.wtf`)
+      service: pdm-service
+      entryPoints:
+      - websecure
+      middlewares:
+      - internal-whitelist
+      - secure-headers
+      tls:
+        certResolver: cloudflare
+        domains:
+        - main: '*.internal.lakehouse.wtf'
+    vault-router:
+      rule: Host(`vault.internal.lakehouse.wtf`)
+      service: vault-service
+      entryPoints:
+      - websecure
+      middlewares:
+      - secure-headers
+      tls:
+        certResolver: cloudflare
+        domains:
+        - main: '*.internal.lakehouse.wtf'
+    manyfold-router:
+      rule: Host(`manyfold.internal.lakehouse.wtf`)
+      service: manyfold-service
+      entryPoints:
+      - websecure
+      middlewares:
       - secure-headers
       tls:
         certResolver: cloudflare
