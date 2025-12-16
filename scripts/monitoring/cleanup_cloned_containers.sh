@@ -21,7 +21,6 @@ declare -A TEMP_CONTAINERS_RUNNING=(
     [1250]="adguard:125"         # CT 1250 -> original CT 125
     [2000]="github-runner:200"   # CT 2000 -> original CT 200
     [1300]="wikijs-integration:130"  # CT 1300 -> original CT 130
-    [1400]="netbox-agent:140"    # CT 1400 -> original CT 140
 )
 
 declare -A TEMP_CONTAINERS_STOPPED=(

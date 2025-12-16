@@ -26,7 +26,6 @@ TOTAL_SAMPLES=$((MONITORING_DURATION_HOURS * 60 / MONITORING_INTERVAL_MINUTES))
 declare -A TRUENAS_CONTAINERS=(
     [1250]="adguard:networking:high:125"
     [1300]="wikijs-integration:integration:medium:130"
-    [1400]="netbox-agent:monitoring:medium:140"
     [2000]="github-runner:cicd:medium:200"
 )
 

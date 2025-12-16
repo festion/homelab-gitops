@@ -32,7 +32,6 @@ declare -A CRITICAL_CONTAINERS=(
     [200]="github-runner:cicd:medium"
     [1250]="adguard:networking:high"
     [1300]="wikijs-integration:integration:medium"
-    [1400]="netbox-agent:monitoring:medium"
     [2000]="github-runner:cicd:medium"
 )
 
