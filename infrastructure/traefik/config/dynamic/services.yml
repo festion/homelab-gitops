@@ -38,7 +38,7 @@ http:
     influx-service:
       loadBalancer:
         servers:
-        - url: http://192.168.1.56:8086
+        - url: http://192.168.1.74:8086
         healthCheck:
           path: /ping
           interval: 30s
@@ -65,7 +65,7 @@ http:
         servers:
         - url: https://192.168.1.47:8043
         healthCheck:
-          path: /
+          path: /login
           interval: 30s
           timeout: 5s
     pairdrop-service:
@@ -181,6 +181,95 @@ http:
       loadBalancer:
         servers:
         - url: http://192.168.1.132:3001
+        healthCheck:
+          path: /
+          interval: 30s
+          timeout: 5s
+    grafana-service:
+      loadBalancer:
+        servers:
+        - url: http://192.168.1.151:3000
+        healthCheck:
+          path: /api/health
+          interval: 30s
+          timeout: 5s
+    hoarder-service:
+      loadBalancer:
+        servers:
+        - url: http://192.168.1.102:3000
+        healthCheck:
+          path: /
+          interval: 30s
+          timeout: 5s
+    memos-service:
+      loadBalancer:
+        servers:
+        - url: http://192.168.1.144:9030
+        healthCheck:
+          path: /
+          interval: 30s
+          timeout: 5s
+    gitops-service:
+      loadBalancer:
+        servers:
+        - url: http://192.168.1.136:3070
+        healthCheck:
+          path: /
+          interval: 30s
+          timeout: 5s
+    homepage-service:
+      loadBalancer:
+        servers:
+        - url: http://192.168.1.45:3000
+        healthCheck:
+          path: /
+          interval: 30s
+          timeout: 5s
+    infisical-service:
+      loadBalancer:
+        servers:
+        - url: http://192.168.1.29:8080
+        healthCheck:
+          path: /
+          interval: 30s
+          timeout: 5s
+    tandoor-service:
+      loadBalancer:
+        servers:
+        - url: http://192.168.1.108:8002
+        healthCheck:
+          path: /
+          interval: 30s
+          timeout: 5s
+    vikunja-service:
+      loadBalancer:
+        servers:
+        - url: http://192.168.1.143:3456
+        healthCheck:
+          path: /
+          interval: 30s
+          timeout: 5s
+    pdm-service:
+      loadBalancer:
+        serversTransport: insecure-transport
+        servers:
+        - url: https://192.168.1.41:8443
+        healthCheck:
+          path: /
+          interval: 30s
+          timeout: 5s
+    vault-service:
+      loadBalancer:
+        servers:
+        - url: http://192.168.1.140:8000
+        healthCheck:
+          path: /alive
+          interval: 30s
+          timeout: 5s
+    manyfold-service:
+      loadBalancer:
+        servers:
+        - url: http://192.168.1.200:3214
         healthCheck:
           path: /
           interval: 30s
