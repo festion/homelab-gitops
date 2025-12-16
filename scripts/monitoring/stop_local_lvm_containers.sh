@@ -31,7 +31,6 @@ declare -A LOCAL_LVM_CONTAINERS=(
     [123]="gitopsdashboard:medium:"    # CT 123 -> no direct replacement
     [124]="mqtt:medium:"               # CT 124 -> no direct replacement
     [125]="adguard:critical:1250"      # CT 125 -> TrueNAS replacement CT 1250  
-    [131]="netbox:medium:1400"         # CT 131 -> TrueNAS replacement CT 1400
 )
 
 ### FUNCTIONS ###

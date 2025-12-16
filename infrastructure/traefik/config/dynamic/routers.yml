@@ -11,9 +11,9 @@ http:
         certResolver: cloudflare
         domains:
         - main: '*.internal.lakehouse.wtf'
-    adguard2-router:
-      rule: Host(`adguard2.internal.lakehouse.wtf`)
-      service: adguard2-service
+    adguard-2-router:
+      rule: Host(`adguard-2.internal.lakehouse.wtf`)
+      service: adguard-2-service
       entryPoints:
       - websecure
       middlewares:
@@ -58,6 +58,30 @@ http:
     influx-router:
       rule: Host(`influx.internal.lakehouse.wtf`)
       service: influx-service
+      entryPoints:
+      - websecure
+      middlewares:
+      - internal-whitelist
+      - secure-headers
+      tls:
+        certResolver: cloudflare
+        domains:
+        - main: '*.internal.lakehouse.wtf'
+    kea-1-router:
+      rule: Host(`kea-1.internal.lakehouse.wtf`)
+      service: kea-1-service
+      entryPoints:
+      - websecure
+      middlewares:
+      - internal-whitelist
+      - secure-headers
+      tls:
+        certResolver: cloudflare
+        domains:
+        - main: '*.internal.lakehouse.wtf'
+    kea-2-router:
+      rule: Host(`kea-2.internal.lakehouse.wtf`)
+      service: kea-2-service
       entryPoints:
       - websecure
       middlewares:
@@ -117,6 +141,18 @@ http:
     proxmox2-router:
       rule: Host(`proxmox2.internal.lakehouse.wtf`)
       service: proxmox2-service
+      entryPoints:
+      - websecure
+      middlewares:
+      - internal-whitelist
+      - secure-headers
+      tls:
+        certResolver: cloudflare
+        domains:
+        - main: '*.internal.lakehouse.wtf'
+    proxmox3-router:
+      rule: Host(`proxmox3.internal.lakehouse.wtf`)
+      service: proxmox3-service
       entryPoints:
       - websecure
       middlewares:
@@ -190,18 +226,6 @@ http:
       - websecure
       middlewares:
       - secure-headers
-      tls:
-        certResolver: cloudflare
-        domains:
-        - main: '*.internal.lakehouse.wtf'
-    netbox-router:
-      rule: Host(`netbox.internal.lakehouse.wtf`)
-      service: netbox-service
-      entryPoints:
-      - websecure
-      middlewares:
-      - secure-headers
-      - netbox-headers
       tls:
         certResolver: cloudflare
         domains:
