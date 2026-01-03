@@ -117,7 +117,7 @@
       "pluginVersion": "12.3.1",
       "targets": [
         {"datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"}, "expr": "{job=\"pbs-tasks\"} |~ \"(?i)(TASK OK|TASK ERROR|backup|finished|failed)\"", "legendFormat": "Task Logs", "refId": "A"},
-        {"datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"}, "expr": "{job=\"pbs\"} |~ \"(?i)(error|failed)\"", "legendFormat": "System Logs", "refId": "B"}
+        {"datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"}, "expr": "{job=\"pbs\"} |~ \"(?i)(error|failed)\" | !~ \"Transport endpoint\"", "legendFormat": "System Logs", "refId": "B"}
       ],
       "title": "PBS Backup Status",
       "type": "logs"
