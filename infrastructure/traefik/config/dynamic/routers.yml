@@ -321,9 +321,6 @@ http:
         certResolver: cloudflare
         domains:
         - main: '*.internal.lakehouse.wtf'
-    caddy-router:
-      rule: Host(`caddy.internal.lakehouse.wtf`)
-      service: caddy-service
       entryPoints:
       - websecure
       middlewares:
@@ -483,6 +480,28 @@ http:
     manyfold-router:
       rule: Host(`manyfold.internal.lakehouse.wtf`)
       service: manyfold-service
+      entryPoints:
+      - websecure
+      middlewares:
+      - secure-headers
+      tls:
+        certResolver: cloudflare
+        domains:
+        - main: '*.internal.lakehouse.wtf'
+    node-red-router:
+      rule: Host(`node-red.internal.lakehouse.wtf`)
+      service: node-red-service
+      entryPoints:
+      - websecure
+      middlewares:
+      - secure-headers
+      tls:
+        certResolver: cloudflare
+        domains:
+        - main: '*.internal.lakehouse.wtf'
+    loki-router:
+      rule: Host(`loki.internal.lakehouse.wtf`)
+      service: loki-service
       entryPoints:
       - websecure
       middlewares:
