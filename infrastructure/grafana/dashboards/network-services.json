@@ -617,7 +617,7 @@
             "type": "loki",
             "uid": "P8E80F9AEF21F6940"
           },
-          "expr": "{job=\"traefik\"} |!~ \"Skipping service\"",
+          "expr": "{job=\"traefik-access\"}",
           "refId": "A",
           "queryType": "range"
         }
