@@ -1,0 +1,43 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /var/lib/promtail/positions.yaml
+
+clients:
+  - url: http://192.168.1.170:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: pbs
+    journal:
+      max_age: 12h
+      labels:
+        job: pbs
+        service: proxmox-backup
+    relabel_configs:
+      - source_labels: ['__journal__systemd_unit']
+        target_label: 'unit'
+
+  - job_name: pbs-tasks
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: pbs-tasks
+          service: proxmox-backup
+          __path__: /var/log/proxmox-backup/tasks/**/*
+    pipeline_stages:
+      - regex:
+          expression: '^(?P<timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}): (?P<message>.*)$'
+      - timestamp:
+          source: timestamp
+          format: RFC3339
+      - output:
+          source: message
+      - match:
+          selector: '{job="pbs-tasks"}'
+          stages:
+            - regex:
+                expression: '(?P<status>TASK OK|TASK ERROR|TASK WARNINGS)'
+            - labels:
+                status:

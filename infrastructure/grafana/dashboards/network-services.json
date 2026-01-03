@@ -115,7 +115,10 @@
       "id": 6,
       "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true},
       "pluginVersion": "12.3.1",
-      "targets": [{"datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"}, "expr": "{job=\"pbs\"} |~ \"(?i)(backup|error|finished|failed|TASK)\"", "refId": "A"}],
+      "targets": [
+        {"datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"}, "expr": "{job=\"pbs-tasks\"} |~ \"(?i)(TASK OK|TASK ERROR|backup|finished|failed)\"", "legendFormat": "Task Logs", "refId": "A"},
+        {"datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"}, "expr": "{job=\"pbs\"} |~ \"(?i)(error|failed)\"", "legendFormat": "System Logs", "refId": "B"}
+      ],
       "title": "PBS Backup Status",
       "type": "logs"
     },
