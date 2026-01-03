@@ -22,7 +22,7 @@
       "id": 1,
       "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"maxHeight": 600, "mode": "multi", "sort": "desc"}},
       "pluginVersion": "12.3.1",
-      "targets": [{"datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"}, "expr": "sum(rate({job=\"traefik\"}[1m]))", "legendFormat": "Requests/sec", "refId": "A"}],
+      "targets": [{"datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"}, "expr": "sum(rate({job=\"traefik-access\"}[1m]))", "legendFormat": "Requests/sec", "refId": "A"}],
       "title": "Traefik Request Rate",
       "type": "timeseries"
     },
@@ -43,8 +43,8 @@
       "options": {"legend": {"calcs": ["sum"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"maxHeight": 600, "mode": "multi", "sort": "desc"}},
       "pluginVersion": "12.3.1",
       "targets": [
-        {"datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"}, "expr": "sum(count_over_time({job=\"traefik\"} |~ \"\\\" 5[0-9]{2} \" [1m]))", "legendFormat": "5xx Errors", "refId": "A"},
-        {"datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"}, "expr": "sum(count_over_time({job=\"traefik\"} |~ \"\\\" 4[0-9]{2} \" [1m]))", "legendFormat": "4xx Errors", "refId": "B"}
+        {"datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"}, "expr": "sum(count_over_time({job=\"traefik-access\", status=~\"5..\"} [1m]))", "legendFormat": "5xx Errors", "refId": "A"},
+        {"datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"}, "expr": "sum(count_over_time({job=\"traefik-access\", status=~\"4..\"} [1m]))", "legendFormat": "4xx Errors", "refId": "B"}
       ],
       "title": "Traefik HTTP Errors",
       "type": "timeseries"
@@ -138,7 +138,7 @@
       "id": 8,
       "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true},
       "pluginVersion": "12.3.1",
-      "targets": [{"datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"}, "expr": "{job=\"traefik\"}", "refId": "A"}],
+      "targets": [{"datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"}, "expr": "{job=\"traefik\"} |!~ \"Skipping service\"", "refId": "A"}],
       "title": "Traefik Access Logs",
       "type": "logs"
     }
