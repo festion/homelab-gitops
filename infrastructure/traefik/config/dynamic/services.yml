@@ -22,7 +22,7 @@ http:
     birdnet-service:
       loadBalancer:
         servers:
-        - url: http://192.168.1.80:8080
+        - url: http://192.168.1.197:8080
         healthCheck:
           path: /
           interval: 30s
@@ -169,14 +169,6 @@ http:
           path: /
           interval: 30s
           timeout: 5s
-    caddy-service:
-      loadBalancer:
-        servers:
-        - url: http://localhost:2019
-        healthCheck:
-          path: /
-          interval: 30s
-          timeout: 5s
     uptime-service:
       loadBalancer:
         servers:
@@ -213,10 +205,6 @@ http:
       loadBalancer:
         servers:
         - url: http://192.168.1.136:3070
-        healthCheck:
-          path: /
-          interval: 30s
-          timeout: 5s
     homepage-service:
       loadBalancer:
         servers:
@@ -271,3 +259,15 @@ http:
         servers:
         - url: http://192.168.1.200:3214
         # Health check disabled - app has redirect loop without session cookies
+    node-red-service:
+      loadBalancer:
+        servers:
+        - url: http://192.168.1.142:1880
+    loki-service:
+      loadBalancer:
+        servers:
+        - url: http://192.168.1.170:3100
+        healthCheck:
+          path: /ready
+          interval: 30s
+          timeout: 5s
