@@ -76,6 +76,17 @@ your-project/
 - **Labels & Milestones** - Organized project tracking and releases
 - **Workflows** - CI/CD integration and automated processes
 
+## Related Projects
+
+This repository works alongside [operations](https://github.com/festion/operations):
+
+| Repository | Purpose | Content |
+|------------|---------|---------|
+| **homelab-gitops** (this repo) | Infrastructure automation | Code, configs, MCP servers, dashboard |
+| **operations** | Documentation & SOPs | Markdown docs, runbooks, procedures |
+
+See [RELATED_PROJECTS.md](RELATED_PROJECTS.md) for details on how these repositories complement each other.
+
 ## 📚 Documentation
 
 - **[Setup Guide](docs/SETUP.md)** - Detailed installation and configuration

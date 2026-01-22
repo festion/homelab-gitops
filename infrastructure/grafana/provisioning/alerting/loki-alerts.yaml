@@ -40,8 +40,16 @@ groups:
         execErrState: Alerting
         for: 5m
         annotations:
-          summary: No logs received from any service in the last 5 minutes
-          description: Loki is not receiving any log data. Check Promtail agents and Loki service.
+          summary: "Loki receiving no logs - all Promtail agents may be down"
+          description: |
+            No logs received in 5 minutes.
+
+            Check on each node:
+            - proxmox1: ssh root@192.168.1.110 systemctl status promtail
+            - proxmox2: ssh root@192.168.1.137 systemctl status promtail
+            - proxmox3: ssh root@192.168.1.138 systemctl status promtail
+
+            Check Loki: pct exec 101 -- systemctl status loki
         labels:
           severity: critical
 
@@ -76,11 +84,17 @@ groups:
                       - 5
                     type: gt
         noDataState: OK
-        execErrState: Alerting
+        execErrState: OK
         for: 0s
         annotations:
-          summary: Multiple Vaultwarden authentication failures detected
-          description: More than 5 failed auth attempts in the last 5 minutes. Possible brute force attack.
+          summary: "Vaultwarden: {{ $values.B.Value }} failed auth attempts in 5min"
+          description: |
+            {{ $values.B.Value }} failed authentication attempts detected.
+
+            View details in Grafana Explore:
+            {job="vaultwarden"} |~ "(?i)(failed|invalid|unauthorized)"
+
+            Action: Check source IPs for brute force, consider blocking if malicious.
         labels:
           severity: critical
 
@@ -115,52 +129,29 @@ groups:
                       - 0
                     type: gt
         noDataState: OK
-        execErrState: Alerting
+        execErrState: OK
         for: 0s
         annotations:
-          summary: Proxmox Backup Server reported a task error
-          description: PBS backup job has failed. Check PBS logs for details.
+          summary: "PBS backup task failed - {{ $values.B.Value }} errors in 10min"
+          description: |
+            Backup job failed on Proxmox Backup Server.
+
+            View error details:
+            {job="pbs"} |~ "TASK ERROR"
+
+            Check PBS UI: https://pbs.internal.lakehouse.wtf
+            Or: ssh root@192.168.1.110 pct exec 106 -- proxmox-backup-manager task list
         labels:
           severity: critical
 
-      - uid: critical-system-error
-        title: Critical System Error
-        condition: C
-        data:
-          - refId: A
-            relativeTimeRange:
-              from: 300
-              to: 0
-            datasourceUid: P8E80F9AEF21F6940
-            model:
-              expr: sum(count_over_time({job=~".+"} |~ "(?i)(fatal|panic)" [5m]))
-              refId: A
-          - refId: B
-            datasourceUid: __expr__
-            model:
-              refId: B
-              type: reduce
-              expression: A
-              reducer: last
-          - refId: C
-            datasourceUid: __expr__
-            model:
-              refId: C
-              type: threshold
-              expression: B
-              conditions:
-                - evaluator:
-                    params:
-                      - 0
-                    type: gt
-        noDataState: OK
-        execErrState: Alerting
-        for: 0s
-        annotations:
-          summary: Critical system error detected
-          description: A fatal or panic error was logged. Immediate attention required.
-        labels:
-          severity: critical
+      # DISABLED 2026-01-10: This alert was causing spurious notifications
+      # despite empty query results. The reduce/threshold expression chain
+      # doesn't handle empty Loki results well, causing -1 sentinel values.
+      # Rely on service-specific alerts (PBS, Vaultwarden, etc.) instead.
+      #
+      # - uid: critical-system-error
+      #   title: Critical System Error
+      #   ... (removed to prevent false positives)
 
   - orgId: 1
     name: Loki Warning Alerts
@@ -177,7 +168,8 @@ groups:
               to: 0
             datasourceUid: P8E80F9AEF21F6940
             model:
-              expr: sum(count_over_time({job=~"pbs|vaultwarden|zigbee2mqtt|node-red|mosquitto|influxdb|grafana"} |~ "(?i)error" [5m]))
+              # Group by job to show which service has errors
+              expr: sum by (job) (count_over_time({job=~"pbs|vaultwarden|zigbee2mqtt|node-red|mosquitto|influxdb|grafana"} |~ "(?i)error" [5m]))
               refId: A
           - refId: B
             datasourceUid: __expr__
@@ -198,14 +190,21 @@ groups:
                       - 100
                     type: gt
         noDataState: OK
-        execErrState: Alerting
+        execErrState: OK
         for: 5m
         annotations:
-          summary: High error rate across services
-          description: More than 100 errors logged in the last 5 minutes across core services.
+          summary: "High error rate - {{ $values.B.Value }} errors in 5min across monitored services"
+          description: |
+            {{ $values.B.Value }} errors detected in monitored services.
+
+            Find which service(s):
+            sum by (job) (count_over_time({job=~"pbs|vaultwarden|zigbee2mqtt|node-red|mosquitto|influxdb|grafana"} |~ "(?i)error" [5m]))
+
+            Check service status and recent changes.
         labels:
           severity: warning
 
+      # Zigbee device offline - captures device name from log
       - uid: zigbee-device-offline
         title: Zigbee Device Offline
         condition: C
@@ -216,7 +215,10 @@ groups:
               to: 0
             datasourceUid: P8E80F9AEF21F6940
             model:
-              expr: count_over_time({job="zigbee2mqtt"} |~ "(?i)(offline|unavailable)" [5m])
+              # Match actual availability state changes
+              # Log format: MQTT publish: topic 'zigbee2mqtt/<device>/availability', payload '{"state":"offline"}'
+              expr: |
+                count_over_time({job="zigbee2mqtt"} |~ "MQTT publish.*availability.*state.*offline" [5m])
               refId: A
           - refId: B
             datasourceUid: __expr__
@@ -237,11 +239,19 @@ groups:
                       - 0
                     type: gt
         noDataState: OK
-        execErrState: Alerting
-        for: 5m
+        execErrState: OK
+        for: 2m
         annotations:
-          summary: Zigbee device went offline
-          description: A Zigbee device has gone offline or become unavailable.
+          summary: "Zigbee device offline - {{ $values.B.Value }} device(s)"
+          description: |
+            {{ $values.B.Value }} Zigbee device(s) went offline.
+
+            Find which device(s):
+            {job="zigbee2mqtt"} |~ "MQTT publish.*availability.*offline"
+
+            The device name is in the MQTT topic between 'zigbee2mqtt/' and '/availability'.
+
+            Common causes: Device battery dead, device unplugged, interference, coordinator issue.
         labels:
           severity: warning
 
@@ -276,10 +286,125 @@ groups:
                       - 10
                     type: gt
         noDataState: OK
-        execErrState: Alerting
+        execErrState: OK
         for: 2m
         annotations:
-          summary: Traefik returning server errors
-          description: More than 10 HTTP 5xx errors in the last 5 minutes. Backend services may be unhealthy.
+          summary: "Traefik: {{ $values.B.Value }} server errors (5xx) in 5min"
+          description: |
+            {{ $values.B.Value }} HTTP 5xx errors from backend services.
+
+            Find which backends are failing:
+            {job="traefik"} |~ "\" 5[0-9]{2} "
+
+            Look for the router/service name in the log line.
+            Check if backend container is running and healthy.
         labels:
           severity: warning
+
+      - uid: loki-stream-limit-exceeded
+        title: Loki Stream Limit Exceeded
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: P8E80F9AEF21F6940
+            model:
+              expr: count_over_time({job="loki"} |~ "^level=warn" |~ "stream limit exceeded" [5m])
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: reduce
+              expression: A
+              reducer: last
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    params:
+                      - 0
+                    type: gt
+        noDataState: OK
+        execErrState: OK
+        for: 0s
+        annotations:
+          summary: "Loki rejecting logs - stream limit exceeded"
+          description: |
+            Loki is rejecting log pushes (HTTP 429) due to too many active streams.
+
+            Fix options:
+            1. Increase max_streams_per_user in /etc/loki/loki-config.yaml
+            2. Reduce label cardinality in Promtail configs
+
+            Current config: pct exec 101 -- cat /etc/loki/loki-config.yaml | grep max_streams
+        labels:
+          severity: critical
+
+  # =============================================================================
+  # REMEDIATION ALERTS
+  # Updated 2026-01-06: Removed noisy alerts (remediation-attempt, remediation-config-missing)
+  # User only wants to be notified when self-healing FAILS, not on every attempt.
+  # Successful remediation attempts are logged to daily digest instead.
+  # =============================================================================
+  - orgId: 1
+    name: Remediation Alerts
+    folder: Loki Alerts
+    interval: 1m
+    rules:
+      # ONLY alert when auto-remediation actually FAILS
+      # Successful remediations are silent and captured in daily digest
+      - uid: remediation-failed
+        title: Auto-Remediation Failed
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: P8E80F9AEF21F6940
+            model:
+              expr: |
+                count_over_time({job="node-red"} |~ "(?i)(remediation.*fail|failed.*remediat|recovery.*fail|failed.*recover)" [5m])
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: reduce
+              expression: A
+              reducer: last
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    params:
+                      - 0
+                    type: gt
+        noDataState: OK
+        execErrState: OK
+        for: 0s
+        annotations:
+          summary: "REMEDIATION FAILED - manual intervention required"
+          description: |
+            Auto-remediation failed {{ $values.B.Value }} time(s).
+
+            Self-healing was attempted but could not recover the service.
+            Manual intervention is now required.
+
+            View failure details in Grafana:
+            {job="node-red"} |~ "(?i)(remediation|recovery).*fail"
+
+            Check which service failed and why remediation couldn't fix it.
+        labels:
+          severity: critical
