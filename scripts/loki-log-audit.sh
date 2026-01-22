@@ -69,8 +69,8 @@ AUTH_FAILURES=""
 # Check PBS authentication
 PBS_AUTH=$(query_loki '{job="pbs"} |~ "authentication fail"' | jq -r '[.data.result[].values[]] | length' 2>/dev/null)
 [[ ${PBS_AUTH:-0} -gt 0 ]] && AUTH_FAILURES+="pbs $PBS_AUTH\n"
-# Check Grafana authentication
-GRAFANA_AUTH=$(query_loki '{job="grafana"} |~ "(?i)(unauthorized|permission denied)"' | jq -r '[.data.result[].values[]] | length' 2>/dev/null)
+# Check Grafana authentication (exclude alerting scheduler logs which contain "auth" in query text)
+GRAFANA_AUTH=$(query_loki '{job="grafana"} |~ "(?i)(unauthorized|permission denied)" |!~ "grafana_scheduler" |!~ "fromAlert=true" |!~ "rule_uid="' | jq -r '[.data.result[].values[]] | length' 2>/dev/null)
 [[ ${GRAFANA_AUTH:-0} -gt 0 ]] && AUTH_FAILURES+="grafana $GRAFANA_AUTH\n"
 # Check Vaultwarden authentication
 VAULT_AUTH=$(query_loki '{job="vaultwarden"} |~ "(?i)(failed|invalid|unauthorized)"' | jq -r '[.data.result[].values[]] | length' 2>/dev/null)
