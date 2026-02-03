@@ -1,0 +1,364 @@
+[
+    {
+        "id": "auto-remediation-tab",
+        "type": "tab",
+        "label": "Auto-Remediation",
+        "disabled": false,
+        "info": "Automatic service recovery triggered by Uptime Kuma webhooks\n\nWebhook URL: http://192.168.1.142:1880/uptime-kuma/webhook"
+    },
+    {
+        "id": "comment-instructions",
+        "type": "comment",
+        "z": "auto-remediation-tab",
+        "name": "SETUP: Import this flow, then configure Uptime Kuma webhook to http://192.168.1.142:1880/uptime-kuma/webhook",
+        "info": "",
+        "x": 380,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "uptime-kuma-webhook",
+        "type": "http in",
+        "z": "auto-remediation-tab",
+        "name": "Uptime Kuma Webhook",
+        "url": "/uptime-kuma/webhook",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 150,
+        "y": 120,
+        "wires": [
+            [
+                "fork-response"
+            ]
+        ]
+    },
+    {
+        "id": "fork-response",
+        "type": "function",
+        "z": "auto-remediation-tab",
+        "name": "Fork & Respond 200",
+        "func": "// Immediately send 200 response\nconst responseMsg = RED.util.cloneMessage(msg);\nresponseMsg.payload = {status: 'received'};\nnode.send([null, responseMsg]);\n\n// Continue processing original message\nreturn [msg, null];",
+        "outputs": 2,
+        "timeout": "",
+        "noerr": 0,
+        "x": 380,
+        "y": 120,
+        "wires": [
+            [
+                "parse-webhook"
+            ],
+            [
+                "webhook-response"
+            ]
+        ]
+    },
+    {
+        "id": "webhook-response",
+        "type": "http response",
+        "z": "auto-remediation-tab",
+        "name": "200 OK",
+        "statusCode": "200",
+        "headers": {},
+        "x": 570,
+        "y": 60,
+        "wires": []
+    },
+    {
+        "id": "parse-webhook",
+        "type": "function",
+        "z": "auto-remediation-tab",
+        "name": "Parse & Match Service",
+        "func": "const payload = msg.payload;\nconst monitor = payload.monitor || {};\nconst heartbeat = payload.heartbeat || {};\n\n// Only process DOWN events (status = 0)\nif (heartbeat.status !== 0) {\n    node.status({fill:'green', shape:'dot', text:'UP: ' + (monitor.name || 'unknown')});\n    return null;\n}\n\nnode.status({fill:'red', shape:'ring', text:'DOWN: ' + (monitor.name || 'unknown')});\n\n// Service mapping: monitor name contains key -> remediation config\nconst serviceMap = {\n    'zigbee2mqtt': { host: '192.168.1.125', ct: '122', svc: 'zigbee2mqtt', type: 'service' },\n    'zwave': { host: '192.168.1.125', ct: '125', svc: 'zwave-js-ui', type: 'service' },\n    'mqtt-prod': { host: '192.168.1.137', ct: '130', svc: 'mosquitto', type: 'service' },\n    'mqtt': { host: '192.168.1.137', ct: '124', svc: 'mosquitto', type: 'service' },\n    'adguard-1': { host: '192.168.1.137', ct: '1250', svc: null, type: 'container' },\n    'adguard-2': { host: '192.168.1.125', ct: '116', svc: null, type: 'container' },\n    'kea-dhcp-1': { host: '192.168.1.137', ct: '133', svc: 'kea-dhcp4-server', type: 'service' },\n    'kea-dhcp-2': { host: '192.168.1.137', ct: '134', svc: 'kea-dhcp4-server', type: 'service' },\n    'traefik-1': { host: '192.168.1.137', ct: '110', svc: 'traefik', type: 'service' },\n    'traefik-2': { host: '192.168.1.125', ct: '121', svc: 'traefik', type: 'service' },\n    'influxdb': { host: '192.168.1.125', ct: '100', svc: 'influxdb', type: 'service' },\n    'postgresql': { host: '192.168.1.125', ct: '113', svc: 'postgresql', type: 'service' },\n    'vaultwarden': { host: '192.168.1.125', ct: '140', svc: 'vaultwarden', type: 'service' },\n    'grafana': { host: '192.168.1.137', ct: '101', svc: 'grafana-server', type: 'service' }\n};\n\nconst monitorName = (monitor.name || '').toLowerCase();\nlet matched = null;\nlet matchKey = null;\n\nfor (const [key, cfg] of Object.entries(serviceMap)) {\n    if (monitorName.includes(key)) {\n        matched = cfg;\n        matchKey = key;\n        break;\n    }\n}\n\nif (!matched) {\n    node.warn('No remediation config for: ' + monitor.name);\n    return null;\n}\n\nmsg.payload = {\n    service: matchKey,\n    config: matched,\n    monitor: monitor.name,\n    timestamp: new Date().toISOString()\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "x": 610,
+        "y": 120,
+        "wires": [
+            [
+                "cooldown-check"
+            ]
+        ]
+    },
+    {
+        "id": "cooldown-check",
+        "type": "function",
+        "z": "auto-remediation-tab",
+        "name": "Cooldown (3/hr, 20min gap)",
+        "func": "const COOLDOWN_MIN = 20;\nconst MAX_PER_HOUR = 3;\nconst service = msg.payload.service;\nconst now = Date.now();\n\nconst cooldowns = flow.get('cooldowns') || {};\nlet history = cooldowns[service] || [];\n\n// Clean entries older than 1 hour\nconst hourAgo = now - 3600000;\nhistory = history.filter(ts => ts > hourAgo);\n\n// Check max restarts\nif (history.length >= MAX_PER_HOUR) {\n    node.status({fill:'yellow', shape:'ring', text:'Max reached: ' + service});\n    msg.payload.blocked = true;\n    msg.payload.reason = 'Max ' + MAX_PER_HOUR + ' restarts/hour reached';\n    return [null, msg];\n}\n\n// Check min gap\nif (history.length > 0) {\n    const last = Math.max(...history);\n    const minSince = (now - last) / 60000;\n    if (minSince < COOLDOWN_MIN) {\n        const wait = Math.ceil(COOLDOWN_MIN - minSince);\n        node.status({fill:'yellow', shape:'ring', text:'Wait ' + wait + 'm: ' + service});\n        msg.payload.blocked = true;\n        msg.payload.reason = 'Wait ' + wait + ' more minutes';\n        return [null, msg];\n    }\n}\n\n// Record restart\nhistory.push(now);\ncooldowns[service] = history;\nflow.set('cooldowns', cooldowns);\n\nnode.status({fill:'blue', shape:'dot', text:'Restarting: ' + service});\nmsg.payload.attempt = history.length;\n\nreturn [msg, null];",
+        "outputs": 2,
+        "timeout": "",
+        "noerr": 0,
+        "x": 870,
+        "y": 120,
+        "wires": [
+            [
+                "build-command"
+            ],
+            [
+                "notify-cooldown"
+            ]
+        ]
+    },
+    {
+        "id": "build-command",
+        "type": "function",
+        "z": "auto-remediation-tab",
+        "name": "Build SSH Command",
+        "func": "const cfg = msg.payload.config;\nlet cmd;\n\nif (cfg.type === 'service') {\n    cmd = 'ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@' + cfg.host + \n          ' \"pct exec ' + cfg.ct + ' -- systemctl restart ' + cfg.svc + '\"';\n} else if (cfg.type === 'vm') {\n    cmd = 'ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@' + cfg.host + \n          ' \"qm reset ' + cfg.vm + '\"';\n} else {\n    cmd = 'ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@' + cfg.host + \n          ' \"pct restart ' + cfg.ct + '\"';\n}\n\nmsg.originalPayload = msg.payload;\nmsg.payload = cmd;\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "x": 1110,
+        "y": 120,
+        "wires": [
+            [
+                "exec-ssh"
+            ]
+        ]
+    },
+    {
+        "id": "exec-ssh",
+        "type": "exec",
+        "z": "auto-remediation-tab",
+        "command": "",
+        "addpay": "payload",
+        "append": "",
+        "useSpawn": "false",
+        "timer": "60",
+        "winHide": false,
+        "oldrc": false,
+        "name": "Execute SSH",
+        "x": 1290,
+        "y": 120,
+        "wires": [
+            [
+                "handle-success"
+            ],
+            [
+                "handle-error"
+            ],
+            [
+                "handle-error"
+            ]
+        ]
+    },
+    {
+        "id": "handle-success",
+        "type": "function",
+        "z": "auto-remediation-tab",
+        "name": "Success",
+        "func": "const orig = msg.originalPayload || {};\nnode.status({fill:'green', shape:'dot', text:'OK: ' + orig.service});\n\nmsg.payload = {\n    status: 'success',\n    service: orig.service,\n    monitor: orig.monitor,\n    attempt: orig.attempt,\n    timestamp: new Date().toISOString()\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "x": 1460,
+        "y": 80,
+        "wires": [
+            [
+                "notify-success",
+                "log-action",
+                "format-pushover-success"
+            ]
+        ]
+    },
+    {
+        "id": "handle-error",
+        "type": "function",
+        "z": "auto-remediation-tab",
+        "name": "Error",
+        "func": "const orig = msg.originalPayload || {};\nnode.status({fill:'red', shape:'dot', text:'FAIL: ' + orig.service});\n\nmsg.payload = {\n    status: 'error',\n    service: orig.service,\n    monitor: orig.monitor,\n    error: String(msg.payload),\n    timestamp: new Date().toISOString()\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "x": 1460,
+        "y": 160,
+        "wires": [
+            [
+                "notify-error",
+                "log-action",
+                "format-pushover-error"
+            ]
+        ]
+    },
+    {
+        "id": "notify-success",
+        "type": "http request",
+        "z": "auto-remediation-tab",
+        "name": "HA: Success",
+        "method": "POST",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "http://192.168.1.155:8123/api/webhook/auto_remediation_success",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 1630,
+        "y": 80,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "notify-error",
+        "type": "http request",
+        "z": "auto-remediation-tab",
+        "name": "HA: Error",
+        "method": "POST",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "http://192.168.1.155:8123/api/webhook/auto_remediation_error",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 1620,
+        "y": 160,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "notify-cooldown",
+        "type": "function",
+        "z": "auto-remediation-tab",
+        "name": "Format Cooldown",
+        "func": "node.warn('Cooldown: ' + msg.payload.service + ' - ' + msg.payload.reason);\n\nmsg.payload = {\n    status: 'cooldown',\n    service: msg.payload.service,\n    reason: msg.payload.reason,\n    timestamp: new Date().toISOString()\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "x": 1110,
+        "y": 200,
+        "wires": [
+            [
+                "notify-cooldown-ha",
+                "log-action"
+            ]
+        ]
+    },
+    {
+        "id": "notify-cooldown-ha",
+        "type": "http request",
+        "z": "auto-remediation-tab",
+        "name": "HA: Cooldown",
+        "method": "POST",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "http://192.168.1.155:8123/api/webhook/auto_remediation_cooldown",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 1320,
+        "y": 200,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "log-action",
+        "type": "debug",
+        "z": "auto-remediation-tab",
+        "name": "Log",
+        "active": true,
+        "tosidebar": true,
+        "console": true,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1610,
+        "y": 240,
+        "wires": []
+    },
+    {
+        "id": "pushover-success",
+        "type": "http request",
+        "z": "auto-remediation-tab",
+        "name": "Pushover: Success",
+        "method": "POST",
+        "ret": "txt",
+        "paytoqs": "body",
+        "url": "https://api.pushover.net/1/messages.json",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 1630,
+        "y": 40,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "pushover-error",
+        "type": "http request",
+        "z": "auto-remediation-tab",
+        "name": "Pushover: Error",
+        "method": "POST",
+        "ret": "txt",
+        "paytoqs": "body",
+        "url": "https://api.pushover.net/1/messages.json",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 1620,
+        "y": 200,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "format-pushover-success",
+        "type": "function",
+        "z": "auto-remediation-tab",
+        "name": "Format Pushover Success",
+        "func": "msg.payload = {\n    token: 'aueprfgesn49aj3zgcmqkmd2kj6p5m',\n    user: 'upo4vp1u4hj99k4grnphr1wqdbipja',\n    title: 'Auto-Remediation Success',\n    message: msg.payload.service + ' restarted successfully (attempt ' + msg.payload.attempt + ')',\n    priority: 0\n};\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "x": 1460,
+        "y": 40,
+        "wires": [
+            [
+                "pushover-success"
+            ]
+        ]
+    },
+    {
+        "id": "format-pushover-error",
+        "type": "function",
+        "z": "auto-remediation-tab",
+        "name": "Format Pushover Error",
+        "func": "msg.payload = {\n    token: 'aueprfgesn49aj3zgcmqkmd2kj6p5m',\n    user: 'upo4vp1u4hj99k4grnphr1wqdbipja',\n    title: 'Auto-Remediation FAILED',\n    message: 'Failed to restart ' + msg.payload.service + ': ' + (msg.payload.error || 'unknown error'),\n    priority: 1,\n    sound: 'siren'\n};\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "x": 1460,
+        "y": 200,
+        "wires": [
+            [
+                "pushover-error"
+            ]
+        ]
+    }
+]
