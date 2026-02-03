@@ -1,6 +1,19 @@
 {
-  "alwaysThinkingEnabled": true,
   "enabledPlugins": {
     "document-skills@anthropic-agent-skills": true
+  },
+  "alwaysThinkingEnabled": true,
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Read|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ~/.claude/hooks/block-secrets.py"
+          }
+        ]
+      }
+    ]
   }
 }
