@@ -1,0 +1,39 @@
+---
+title: Homelab Dashboard
+favicon: https://avatars.githubusercontent.com/u/1024025
+
+theme: dark
+color: slate
+headerStyle: boxed
+target: _blank
+
+layout:
+  Infrastructure:
+    style: row
+    columns: 4
+    icon: mdi-server
+  Monitoring:
+    style: row
+    columns: 3
+    icon: mdi-chart-line
+  Network:
+    style: row
+    columns: 4
+    icon: mdi-network
+  Home Automation:
+    style: row
+    columns: 3
+    icon: mdi-home-automation
+  Productivity:
+    style: row
+    columns: 4
+    icon: mdi-folder
+  DevOps:
+    style: row
+    columns: 4
+    icon: mdi-code-braces
+
+quicklaunch:
+  searchDescriptions: true
+  hideInternetSearch: false
+  hideVisitURL: false
