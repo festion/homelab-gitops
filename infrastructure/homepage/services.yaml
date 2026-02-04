@@ -1,0 +1,257 @@
+---
+# Infrastructure & Virtualization
+- Infrastructure:
+    - Proxmox Agent:
+        icon: proxmox.png
+        href: https://proxmox-agent.internal.lakehouse.wtf
+        description: Proxmox Cluster Dashboard
+
+    - Proxmox (Main):
+        icon: proxmox.png
+        href: https://proxmox.internal.lakehouse.wtf
+        description: Proxmox VE - Main Node
+        widget:
+          type: proxmox
+          url: https://192.168.1.137:8006
+          username: {{HOMEPAGE_VAR_PROXMOX_USER}}
+          password: {{HOMEPAGE_VAR_PROXMOX_PASS}}
+          insecureSkipVerify: true
+          node: proxmox
+
+    - Proxmox 2:
+        icon: proxmox.png
+        href: https://proxmox2.internal.lakehouse.wtf
+        description: Proxmox VE - Node 2
+        widget:
+          type: proxmox
+          url: https://192.168.1.125:8006
+          username: {{HOMEPAGE_VAR_PROXMOX_USER}}
+          password: {{HOMEPAGE_VAR_PROXMOX_PASS}}
+          insecureSkipVerify: true
+          node: proxmox2
+
+    - Proxmox 3:
+        icon: proxmox.png
+        href: https://proxmox3.internal.lakehouse.wtf
+        description: Proxmox VE - Node 3
+        widget:
+          type: proxmox
+          url: https://192.168.1.126:8006
+          username: {{HOMEPAGE_VAR_PROXMOX_USER}}
+          password: {{HOMEPAGE_VAR_PROXMOX_PASS}}
+          insecureSkipVerify: true
+          node: proxmox3
+
+    - PDM:
+        icon: proxmox.png
+        href: https://pdm.internal.lakehouse.wtf
+        description: Proxmox Datacenter Manager
+
+    - TrueNAS:
+        icon: truenas.png
+        href: https://truenas.internal.lakehouse.wtf
+        description: TrueNAS Storage Server
+        widget:
+          type: truenas
+          url: https://truenas.internal.lakehouse.wtf
+          key: {{HOMEPAGE_VAR_TRUENAS_KEY}}
+
+- Monitoring:
+    - Uptime Kuma:
+        icon: uptime-kuma.png
+        href: https://uptime.internal.lakehouse.wtf
+        description: Service Monitoring Dashboard
+
+    - Grafana:
+        icon: grafana.png
+        href: https://grafana.internal.lakehouse.wtf
+        description: Metrics Visualization
+        widget:
+          type: grafana
+          url: https://grafana.internal.lakehouse.wtf
+          username: {{HOMEPAGE_VAR_GRAFANA_USER}}
+          password: {{HOMEPAGE_VAR_GRAFANA_PASS}}
+
+    - Loki:
+        icon: loki.png
+        href: https://loki.internal.lakehouse.wtf
+        description: Log Aggregation
+
+    - InfluxDB:
+        icon: influxdb.png
+        href: https://influx.internal.lakehouse.wtf
+        description: Time Series Database
+        widget:
+          type: influxdb
+          url: http://192.168.1.74:8086
+          username: {{HOMEPAGE_VAR_INFLUX_USER}}
+          password: {{HOMEPAGE_VAR_INFLUX_PASS}}
+
+    - MySpeed:
+        icon: myspeed.png
+        href: https://myspeed.internal.lakehouse.wtf
+        description: Internet Speed Testing
+
+    - WatchYourLAN:
+        icon: mdi-lan
+        href: https://watchyourlan.internal.lakehouse.wtf
+        description: Network Device Tracking
+
+# Network Services
+- Network:
+    - Traefik:
+        icon: traefik.png
+        href: https://traefik.internal.lakehouse.wtf
+        description: Reverse Proxy & Load Balancer
+        widget:
+          type: traefik
+          url: https://traefik.internal.lakehouse.wtf
+
+    - Kea DHCP (Primary):
+        icon: mdi-ip-network
+        href: https://kea-1.internal.lakehouse.wtf
+        description: DHCP Server - Primary
+
+    - Kea DHCP (Secondary):
+        icon: mdi-ip-network
+        href: https://kea-2.internal.lakehouse.wtf
+        description: DHCP Server - Secondary (HA)
+
+    - Stork:
+        icon: mdi-server-network
+        href: https://stork.internal.lakehouse.wtf
+        description: Kea DHCP Monitoring
+
+    - AdGuard Home:
+        icon: mdi-shield-check
+        href: https://adguard.internal.lakehouse.wtf
+        description: DNS Ad Blocker - Primary
+        widget:
+          type: adguard
+          url: http://192.168.1.253
+
+    - AdGuard Home 2:
+        icon: mdi-shield-check
+        href: https://adguard-2.internal.lakehouse.wtf
+        description: DNS Ad Blocker - Secondary
+        widget:
+          type: adguard
+          url: http://192.168.1.224
+
+    - AdGuard Sync:
+        icon: mdi-sync
+        href: http://192.168.1.225
+        description: AdGuard Configuration Sync
+
+    - Omada Controller:
+        icon: omada.png
+        href: https://omada.internal.lakehouse.wtf
+        description: TP-Link Network Controller
+
+    - Cloudflared:
+        icon: cloudflare.png
+        href: http://192.168.1.100
+        description: Cloudflare Tunnel
+
+# Home Automation
+- Home Automation:
+    - Home Assistant:
+        icon: home-assistant.png
+        href: https://homeassistant.internal.lakehouse.wtf
+        description: Home Automation Platform
+        widget:
+          type: homeassistant
+          url: http://192.168.1.155:8123
+          key: {{HOMEPAGE_VAR_HASS_TOKEN}}
+
+    - ESPHome:
+        icon: esphome.png
+        href: https://esphome.internal.lakehouse.wtf
+        description: ESP Device Management
+
+    - Node-RED:
+        icon: node-red.png
+        href: https://node-red.internal.lakehouse.wtf
+        description: Visual Automation Editor
+
+    - Zigbee2MQTT:
+        icon: zigbee2mqtt.png
+        href: https://z2m.internal.lakehouse.wtf
+        description: Zigbee to MQTT Bridge
+        widget:
+          type: zigbee2mqtt
+          url: http://192.168.1.228:8099
+
+    - Z-Wave JS UI:
+        icon: mdi-z-wave
+        href: https://zwave-js-ui.internal.lakehouse.wtf
+        description: Z-Wave Device Management
+
+    - MQTT Broker:
+        icon: mqtt.png
+        href: http://192.168.1.85
+        description: Message Queue Broker
+
+    - BirdNET-Go:
+        icon: mdi-bird
+        href: https://birdnet.internal.lakehouse.wtf
+        description: Bird Sound Recognition
+
+# Productivity & Organization
+- Productivity:
+    - Vikunja:
+        icon: vikunja.png
+        href: https://vikunja.internal.lakehouse.wtf
+        description: Task & Project Management
+
+    - Tandoor:
+        icon: tandoor.png
+        href: https://tandoor.internal.lakehouse.wtf
+        description: Recipe Manager
+
+    - Manyfold:
+        icon: mdi-printer-3d
+        href: https://manyfold.internal.lakehouse.wtf
+        description: 3D Model Library
+
+    - WikiJS:
+        icon: wikijs.png
+        href: https://wiki.internal.lakehouse.wtf
+        description: Documentation Wiki
+
+    - Hoarder:
+        icon: mdi-bookmark-multiple
+        href: https://hoarder.internal.lakehouse.wtf
+        description: Bookmark Manager
+
+    - Memos:
+        icon: memos.png
+        href: https://memos.internal.lakehouse.wtf
+        description: Note Taking
+
+    - PairDrop:
+        icon: pairdrop.png
+        href: https://pairdrop.internal.lakehouse.wtf
+        description: Local File Sharing
+
+# DevOps & Development
+- DevOps:
+    - GitOps Auditor:
+        icon: mdi-git
+        href: https://gitops.internal.lakehouse.wtf
+        description: Repository Monitoring
+
+    - Infisical:
+        icon: infisical.png
+        href: https://infisical.internal.lakehouse.wtf
+        description: Secrets Management
+
+    - Vaultwarden:
+        icon: vaultwarden.png
+        href: https://vault.internal.lakehouse.wtf
+        description: Password Manager
+
+    - Pulse:
+        icon: mdi-pulse
+        href: https://pulse.internal.lakehouse.wtf
+        description: Status Page
