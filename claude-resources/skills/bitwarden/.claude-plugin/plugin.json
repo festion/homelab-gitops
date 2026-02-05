@@ -1,0 +1,18 @@
+{
+  "name": "bitwarden",
+  "displayName": "Bitwarden",
+  "version": "1.0.0",
+  "description": "Open-source password manager with self-hosting option",
+  "author": "Canifi",
+  "repository": "https://github.com/canifi/life-os-skills",
+  "category": "utilities",
+  "keywords": ["passwords", "open-source", "vault", "self-hosted", "security"],
+  "capabilities": ["get_secrets", "store_credentials", "generate_passwords", "organization_vaults", "send_files"],
+  "authentication": {"type": "api_key", "provider": "bitwarden"},
+  "endpoints": {"baseUrl": "https://vault.bitwarden.com", "cli": "bw"},
+  "rateLimit": {"requests": 100, "period": "minute"},
+  "environmentVariables": [{"name": "BW_CLIENTID", "description": "Bitwarden client ID", "required": true}, {"name": "BW_CLIENTSECRET", "description": "Bitwarden client secret", "required": true}],
+  "dependencies": ["bitwarden-cli"],
+  "platforms": ["web", "desktop", "ios", "android", "cli"],
+  "documentationUrl": "https://bitwarden.com/help"
+}
