@@ -284,7 +284,7 @@
       "targets": [
         {
           "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
-          "expr": "topk(10, sum by (resp_p) (count_over_time({job=\"zeek-conn\"} | resp_p!=\"80\" | resp_p!=\"443\" | resp_p!=\"53\" | resp_p!=\"22\" | resp_p!=\"8080\" | resp_p!=\"8443\" | resp_p!=\"3100\" | resp_p!=\"1883\" | resp_p=~\".+\" [$__interval])))",
+          "expr": "topk(10, sum by (resp_p) (count_over_time({job=\"zeek-conn\"} | json | resp_p!=\"80\" | resp_p!=\"443\" | resp_p!=\"53\" | resp_p!=\"22\" | resp_p!=\"8080\" | resp_p!=\"8443\" | resp_p!=\"3100\" | resp_p!=\"1883\" | resp_p=~\".+\" [$__interval])))",
           "legendFormat": "port {{resp_p}}",
           "refId": "A",
           "queryType": "range"
@@ -594,7 +594,7 @@
       "targets": [
         {
           "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
-          "expr": "topk(5, sum by (resp_h) (count_over_time({job=\"zeek-dns\"} | resp_h!=\"192.168.1.224\" | resp_h!=\"192.168.1.253\" | resp_h=~\".+\" [$__interval])))",
+          "expr": "topk(5, sum by (resp_h) (count_over_time({job=\"zeek-dns\"} | json | resp_h!=\"192.168.1.224\" | resp_h!=\"192.168.1.253\" | resp_h=~\".+\" [$__interval])))",
           "legendFormat": "{{resp_h}}",
           "refId": "A",
           "queryType": "range"
