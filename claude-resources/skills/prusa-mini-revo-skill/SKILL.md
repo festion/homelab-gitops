@@ -242,6 +242,72 @@ The Bondtech IFS printer profiles are configured with these defaults:
 
 ---
 
+## Skirt and Brim
+
+### Skirt
+
+A printed outline around all models that primes the nozzle and lets you verify first-layer adhesion before the actual print begins.
+
+| Setting | Default | Notes |
+|---------|---------|-------|
+| Loops | 1 | Set to 0 to disable; more loops = more priming |
+| Distance from object | 6mm | Gap between skirt and model |
+| Skirt height | 3 layers | Prusa default; 1-layer skirts are hard to remove |
+| Draft shield | Off | Full-height skirt wall — enable for ABS/ASA to block drafts |
+| Min extrusion length | 0 | Forces extra loops if priming is insufficient |
+
+**Best practice**: Always use at least a 1-loop skirt. Catches first-layer issues before they ruin a print.
+
+### Brim
+
+Extra material printed around the first layer perimeter to increase bed adhesion.
+
+| Setting | Recommended | Notes |
+|---------|-------------|-------|
+| Brim type | Outer only | Options: outer only, inner only, outer+inner |
+| Brim width | 3-5mm standard | 5-10mm for large/tall prints |
+| Brim separation gap | 0.1mm | Small gap for easier removal |
+
+### When to Use Brim
+
+| Scenario | Brim Width | Notes |
+|----------|------------|-------|
+| Small base, tall object | 5-10mm | Prevents tipping/warping |
+| Large flat print | 5-10mm | Prevents edge lifting |
+| Multiple small objects | 3-5mm | Stabilizes each piece |
+| Heavy/dense filaments (bronze, metal-fill) | 8-10mm | Extra weight stresses adhesion |
+| ABS/ASA without enclosure | 10mm+ | Combine with draft shield |
+| Standard PLA print | Skirt only | Brim usually unnecessary |
+
+### Nozzle-Specific Brim Tips
+
+| Nozzle | Brim Separation Gap | Notes |
+|--------|---------------------|-------|
+| 0.25mm | 0.05-0.1mm | Thin lines — easy to remove |
+| 0.40mm | 0.1mm | Standard |
+| 0.60mm | 0.1-0.15mm | Wider lines bond harder |
+| 0.80mm | 0.15-0.2mm | Increase gap for clean removal |
+
+### PrusaSlicer CLI Flags
+
+```bash
+# Skirt (default)
+--skirts 1 --skirt-distance 6 --skirt-height 3
+
+# Brim instead of skirt
+--skirts 0 --brim-width 5 --brim-separation 0.1
+
+# Draft shield for ABS/ASA
+--draft-shield=enabled
+```
+
+### Known Limitations
+
+- **Inner brim** does not apply to enclosed cavities within a model in PrusaSlicer (Bambu Studio handles this differently)
+- Brim height and separation should scale together — if using a taller brim, increase the separation gap for easier removal
+
+---
+
 ## PrusaSlicer CLI Usage
 
 ### CLI Syntax Rules
@@ -374,3 +440,4 @@ All sizes:
 
 - For material-specific profiles: See `references/material-profiles.md`
 - For common print issues: See `references/troubleshooting.md`
+- For PrusaSlicer print settings (layers, perimeters, infill, supports, seam, ironing, fuzzy skin, pressure equalizer, sequential printing): See `references/print-settings.md`
