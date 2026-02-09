@@ -225,6 +225,76 @@ Formula: Min = 25% nozzle, Max = 75-80% nozzle
 
 ---
 
+## Bondtech IFS Profile Defaults
+
+The Bondtech IFS printer profiles are configured with these defaults:
+
+| Setting | Value | Notes |
+|---------|-------|-------|
+| `binary_gcode` | `0` (ASCII) | **Required for Input Shaping** - binary gcode triggers firmware warning |
+| `retract_length` | `2mm` | Reduced for Bowden stress reduction |
+| `retract_speed` | `35 mm/s` | Matched deretract speed |
+| `deretract_speed` | `35 mm/s` | Symmetric with retract speed |
+| `fill_pattern` | `gyroid` | Bowden-friendly, smooth curves |
+| `support_material_style` | `organic` | Tree supports, easy removal |
+
+**Input Shaping**: Always use ASCII gcode (`binary_gcode = 0`) for Prusa Mini+ with Input Shaper firmware. The firmware checks for `M862.6 P"Input shaper"` in the start gcode.
+
+---
+
+## PrusaSlicer CLI Usage
+
+### CLI Syntax Rules
+
+**CRITICAL**: PrusaSlicer CLI has different syntax requirements for different option types:
+
+| Option Type | Syntax | Example |
+|-------------|--------|---------|
+| Enum options | `--option=value` | `--fill-pattern=gyroid` |
+| Numeric options | `--option value` or `--option=value` | `--temperature 215` |
+| Boolean options | `--option` | `--support-material` |
+
+### Common Enum Options (require `=` syntax)
+
+```bash
+--fill-pattern=gyroid           # rectilinear, grid, triangles, stars, cubic, gyroid, honeycomb, etc.
+--support-material-style=organic  # grid, snug, organic
+--support-material-pattern=rectilinear  # rectilinear, rectilinear-grid, honeycomb
+--gcode-flavor=marlin2          # marlin, marlin2, repetier, etc.
+```
+
+### Complete CLI Example
+
+```bash
+flatpak run com.prusa3d.PrusaSlicer --export-gcode \
+  --load "$HOME/.var/app/com.prusa3d.PrusaSlicer/config/PrusaSlicer/print/PROFILE.ini" \
+  --load "$HOME/.var/app/com.prusa3d.PrusaSlicer/config/PrusaSlicer/filament/FILAMENT.ini" \
+  --load "$HOME/.var/app/com.prusa3d.PrusaSlicer/config/PrusaSlicer/printer/PRINTER.ini" \
+  --fill-pattern=gyroid \
+  --support-material-style=organic \
+  --temperature 215 \
+  --first-layer-temperature 215 \
+  --bed-temperature 60 \
+  --retract-length 2 \
+  --retract-speed 35 \
+  --deretract-speed 35 \
+  --support-material \
+  --output ~/3d-print/output.gcode \
+  ~/3d-print/model.stl
+```
+
+### Bowden-Friendly Settings
+
+For Bowden systems, use these infill/support options:
+
+| Setting | Best Choice | Why |
+|---------|-------------|-----|
+| Infill pattern | `gyroid` | Smooth curves, constant extrusion, minimal retractions |
+| Support style | `organic` | Tree-like branches, smooth paths, easy removal |
+| Avoid | `honeycomb`, `grid` | Many direction changes, high retraction count |
+
+---
+
 ## PrusaSlicer Configuration
 
 ### Printer Settings (per nozzle)
