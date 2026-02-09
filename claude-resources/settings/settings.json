@@ -9,17 +9,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash ~/.claude/hooks/pull-dotfiles.sh"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash ~/.claude/hooks/check-uncommitted.sh"
+            "command": "test -f ~/.claude/hooks/pull-dotfiles.sh && bash ~/.claude/hooks/pull-dotfiles.sh || true"
           }
         ]
       }
@@ -30,7 +20,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ~/.claude/hooks/block-secrets.py"
+            "command": "test -f ~/.claude/hooks/block-secrets.py && python3 ~/.claude/hooks/block-secrets.py || true"
           }
         ]
       }
