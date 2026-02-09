@@ -190,6 +190,18 @@ Each nozzle needs separate calibration!
 | TPU | 50°C | Smooth PEI | None |
 | Nylon | 80°C | Garolite/G10 | Glue stick |
 
+### When to Add a Brim
+
+| Situation | Brim Width | Why |
+|-----------|------------|-----|
+| Tall object, small base | 5-10mm | Prevents tipping and corner lift |
+| Large flat print (>100mm) | 5-10mm | Prevents edge warping |
+| Heavy filament (bronze, metal-fill) | 8-10mm | High density stresses bed adhesion |
+| ABS/ASA without enclosure | 10mm+ | Combine with draft shield skirt |
+| Repeated first-layer failures | 5mm | Quick fix while tuning other settings |
+
+**Tip**: For heavy/dense filaments (600g+ prints), even a clean bed and correct temps may not be enough — use a wide brim and consider glue stick on textured PEI.
+
 ---
 
 ## Surface Quality Issues
