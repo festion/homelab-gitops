@@ -277,45 +277,93 @@ collect_automation_report() {
     log_info "Collecting automation run status..."
     local out="${OUTPUT_DIR}/03-automation.md"
 
+    # CT 123 (gitopsdashboard on proxmox2) runs DNS sync and IP audit
+    # Helper: run command inside CT 123 via SSH to proxmox2
+    _ct123() { ssh -o ConnectTimeout=5 -o BatchMode=yes "root@${PROXMOX2_HOST}" "pct exec 123 -- $*" 2>/dev/null; }
+
+    # Collect data before writing markdown (log_info goes to stdout, keep it out of the file)
+    log_info "  Checking DNS Sync status on CT 123..."
+    local dns_last_lines dns_status dns_notes
+    dns_last_lines=$(_ct123 tail -20 /opt/gitops/logs/gitops_dns_sync.log)
+    if [[ -n "$dns_last_lines" ]]; then
+        local dns_last_complete
+        dns_last_complete=$(echo "$dns_last_lines" | command grep -i "complete" | tail -1)
+        local dns_last_date
+        dns_last_date=$(echo "$dns_last_complete" | command grep -oP '^\[\K[0-9-]+ [0-9:]+' || echo "unknown")
+        local dns_errors
+        dns_errors=$(echo "$dns_last_lines" | command grep -ciE "error|traceback|exception" || echo "0")
+        if [[ ${dns_errors:-0} -gt 0 ]]; then
+            dns_status="WARNING"
+            dns_notes="Last run: ${dns_last_date} (${dns_errors} errors in recent log)"
+        elif [[ -n "$dns_last_complete" ]]; then
+            dns_status="OK"
+            dns_notes="Last run: ${dns_last_date}"
+        else
+            dns_status="FAILED"
+            dns_notes="No completion entry in recent log"
+        fi
+    else
+        dns_status="UNKNOWN"
+        dns_notes="Could not read log on CT 123"
+    fi
+
+    log_info "  Checking Loki Log Audit deployment..."
+    local loki_audit_status loki_audit_notes
+    local loki_audit_check
+    loki_audit_check=$(_ct123 ls /opt/loki-audit/loki-audit-cron.sh)
+    if [[ "$loki_audit_check" == *"loki-audit-cron.sh"* ]]; then
+        local loki_audit_last
+        loki_audit_last=$(_ct123 sh -c 'ls -t /var/log/loki-audit/audit-*.log 2>/dev/null | head -1')
+        if [[ -n "$loki_audit_last" ]]; then
+            loki_audit_status="OK"
+            loki_audit_notes="Latest: $(basename "$loki_audit_last")"
+        else
+            loki_audit_status="WARNING"
+            loki_audit_notes="Deployed but no reports generated"
+        fi
+    else
+        loki_audit_status="NOT DEPLOYED"
+        loki_audit_notes="Script in repo but not installed on any host"
+    fi
+
+    log_info "  Checking IP Consistency Audit..."
+    local ip_audit_status ip_audit_notes
+    local ip_audit_lines
+    ip_audit_lines=$(_ct123 tail -5 /opt/gitops/logs/ip-audit.log)
+    if [[ -n "$ip_audit_lines" ]]; then
+        local ip_last_date
+        ip_last_date=$(echo "$ip_audit_lines" | command grep -oP '^\[\K[0-9-]+ [0-9:]+' | tail -1 || echo "unknown")
+        ip_audit_status="OK"
+        ip_audit_notes="Last run: ${ip_last_date}"
+    else
+        ip_audit_status="UNKNOWN"
+        ip_audit_notes="Could not read log on CT 123"
+    fi
+
+    log_info "  Checking Fluent Bit agents..."
+    local fluent_bit_jobs
+    fluent_bit_jobs=$(curl -sG "${LOKI_URL}/loki/api/v1/label/job/values" \
+        --data-urlencode "start=${LOKI_START_TS}" \
+        --data-urlencode "end=${LOKI_END_TS}" \
+        --max-time 10 2>/dev/null | jq -r '.data | length' 2>/dev/null || echo "0")
+
+    local cron_status="OK" cron_notes="Running"
+    if ! systemctl is-active --quiet cron 2>/dev/null; then
+        cron_status="FAILED"
+        cron_notes="Not running"
+    fi
+
+    # Now write the markdown (no log_info calls in this block)
     {
         echo "## Automation Report"
         echo ""
         echo "| Job | Status | Notes |"
         echo "|-----|--------|-------|"
-
-        # DNS Sync (runs daily at 3 AM)
-        local dns_sync_count
-        dns_sync_count=$(loki_count '{job=~".*"} |~ "gitops_dns_sync"')
-        if [[ ${dns_sync_count:-0} -gt 0 ]]; then
-            echo "| DNS Sync | OK | ${dns_sync_count} log entries this week |"
-        else
-            echo "| DNS Sync | UNKNOWN | No log entries found |"
-        fi
-
-        # Loki Audit (weekly)
-        local loki_audit_count
-        loki_audit_count=$(loki_count '{job=~".*"} |~ "loki-log-audit|loki-audit"')
-        if [[ ${loki_audit_count:-0} -gt 0 ]]; then
-            echo "| Loki Log Audit | OK | ${loki_audit_count} log entries this week |"
-        else
-            echo "| Loki Log Audit | UNKNOWN | No log entries found |"
-        fi
-
-        # Fluent Bit agents — count active jobs reporting to Loki
-        local fluent_bit_jobs
-        fluent_bit_jobs=$(curl -sG "${LOKI_URL}/loki/api/v1/label/job/values" \
-            --data-urlencode "start=${LOKI_START_TS}" \
-            --data-urlencode "end=${LOKI_END_TS}" \
-            --max-time 10 2>/dev/null | jq -r '.data | length' 2>/dev/null || echo "0")
+        echo "| DNS Sync | ${dns_status} | ${dns_notes} |"
+        echo "| Loki Log Audit | ${loki_audit_status} | ${loki_audit_notes} |"
+        echo "| IP Consistency Audit | ${ip_audit_status} | ${ip_audit_notes} |"
         echo "| Fluent Bit Agents | OK | ${fluent_bit_jobs} jobs reporting to Loki |"
-
-        # Cron service health on this host
-        if systemctl is-active --quiet cron 2>/dev/null; then
-            echo "| Cron Service (CT 128) | OK | Running |"
-        else
-            echo "| Cron Service (CT 128) | FAILED | Not running |"
-        fi
-
+        echo "| Cron Service (CT 128) | ${cron_status} | ${cron_notes} |"
         echo ""
     } > "$out"
     log_success "Automation report collected"
