@@ -11,7 +11,7 @@ set -euo pipefail
 
 # Load configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/config-loader.sh"
+source "$SCRIPT_DIR/config/config-loader.sh"
 load_config
 
 ### CONFIGURATION ###
