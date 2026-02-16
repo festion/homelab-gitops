@@ -48,5 +48,9 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": ""
+  "description": "",
+  "overrides": {
+    "tar": "^7.5.9",
+    "@smithy/config-resolver": "^4.4.6"
+  }
 }
