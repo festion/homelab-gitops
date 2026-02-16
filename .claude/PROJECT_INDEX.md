@@ -1,44 +1,62 @@
-Done.
-lab-gitops Project Index
-
-Generated: 2026-02-16
-
-## Purpose
-The `homelab-gitops` project aims to manage and automate the deployment and configuration of a homelab environment using GitOps principles. It integrates various components including an API backend, a frontend dashboard, infrastructure definitions, and AI-driven content processing and synchronization with Wiki.js, leveraging Git as the single source of truth for all configurations and deployments.
+Okay, I've created the `PROJECT_INDEX.md` file. What's next?
+pose
+The `homelab-gitops` project serves as a comprehensive system for managing a homelab environment using GitOps principles. It integrates various services, APIs, and automation tools, including a WikiJS instance for documentation, AI agents for content processing, and a "Master Control Program" (MCP) for centralized configuration and deployment. The goal is to provide a robust, automated, and well-documented infrastructure management solution.
 
 ## Architecture
-The project follows a modular architecture:
--   **API Backend (`api/`)**: Provides various services including authentication, data export, email notifications, enhanced discovery, GitHub MCP management, and integration with Wiki.js and Infisical. It serves as the central hub for interacting with the homelab components.
--   **Frontend (`frontend/`)**: Likely a web-based dashboard for visualizing and interacting with the homelab status and controls. (Details not fully available in current context)
--   **Infrastructure (`infrastructure/`)**: Contains definitions for deploying and managing the underlying homelab infrastructure (e.g., Kubernetes manifests, Docker Compose files).
--   **MCP Server (`.mcp/`, `mcp-servers/`, `mcp-enhanced-servers/`)**: Manages configurations, templates, and batch processing for various services, acting as a "Managed Configuration Processor".
--   **Wiki.js Integration (`wikijs-ai-agent/`, `wikijs-sync-agent/`)**: Modules responsible for AI-driven content generation/processing and synchronization of documentation with a Wiki.js instance.
--   **Agent Workspace (`agent-workspace/`)**: Contains components related to agent activation and deployment, possibly for orchestrating various tasks within the homelab.
-
-These components interact through APIs, webhooks, and shared configuration managed via Git.
+The project is structured into several key modules:
+- **`api/`**: Contains the backend services, likely Node.js-based, handling data management, authentication, integrations with external systems (e.g., GitHub, Infisical for secrets management), and webhook processing. It serves as the central hub for most operations.
+- **`frontend/`**: (Implied, not fully detailed in provided structure) The client-side application providing a user interface for interacting with the homelab services.
+- **`infrastructure/`**: Houses infrastructure-as-code (IaC) definitions, primarily Docker Compose configurations (`docker-compose.production.yml`, `docker-compose.green.yml`), for defining and deploying services.
+- **`wikijs-ai-agent/` & `wikijs-sync-agent/`**: Modules dedicated to managing and interacting with a WikiJS instance, potentially involving AI for automated content generation, processing, or synchronization.
+- **`.mcp/` & `mcp-servers/`**: Components related to a "Master Control Program" system, likely responsible for orchestrating deployments, managing configurations, and automating routine tasks across the homelab.
+- **`agent-workspace/websocket/`**: Facilitates real-time communication, possibly for control plane interactions or agent-to-agent communication within the system.
 
 ## Key Files
--   `package.json`: Defines project metadata and Node.js dependencies.
--   `docker-compose.production.yml`: Production Docker Compose configuration for deploying services.
--   `install.sh`: Script for initial project setup and dependency installation.
--   `update-production.sh`: Script for updating the production deployment.
--   `api/server.js`: Main entry point for the API backend.
--   `api/AUTHENTICATION.md`: Documentation for API authentication mechanisms.
--   `api/SECURITY_IMPLEMENTATION.md`: Details on security implementation within the API.
--   `wikijs-ai-content-processor.js`: Core logic for AI-driven content processing for Wiki.js.
--   `create-consolidated-config.py`: Python script for consolidating configuration files.
--   `.pre-commit-config.yaml`: Configuration for pre-commit hooks to enforce code quality.
--   `README.md`: General project overview and getting started guide.
+- `./README.md`: The primary project overview and entry point for new contributors.
+- `./package.json`: Defines project metadata and declares Node.js dependencies for the root project.
+- `./docker-compose.production.yml`: Configuration for deploying services in a production environment using Docker Compose.
+- `./wikijs-ai-content-processor.js`: A JavaScript utility for processing content for WikiJS, likely involving AI.
+- `./api/server.js`: The main entry point for the backend API server.
+- `./api/AUTHENTICATION.md`: Documentation detailing the authentication mechanisms used by the API.
+- `./cleanup-mcp-structure.sh`: A shell script for performing cleanup operations related to the MCP structure.
+- `./deploy-v1.1.0.sh`: A specific deployment script for version 1.1.0 of the project.
+- `./CI_CD_PIPELINE_IMPLEMENTATION.md`: Documentation outlining the implementation details of the project's CI/CD pipeline.
+- `./INFISICAL_INTEGRATION.md`: Documentation on how Infisical (a secrets management tool) is integrated into the project.
+- `./setup-linting.sh`: A shell script to configure and set up linting rules for code quality.
 
 ## Dependencies
--   **Node.js**: Required for the API backend and various utility scripts (indicated by `package.json` and `package-lock.json` in root and `api/`).
--   **Python**: Used for MCP components (`.mcp/`), configuration scripts (`create-consolidated-config.py`), and potentially other automation (indicated by `venv/`).
--   **Docker/Docker Compose**: Essential for deploying and managing services across the homelab infrastructure.
--   **Git**: Core for GitOps workflow, managing all configurations and code.
+The project primarily relies on Node.js and its ecosystem, as indicated by `package.json` files in the root and `api/` directories.
+- **Runtime Dependencies**: Managed via `npm` (Node Package Manager), defined in `package.json` and locked in `package-lock.json`. These include various server-side libraries for the API and potentially frontend frameworks.
+- **Build/Development Dependencies**: Include tools for linting (`.eslintrc.js`), testing (`jest.config.js`), and potentially build tools (e.g., Webpack, Babel, if a frontend framework like React is used). Docker is a key dependency for deploying services.
 
 ## Common Tasks
--   **Installation**: Run `install.sh` to set up the development environment and dependencies.
--   **Testing**: Execute `npm test` or `jest` commands within relevant directories (e.g., `api/`) to run unit and integration tests.
--   **Deployment**: Use `docker-compose.production.yml` with `docker-compose up -d` for production deployments, or specific scripts like `deploy-v1.1.0.sh` or `update-production.sh`.
--   **Development**: Start development servers (e.g., `start-dev.ps1` or `npm run dev` in respective project parts) for local development.
--   **Linting/Formatting**: Run `npm run lint` or use configured pre-commit hooks (`.pre-commit-config.yaml`) to maintain code style and quality.
+- **Install Dependencies**:
+  ```bash
+  npm install
+  # And potentially in api/
+  # cd api && npm install
+  ```
+- **Run Development Server**:
+  ```bash
+  npm start # (If defined in package.json)
+  # Or for API
+  # node api/server.js
+  ```
+- **Test**:
+  ```bash
+  npm test
+  # Or using Jest directly in the API module
+  # npx jest --config api/jest.config.js
+  ```
+- **Lint Code**:
+  ```bash
+  npm run lint # (If defined in package.json)
+  # Or run the setup script
+  # ./setup-linting.sh
+  ```
+- **Deploy (Production)**:
+  ```bash
+  docker-compose -f docker-compose.production.yml up -d
+  # Or use specific deployment scripts
+  # ./deploy-v1.1.0.sh
+  ```
