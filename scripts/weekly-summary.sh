@@ -282,30 +282,6 @@ collect_automation_report() {
     _ct123() { ssh -o ConnectTimeout=5 -o BatchMode=yes "root@${PROXMOX2_HOST}" "pct exec 123 -- $*" 2>/dev/null; }
 
     # Collect data before writing markdown (log_info goes to stdout, keep it out of the file)
-    log_info "  Checking DNS Sync status on CT 123..."
-    local dns_last_lines dns_status dns_notes
-    dns_last_lines=$(_ct123 tail -20 /opt/gitops/logs/gitops_dns_sync.log)
-    if [[ -n "$dns_last_lines" ]]; then
-        local dns_last_complete
-        dns_last_complete=$(echo "$dns_last_lines" | command grep -i "complete" | tail -1)
-        local dns_last_date
-        dns_last_date=$(echo "$dns_last_complete" | command grep -oP '^\[\K[0-9-]+ [0-9:]+' || echo "unknown")
-        local dns_errors
-        dns_errors=$(echo "$dns_last_lines" | command grep -ciE "error|traceback|exception" || echo "0")
-        if [[ ${dns_errors:-0} -gt 0 ]]; then
-            dns_status="WARNING"
-            dns_notes="Last run: ${dns_last_date} (${dns_errors} errors in recent log)"
-        elif [[ -n "$dns_last_complete" ]]; then
-            dns_status="OK"
-            dns_notes="Last run: ${dns_last_date}"
-        else
-            dns_status="FAILED"
-            dns_notes="No completion entry in recent log"
-        fi
-    else
-        dns_status="UNKNOWN"
-        dns_notes="Could not read log on CT 123"
-    fi
 
     log_info "  Checking Loki Log Audit deployment..."
     local loki_audit_status loki_audit_notes
@@ -359,7 +335,6 @@ collect_automation_report() {
         echo ""
         echo "| Job | Status | Notes |"
         echo "|-----|--------|-------|"
-        echo "| DNS Sync | ${dns_status} | ${dns_notes} |"
         echo "| Loki Log Audit | ${loki_audit_status} | ${loki_audit_notes} |"
         echo "| IP Consistency Audit | ${ip_audit_status} | ${ip_audit_notes} |"
         echo "| Fluent Bit Agents | OK | ${fluent_bit_jobs} jobs reporting to Loki |"
