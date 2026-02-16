@@ -30,7 +30,7 @@ else
   echo "📁 Local Git root: ${LOCAL_GIT_ROOT}"
 fi
 
-TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+TIMESTAMP=$(date -u +"%Y-%m-%dT%H-%M-%SZ")
 JSON_PATH="${HISTORY_DIR}/${TIMESTAMP}.json"
 
 mkdir -p "$HISTORY_DIR"
