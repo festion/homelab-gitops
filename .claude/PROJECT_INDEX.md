@@ -1,37 +1,44 @@
-# Project Index: Homelab GitOps
+Done.
+lab-gitops Project Index
 
-## 1. Core Purpose
+Generated: 2026-02-16
 
-This repository contains the source code and configuration for a comprehensive Homelab GitOps platform. It is designed to automate the deployment, management, and monitoring of various services within a homelab environment. The core functionalities include a centralized API, a content management and documentation system (WikiJS), integration with Claude AI for automation, and robust monitoring and logging. The system leverages Git as the single source of truth for declarative infrastructure and application configuration.
+## Purpose
+The `homelab-gitops` project aims to manage and automate the deployment and configuration of a homelab environment using GitOps principles. It integrates various components including an API backend, a frontend dashboard, infrastructure definitions, and AI-driven content processing and synchronization with Wiki.js, leveraging Git as the single source of truth for all configurations and deployments.
 
-## 2. Architecture
+## Architecture
+The project follows a modular architecture:
+-   **API Backend (`api/`)**: Provides various services including authentication, data export, email notifications, enhanced discovery, GitHub MCP management, and integration with Wiki.js and Infisical. It serves as the central hub for interacting with the homelab components.
+-   **Frontend (`frontend/`)**: Likely a web-based dashboard for visualizing and interacting with the homelab status and controls. (Details not fully available in current context)
+-   **Infrastructure (`infrastructure/`)**: Contains definitions for deploying and managing the underlying homelab infrastructure (e.g., Kubernetes manifests, Docker Compose files).
+-   **MCP Server (`.mcp/`, `mcp-servers/`, `mcp-enhanced-servers/`)**: Manages configurations, templates, and batch processing for various services, acting as a "Managed Configuration Processor".
+-   **Wiki.js Integration (`wikijs-ai-agent/`, `wikijs-sync-agent/`)**: Modules responsible for AI-driven content generation/processing and synchronization of documentation with a Wiki.js instance.
+-   **Agent Workspace (`agent-workspace/`)**: Contains components related to agent activation and deployment, possibly for orchestrating various tasks within the homelab.
 
-The platform follows a multi-tier, service-oriented architecture, managed via GitOps principles and containerized using Docker.
+These components interact through APIs, webhooks, and shared configuration managed via Git.
 
-*   **API Server (`api/`):** A Node.js/Express application that serves as the central orchestration point. It manages deployments, handles webhook integrations, and interacts with various backend services.
-*   **WikiJS Integration (`wikijs-ai-agent/`, `wikijs-sync-agent/`):** A dedicated set of services to manage and synchronize documentation with a WikiJS instance. It includes an AI agent for content processing and automation.
-*   **MCP (Model Context Protocol) Servers (`mcp-servers/`):** A collection of specialized microservices that provide context and control for various homelab systems (e.g., Proxmox, TrueNAS, networking).
-*   **Dashboard (`dashboard/`):** A web-based user interface for monitoring and interacting with the GitOps platform.
-*   **Infrastructure & Monitoring (`infrastructure/`, `monitoring/`):** Configuration files for infrastructure components like Traefik (reverse proxy), Grafana (dashboards), Prometheus (metrics), and Loki (logs).
-*   **Automation & Scripts (`scripts/`, `wrappers/`):** A collection of shell scripts and wrappers for automating deployment, testing, backups, and other operational tasks.
+## Key Files
+-   `package.json`: Defines project metadata and Node.js dependencies.
+-   `docker-compose.production.yml`: Production Docker Compose configuration for deploying services.
+-   `install.sh`: Script for initial project setup and dependency installation.
+-   `update-production.sh`: Script for updating the production deployment.
+-   `api/server.js`: Main entry point for the API backend.
+-   `api/AUTHENTICATION.md`: Documentation for API authentication mechanisms.
+-   `api/SECURITY_IMPLEMENTATION.md`: Details on security implementation within the API.
+-   `wikijs-ai-content-processor.js`: Core logic for AI-driven content processing for Wiki.js.
+-   `create-consolidated-config.py`: Python script for consolidating configuration files.
+-   `.pre-commit-config.yaml`: Configuration for pre-commit hooks to enforce code quality.
+-   `README.md`: General project overview and getting started guide.
 
-## 3. Key Files
+## Dependencies
+-   **Node.js**: Required for the API backend and various utility scripts (indicated by `package.json` and `package-lock.json` in root and `api/`).
+-   **Python**: Used for MCP components (`.mcp/`), configuration scripts (`create-consolidated-config.py`), and potentially other automation (indicated by `venv/`).
+-   **Docker/Docker Compose**: Essential for deploying and managing services across the homelab infrastructure.
+-   **Git**: Core for GitOps workflow, managing all configurations and code.
 
-*   `docker-compose.production.yml`: Defines the production services, networks, and volumes for the entire stack.
-*   `package.json`: Lists the core project dependencies and scripts for the root-level coordination.
-*   `api/server.js`: The main entry point for the core backend API server.
-*   `api/routes/`: Contains the API endpoint definitions and routing logic.
-*   `wikijs-ai-agent/run_server.py`: The entry point for the Python-based WikiJS AI agent.
-*   `mcp-servers/`: Directory containing the various Model Context Protocol servers that act as bridges to other services.
-*   `scripts/deploy.sh`: A key script for orchestrating application deployments.
-*   `infrastructure/`: Contains configuration for essential services like Traefik, Grafana, and Prometheus.
-*   `PROJECT_OVERVIEW.md`, `ROADMAP-2025.md`: High-level documentation outlining the project's vision and goals.
-
-## 4. Dependencies
-
-*   **Backend:** Node.js, Express, Mongoose, Axios, Socket.IO, Winston (logging).
-*   **AI & Python:** Python, various libraries for AI processing (details in `wikijs-ai-agent/requirements.txt`).
-*   **Frontend (Dashboard):** Vite, TypeScript, React.
-*   **Infrastructure:** Docker, Docker Compose, Nginx, Traefik.
-*   **Databases/Storage:** MongoDB, Redis (implied by dependencies), PostgreSQL (for WikiJS).
-*   **Development & Testing:** Jest, ESLint, Prettier, Nodemon.
+## Common Tasks
+-   **Installation**: Run `install.sh` to set up the development environment and dependencies.
+-   **Testing**: Execute `npm test` or `jest` commands within relevant directories (e.g., `api/`) to run unit and integration tests.
+-   **Deployment**: Use `docker-compose.production.yml` with `docker-compose up -d` for production deployments, or specific scripts like `deploy-v1.1.0.sh` or `update-production.sh`.
+-   **Development**: Start development servers (e.g., `start-dev.ps1` or `npm run dev` in respective project parts) for local development.
+-   **Linting/Formatting**: Run `npm run lint` or use configured pre-commit hooks (`.pre-commit-config.yaml`) to maintain code style and quality.
