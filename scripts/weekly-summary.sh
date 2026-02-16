@@ -349,7 +349,7 @@ collect_cicd_summary() {
                     | group_by(.name)
                     | .[]
                     | {
-                        name: .[0].name,
+                        name: (.[0].name | if length > 60 then .[:57] + "..." else . end),
                         total: length,
                         success: [.[] | select(.conclusion == "success")] | length,
                         failure: [.[] | select(.conclusion == "failure")] | length,
