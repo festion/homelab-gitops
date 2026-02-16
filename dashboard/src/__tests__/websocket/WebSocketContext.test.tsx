@@ -31,7 +31,9 @@ jest.mock('react-hot-toast', () => ({
   }
 }));
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { io } = require('socket.io-client');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const mockSocket = require('socket.io-client').__mockSocket;
 
 describe('WebSocketContext', () => {

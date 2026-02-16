@@ -233,7 +233,7 @@ export const LazyChart: React.FC<LazyChartProps> = memo(({
 LazyChart.displayName = 'LazyChart';
 
 // Data sampling for large datasets
-export const useSampledData = <T extends any>(
+export const useSampledData = <T,>(
   data: T[],
   maxPoints: number = 1000
 ) => {
