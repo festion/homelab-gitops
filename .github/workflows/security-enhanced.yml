@@ -31,10 +31,10 @@ jobs:
 
     - name: Run TruffleHog OSS (scheduled/manual - recent commits)
       if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-      uses: trufflesecurity/trufflehog@main
-      with:
-        path: ./
-        extra_args: --debug --only-verified --since-commit HEAD~10
+      run: |
+        docker run --rm -v "$PWD:/repo" ghcr.io/trufflesecurity/trufflehog:latest \
+          git file:///repo/ --only-verified --fail \
+          --since-commit "$(git rev-parse HEAD~10)"
 
   code-security:
     name: Static Code Analysis
