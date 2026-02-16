@@ -22,3 +22,9 @@
 - When decommissioning automation, move scripts to `scripts/retired/` with a README noting the reason and date.
 - Comment out the cron entry in `cron/gitops-schedule` with a retirement note.
 - Disable the live cron on the target host.
+
+### ESLint flat config needs `typescript-eslint` package — 2026-02-16
+- The dashboard's `eslint.config.js` imports `typescript-eslint` (flat config API), but only `@typescript-eslint/eslint-plugin` and `@typescript-eslint/parser` (legacy) were in devDependencies. Both the legacy and flat-config packages are needed.
+
+### comprehensive_audit.sh config-loader path — 2026-02-16
+- `config-loader.sh` lives in `scripts/config/config-loader.sh`, not `scripts/config-loader.sh`. The CI workflow previously copied the script to `/tmp` via sed, breaking `$SCRIPT_DIR` resolution. Fixed by running in-place with env var override for `LOCAL_GIT_ROOT`.
