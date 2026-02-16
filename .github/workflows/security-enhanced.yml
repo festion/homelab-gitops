@@ -20,13 +20,21 @@ jobs:
       with:
         fetch-depth: 0
         
-    - name: Run TruffleHog OSS
+    - name: Run TruffleHog OSS (push/PR - diff scan)
+      if: github.event_name == 'push' || github.event_name == 'pull_request'
       uses: trufflesecurity/trufflehog@main
       with:
         path: ./
         base: main
         head: HEAD
         extra_args: --debug --only-verified
+
+    - name: Run TruffleHog OSS (scheduled/manual - recent commits)
+      if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+      uses: trufflesecurity/trufflehog@main
+      with:
+        path: ./
+        extra_args: --debug --only-verified --since-commit HEAD~10
 
   code-security:
     name: Static Code Analysis
