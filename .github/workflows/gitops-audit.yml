@@ -84,20 +84,18 @@ jobs:
           sudo apt-get install -y jq curl git
 
       - name: Run comprehensive audit (simulation)
+        env:
+          LOCAL_GIT_ROOT: /tmp/git-simulation
         run: |
           # Create simulation of C:\GIT structure for testing
           mkdir -p /tmp/git-simulation
-          
+
           # Simulate some repositories
           git clone --depth 1 https://github.com/festion/homelab-gitops-auditor.git /tmp/git-simulation/homelab-gitops-auditor
           git clone --depth 1 https://github.com/festion/ESPHome.git /tmp/git-simulation/ESPHome || true
-          
-          # Modify script to use simulation directory
-          sed 's|LOCAL_GIT_ROOT="/mnt/c/GIT"|LOCAL_GIT_ROOT="/tmp/git-simulation"|g' scripts/comprehensive_audit.sh > /tmp/audit_test.sh
-          chmod +x /tmp/audit_test.sh
-          
-          # Run the audit script
-          bash /tmp/audit_test.sh --dev
+
+          # Run the audit script directly (LOCAL_GIT_ROOT set via env)
+          bash scripts/comprehensive_audit.sh --dev
 
       - name: Upload audit results
         uses: actions/upload-artifact@v4
