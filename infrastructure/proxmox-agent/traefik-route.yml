@@ -1,0 +1,27 @@
+http:
+  routers:
+    proxmox-agent:
+      rule: "Host(`proxmox-agent.internal.lakehouse.wtf`)"
+      service: proxmox-agent
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: cloudflare
+      middlewares:
+        - compress
+        - secure-headers
+
+  services:
+    proxmox-agent:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.1.161:80"
+        passHostHeader: true
+        serversTransport: proxmox-agent-transport
+
+  serversTransports:
+    proxmox-agent-transport:
+      forwardingTimeouts:
+        dialTimeout: 30s
+        responseHeaderTimeout: 60s
+        idleConnTimeout: 90s
