@@ -53,7 +53,7 @@
   "dependencies": {
     "@modelcontextprotocol/server-filesystem": "^2025.7.1",
     "@modelcontextprotocol/server-github": "^2025.4.8",
-    "axios": "^1.6.2",
+    "axios": "^1.13.5",
     "chokidar": "^3.5.3",
     "concurrently": "^9.1.0",
     "dotenv": "^16.3.1",
@@ -79,8 +79,12 @@
     "typescript": "^5.8.3"
   },
   "overrides": {
-    "@anthropic-ai/claude-code": "^2.0.65",
-    "@modelcontextprotocol/sdk": "^1.24.3"
+    "@anthropic-ai/claude-code": "^2.1.7",
+    "@modelcontextprotocol/sdk": "^1.26.0",
+    "@isaacs/brace-expansion": "^5.0.1",
+    "tar": "^7.5.7",
+    "diff": "^5.2.2",
+    "qs": "^6.14.2"
   },
   "engines": {
     "node": ">=18.0.0",
