@@ -6,11 +6,21 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["mcp", "claude", "automation", "homelab"],
+  "keywords": [
+    "mcp",
+    "claude",
+    "automation",
+    "homelab"
+  ],
   "author": "Claude AI Assistant",
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.25.2",
     "@modelcontextprotocol/server-filesystem": "^2025.7.1"
+  },
+  "overrides": {
+    "minimatch": "^10.2.1",
+    "glob": "^11.0.0",
+    "rimraf": "^6.0.0"
   }
 }
