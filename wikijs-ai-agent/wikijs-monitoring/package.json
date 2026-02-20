@@ -97,6 +97,9 @@
       "<rootDir>/tests/setup.js"
     ]
   },
+  "overrides": {
+    "tar": "^7.5.8"
+  },
   "eslintConfig": {
     "extends": [
       "standard"
