@@ -1,10 +1,16 @@
 # Traefik VIP DNS Migration Complete - 2026-01-08
 
+> **STALE (2026-02-27):** This document references the .101 keepalived VIP and active
+> keepalived — both are **retired** (Feb 2026, IP conflict with Roku TV). All DNS rewrites
+> now point to 192.168.1.110 (Traefik direct). Keepalived is disabled on both Traefik CTs.
+>
+> **Current DNS architecture:** See `operations/docs/network/dns-architecture.md`
+
 ## Executive Summary
 
 Successfully completed DNS migration from old Traefik IP (192.168.1.110) to Traefik HA VIP (192.168.1.101) for all services. All internal services now utilize the high-availability VIP with automatic failover capability.
 
-**Final Status:** ✅ **COMPLETE**
+**Final Status:** ✅ **COMPLETE** — then **REVERTED** (VIP retired Feb 2026)
 - **Services Migrated:** 63/63 (100%)
 - **Remaining on Old IP:** 0
 - **Migration Method:** AdGuard API (safe, no service disruption)

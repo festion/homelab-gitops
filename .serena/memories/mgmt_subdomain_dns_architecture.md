@@ -1,5 +1,8 @@
 # Management Subdomain DNS Architecture
 
+> **Canonical reference:** `operations/docs/network/dns-architecture.md`
+> This file is retained for Serena context but the operations doc is authoritative.
+
 ## Overview
 
 The homelab uses two DNS subdomain patterns for different purposes:
@@ -14,8 +17,8 @@ The homelab uses two DNS subdomain patterns for different purposes:
 | proxmox.mgmt.lakehouse.wtf | 192.168.1.137 | 8006 | Proxmox node 1 WebUI |
 | proxmox2.mgmt.lakehouse.wtf | 192.168.1.125 | 8006 | Proxmox node 2 WebUI |
 | proxmox3.mgmt.lakehouse.wtf | 192.168.1.126 | 8006 | Proxmox node 3 WebUI |
-| adguard.mgmt.lakehouse.wtf | 192.168.1.253 | 6060 | AdGuard Home primary |
-| adguard2.mgmt.lakehouse.wtf | 192.168.1.224 | 6060 | AdGuard Home 2 (sync origin) |
+| adguard.mgmt.lakehouse.wtf | 192.168.1.253 | — | AdGuard replica |
+| adguard2.mgmt.lakehouse.wtf | 192.168.1.224 | — | AdGuard source of truth |
 | adguard-sync.mgmt.lakehouse.wtf | 192.168.1.225 | 6060 | AdGuard Home sync instance |
 | pbs.mgmt.lakehouse.wtf | 192.168.1.31 | 8007 | Proxmox Backup Server |
 | stork.mgmt.lakehouse.wtf | 192.168.1.234 | 443 | Stork DHCP monitoring |
