@@ -24,7 +24,7 @@
     "socket.io": "^4.7.5",
     "axios": "^1.6.2",
     "nodemailer": "^7.0.11",
-    "sqlite3": "^5.1.6",
+    "sqlite3": "^6.0.1",
     "node-cron": "^3.0.3",
     "winston": "^3.11.0",
     "winston-daily-rotate-file": "^4.7.1",
