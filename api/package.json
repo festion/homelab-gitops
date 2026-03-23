@@ -55,6 +55,6 @@
     "minimatch": "^10.2.1",
     "glob": "^11.0.0",
     "rimraf": "^6.0.0",
-    "fast-xml-parser": "^5.2.0"
+    "fast-xml-parser": "^5.5.7"
   }
 }
