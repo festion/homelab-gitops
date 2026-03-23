@@ -50,7 +50,8 @@
   "license": "ISC",
   "description": "",
   "overrides": {
-    "tar": "^7.5.9",
+    "tar": "^7.5.11",
+    "socket.io-parser": "^4.2.6",
     "@smithy/config-resolver": "^4.4.6",
     "minimatch": "^10.2.1",
     "glob": "^11.0.0",
