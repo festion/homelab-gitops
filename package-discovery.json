@@ -15,7 +15,7 @@
     "discovery:run-full": "node scripts/wiki-discovery-cron.js run-once daily-full-discovery",
     "discovery:test": "jest tests/discovery/discovery-system.test.js"
   },
-  "keywords": ["gitops", "automation", "deployment", "wiki", "documentation", "discovery"],
+  "keywords": ["gitops", "automation", "deployment", "documentation", "discovery"],
   "author": "Development Team",
   "license": "MIT",
   "dependencies": {

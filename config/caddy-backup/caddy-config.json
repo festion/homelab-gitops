@@ -394,35 +394,6 @@
                                                             "handle": [
                                                                 {
                                                                     "handler": "reverse_proxy",
-                                                                    "upstreams": [
-                                                                        {
-                                                                            "dial": "192.168.1.135:3000"
-                                                                        }
-                                                                    ]
-                                                                }
-                                                            ]
-                                                        }
-                                                    ]
-                                                }
-                                            ],
-                                            "match": [
-                                                {
-                                                    "host": [
-                                                        "wiki.internal.lakehouse.wtf"
-                                                    ]
-                                                }
-                                            ]
-                                        },
-                                        {
-                                            "group": "group18",
-                                            "handle": [
-                                                {
-                                                    "handler": "subroute",
-                                                    "routes": [
-                                                        {
-                                                            "handle": [
-                                                                {
-                                                                    "handler": "reverse_proxy",
                                                                     "headers": {
                                                                         "request": {
                                                                             "set": {
