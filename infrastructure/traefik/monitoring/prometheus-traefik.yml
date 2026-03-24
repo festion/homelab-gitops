@@ -59,7 +59,7 @@ scrape_configs:
         replacement: 'infrastructure'
 
       - source_labels: [service]
-        regex: '(wiki|netbox)'
+        regex: '(netbox)'
         target_label: service_type
         replacement: 'documentation'
 
