@@ -45,12 +45,6 @@
       "args": ["/home/dev/workspace/github-wrapper.sh"],
       "env": {}
     },
-    "wikijs": {
-      "type": "stdio",
-      "command": "bash", 
-      "args": ["/home/dev/workspace/wikijs-mcp-wrapper.sh"],
-      "env": {}
-    },
     "code-linter": {
       "type": "stdio",
       "command": "bash",

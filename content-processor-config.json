@@ -53,12 +53,6 @@
       "styleGuide": true
     }
   },
-  "wikijs": {
-    "baseUrl": "http://192.168.1.90:3000",
-    "uploadPath": "/api/pages",
-    "defaultTags": ["ai-processed", "documentation"],
-    "autoPublish": false
-  },
   "logging": {
     "level": "info",
     "file": "/tmp/wikijs-processor/logs/processor.log",

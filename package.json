@@ -1,7 +1,7 @@
 {
   "name": "homelab-gitops-auditor",
   "version": "2.0.0-alpha",
-  "description": "Homelab GitOps Auditor with Enhanced Dashboard, Pipeline Integration, and WikiJS Agent",
+  "description": "Homelab GitOps Auditor with Enhanced Dashboard and Pipeline Integration",
   "main": "api/server.js",
   "scripts": {
     "start": "node api/server.js",
@@ -27,11 +27,6 @@
     "install:dashboard": "cd dashboard && npm install",
     "commit": "npx claude-auto-commit",
     "commit:dry": "npx claude-auto-commit --dry-run",
-    "wikijs-processor": "node wikijs-content-processor-cli.js",
-    "process": "node wikijs-content-processor-cli.js process",
-    "batch": "node wikijs-content-processor-cli.js batch",
-    "test-processor": "node wikijs-content-processor-cli.js test",
-    "metrics": "node wikijs-content-processor-cli.js metrics",
     "discovery:start": "node scripts/wiki-discovery-cron.js start",
     "discovery:stop": "node scripts/wiki-discovery-cron.js stop",
     "discovery:status": "node scripts/wiki-discovery-cron.js status",
@@ -42,7 +37,6 @@
     "gitops",
     "automation",
     "deployment",
-    "wiki",
     "documentation",
     "discovery",
     "dashboard",
