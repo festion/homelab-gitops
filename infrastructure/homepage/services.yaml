@@ -214,11 +214,6 @@
         href: https://manyfold.internal.lakehouse.wtf
         description: 3D Model Library
 
-    - WikiJS:
-        icon: wikijs.png
-        href: https://wiki.internal.lakehouse.wtf
-        description: Documentation Wiki
-
     - Hoarder:
         icon: mdi-bookmark-multiple
         href: https://hoarder.internal.lakehouse.wtf

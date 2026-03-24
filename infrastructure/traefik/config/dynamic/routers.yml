@@ -242,17 +242,6 @@ http:
         certResolver: cloudflare
         domains:
         - main: '*.internal.lakehouse.wtf'
-    wiki-router:
-      rule: Host(`wiki.internal.lakehouse.wtf`)
-      service: wiki-service
-      entryPoints:
-      - websecure
-      middlewares:
-      - secure-headers
-      tls:
-        certResolver: cloudflare
-        domains:
-        - main: '*.internal.lakehouse.wtf'
     esphome-router:
       rule: Host(`esphome.internal.lakehouse.wtf`)
       service: esphome-service
