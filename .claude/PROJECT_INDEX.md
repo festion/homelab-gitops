@@ -2,16 +2,36 @@
 
 ## 1. Core Purpose
 
-This project provides a GitOps framework for managing a homelab environment. It automates the deployment, configuration, and monitoring of various services through version-controlled infrastructure definitions. A key feature is the integration of an AI agent (Claude) with a WikiJS instance to automate documentation and content processing, managed by a custom Model Context Protocol (MCP).
+This repository implements a GitOps methodology for managing a comprehensive homelab environment. It automates the deployment, configuration, and monitoring of various services, including a backend API, a frontend dashboard, and integrations with third-party tools like WikiJS and Infisical. The system leverages AI capabilities (Claude) and a custom Model Context Protocol (MCP) for advanced automation and orchestration.
 
 ## 2. Architecture
 
-The system is a multi-component, service-oriented architecture designed for automated, Git-driven operations.
+The project is structured as a multi-component system managed via Infrastructure as Code (IaC) principles.
 
--   **Backend API (`/api`)**: A central Node.js application that orchestrates deployments, manages configurations, and integrates with various services like WikiJS and Infisical for secrets management. It exposes RESTful and WebSocket endpoints.
--   **Frontend Dashboard (`/dashboard`)**: A web-based user interface for monitoring the status of services, viewing deployment logs, and interacting with the system.
--   **Infrastructure (`/infrastructure`)**: Contains declarative configurations for core services managed by Docker Compose, including Traefik (reverse proxy), Prometheus/Grafana (monitoring), and other homelab applications.
--   **Automation & Tooling (`/scripts`, `/wrappers`)**: A collection of Bash and Python scripts that handle deployment pipelines, health checks, backups, system audits, and integration with external systems (e.g., Proxmox, TrueNAS).
--   **AI & Documentation (`/wikijs-ai-agent`, `mcp-servers`)**: A specialized set of services that connect the Claude AI model to the WikiJS platform. This includes content processors, sync agents, and MCP servers to standardize communication and data flow.
+-   **Backend API (`/api`)**: A Node.js application serving as the central control plane, managing integrations, and exposing endpoints for the frontend.
+-   **Frontend Dashboard (`/dashboard`)**: A Vite-based single-page application providing a user interface for monitoring and managing the homelab services.
+-   **Infrastructure (`/infrastructure`, `/nginx`, `/monitoring`)**: Configuration files for Docker, Nginx, Traefik, Prometheus, and Grafana, defining the core service stack.
+-   **Automation & Scripts (`/scripts`, `/wrappers`)**: A collection of shell and Python scripts that drive the CI/CD pipeline, perform automated tasks, health checks, and backups.
+-   **MCP Services (`/mcp-servers`, `/mcp-integrations`)**: Specialized servers and clients that form a "Model Context Protocol" network, enabling AI-driven interactions with various homelab components (e.g., Proxmox, TrueNAS).
+-   **Documentation (`/docs`, `*.md`)**: Extensive markdown documentation covering architecture, deployment plans, security, and development processes.
 
-## 3. Key
+## 3. Key Files
+
+-   `docker-compose.production.yml`: Defines the core services and their configuration for the production environment.
+-   `api/server.js`: The main entry point for the backend API server.
+-   `dashboard/vite.config.ts`: Build and development configuration for the frontend dashboard.
+-   `package.json`: Lists project dependencies and defines key scripts for building, testing, and running the application.
+-   `PHASE3A-VISION.md`: Outlines the strategic vision and long-term goals for the project.
+-   `STANDARD_MCP_CONFIG.json`: Core configuration file for the Model Context Protocol services.
+-   `scripts/deploy.sh`: Primary script for handling automated deployments.
+-   `PROJECT_OVERVIEW.md`: Provides a high-level summary of the project's goals and structure.
+
+## 4. Dependencies
+
+-   **Runtime Environment**: Docker, Node.js, Python
+-   **Backend Framework**: Express.js
+-   **Database**: MongoDB (inferred from Mongoose), Redis, PostgreSQL
+-   **Frontend Stack**: Vite, TypeScript, Tailwind CSS
+-   **Infrastructure & Services**: Nginx, Traefik, Prometheus, Grafana, Loki, Infisical, WikiJS
+-   **Testing**: Jest
+-   **AI Integration**: Anthropic Claude API
