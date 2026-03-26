@@ -120,7 +120,12 @@ check_missing_files() {
 
 ### FETCH REMOTE REPOS ###
 echo "🌐 Fetching GitHub repositories for user: $GITHUB_USER..."
-mapfile -t remote_repos < <(curl -s "$GITHUB_API_URL" | jq -r '.[].name' | sort)
+CURL_AUTH_ARGS=()
+if [ -n "${GITHUB_TOKEN:-}" ]; then
+  CURL_AUTH_ARGS=(-H "Authorization: token $GITHUB_TOKEN")
+  echo "  Using authenticated GitHub API request"
+fi
+mapfile -t remote_repos < <(curl -s "${CURL_AUTH_ARGS[@]}" "$GITHUB_API_URL" | jq -r '.[].name' | sort)
 
 if [ ${#remote_repos[@]} -eq 0 ]; then
   echo "⚠️  No repositories found on GitHub for user: $GITHUB_USER"

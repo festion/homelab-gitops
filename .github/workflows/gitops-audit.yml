@@ -86,6 +86,7 @@ jobs:
       - name: Run comprehensive audit (simulation)
         env:
           LOCAL_GIT_ROOT: /tmp/git-simulation
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Create simulation of C:\GIT structure for testing
           mkdir -p /tmp/git-simulation
