@@ -2,46 +2,16 @@
 
 ## 1. Core Purpose
 
-This repository implements a GitOps-based management system for a homelab environment. It automates the deployment, configuration, and monitoring of various services through a centralized API, a web dashboard, and a suite of specialized agents. The system is designed to be version-controlled, auditable, and easily extensible.
+This project provides a GitOps framework for managing a homelab environment. It automates the deployment, configuration, and monitoring of various services through version-controlled infrastructure definitions. A key feature is the integration of an AI agent (Claude) with a WikiJS instance to automate documentation and content processing, managed by a custom Model Context Protocol (MCP).
 
 ## 2. Architecture
 
-The project follows a multi-tiered, microservice-oriented architecture:
+The system is a multi-component, service-oriented architecture designed for automated, Git-driven operations.
 
--   **Frontend:** A web-based dashboard (`dashboard/`) built with a modern JavaScript framework (Vite-based) provides a user interface for monitoring and interacting with the system.
--   **Backend:** A core API (`api/`) built with Node.js and Express.js serves as the central orchestration layer. It manages application logic, data persistence, and communication between different components via REST and WebSocket endpoints.
--   **Services & Agents:**
-    -   **MCP Servers (`mcp-servers/`):** A collection of specialized microservices (e.g., `wikijs-mcp-server`, `proxmox-mcp-server`) that implement a custom "Model Context Protocol" (MCP) to interface with various homelab services.
-    -   **WikiJS Agents (`wikijs-ai-agent/`):** Dedicated agents for synchronizing and processing documentation with a Wiki.js instance.
--   **Infrastructure:** The entire system is designed to be deployed via Docker. `docker-compose.production.yml` defines the production environment, which includes services like Traefik for reverse proxying and a full monitoring stack (Prometheus, Grafana, Loki).
--   **Automation & CI/CD:** Automation is handled by a combination of Bash scripts (`scripts/`), Python scripts, and GitHub Actions (`.github/workflows`) for continuous integration and deployment, adhering to GitOps principles.
+-   **Backend API (`/api`)**: A central Node.js application that orchestrates deployments, manages configurations, and integrates with various services like WikiJS and Infisical for secrets management. It exposes RESTful and WebSocket endpoints.
+-   **Frontend Dashboard (`/dashboard`)**: A web-based user interface for monitoring the status of services, viewing deployment logs, and interacting with the system.
+-   **Infrastructure (`/infrastructure`)**: Contains declarative configurations for core services managed by Docker Compose, including Traefik (reverse proxy), Prometheus/Grafana (monitoring), and other homelab applications.
+-   **Automation & Tooling (`/scripts`, `/wrappers`)**: A collection of Bash and Python scripts that handle deployment pipelines, health checks, backups, system audits, and integration with external systems (e.g., Proxmox, TrueNAS).
+-   **AI & Documentation (`/wikijs-ai-agent`, `mcp-servers`)**: A specialized set of services that connect the Claude AI model to the WikiJS platform. This includes content processors, sync agents, and MCP servers to standardize communication and data flow.
 
-## 3. Key Files
-
--   `README.md`: Provides a high-level overview of the project, setup instructions, and goals.
--   `PROJECT_OVERVIEW.md`: Detailed documentation covering the project's vision, scope, and technical strategy.
--   `docker-compose.production.yml`: The main Docker Compose file defining the services, networks, and configurations for the production deployment.
--   `api/server.js`: The primary entry point for the backend Node.js application, which initializes the Express server and middleware.
--   `dashboard/vite.config.ts`: The build configuration file for the frontend dashboard application.
--   `config/deployment-config.json`: A central configuration file that defines deployment parameters, service endpoints, and environment settings.
--   `scripts/deploy.sh`: The main deployment script responsible for orchestrating the build and startup of the application stack.
--   `mcp-servers/README.md`: Documentation explaining the Model Context Protocol (MCP) and how the various MCP servers operate.
--   `WIKIJS-UPLOAD-SYSTEM-README.md`: Explains the architecture and functionality of the Wiki.js integration and content processing agents.
-
-## 4. Dependencies
-
--   **Runtime:**
-    -   **Docker & Docker Compose:** Containerization and orchestration of all services.
-    -   **Node.js:** Backend API, scripts, and various agents.
-    -   **Python:** Automation and utility scripts.
-    -   **Bash:** Core deployment and automation scripts.
--   **Key Libraries & Frameworks:**
-    -   **Express.js:** Backend API framework.
-    -   **Socket.io:** Real-time communication via WebSockets.
-    -   **Mongoose / pg:** Database interaction for MongoDB and PostgreSQL.
-    -   **Vite:** Frontend build tooling.
--   **Infrastructure & Services:**
-    -   **Traefik:** Reverse proxy and load balancer.
-    -   **Prometheus, Grafana, Loki:** Monitoring, metrics, and logging stack.
-    -   **Wiki.js:** External documentation platform, integrated via agents.
-    -   **Infisical:** Secrets management.
+## 3. Key
