@@ -2,45 +2,37 @@
 
 ## 1. Core Purpose
 
-This project implements a comprehensive GitOps framework for managing a homelab environment. It automates deployment, configuration, and monitoring of various services through version-controlled infrastructure as code. The system integrates custom AI tooling (MCP, Claude, Serena) to manage and automate documentation workflows with WikiJS, and provides a central API and dashboard for orchestration and monitoring.
+This repository implements a GitOps framework for managing a personal homelab environment. It automates the deployment, configuration, and monitoring of various services through a centralized, version-controlled system. The project integrates AI agents (Claude), documentation platforms (WikiJS), and secret management (Infisical) to create a highly automated and maintainable infrastructure-as-code setup.
 
 ## 2. Architecture
 
-The architecture is a multi-tiered system centered around GitOps principles:
+The project follows a multi-component, service-oriented architecture:
 
--   **Core:** The root directory contains Docker Compose files (`docker-compose.production.yml`), configuration (`config/`), and automation scripts (`scripts/`) that define and manage the infrastructure.
--   **Backend:** A Node.js API (`api/`) acts as the central orchestrator, managing services, handling websocket communication, and integrating with other components like the MCP servers and secret management systems.
--   **Frontend:** A modern web application (`dashboard/`) built with Vite provides a user interface for monitoring, managing deployments, and interacting with the system.
--   **MCP Services:** A set of microservices (`mcp-servers/`, `mcp-enhanced-servers/`) that handle specialized tasks such as interfacing with Proxmox, TrueNAS, WikiJS, and performing code analysis.
--   **AI & Documentation:** An AI agent (`wikijs-ai-agent/`) is integrated with WikiJS to process and manage documentation automatically. A sophisticated prompting framework (`.prompts/`) guides the AI's behavior.
--   **Infrastructure & Monitoring:** The system uses Traefik for reverse proxying, and the TICK stack (Prometheus, Grafana, Loki) for comprehensive monitoring and log aggregation, defined in the `infrastructure/` and `monitoring/` directories.
+*   **API Server (`api/`)**: A Node.js/Express backend that serves as the central control plane. It manages deployments, handles webhook integrations, and communicates with other services.
+*   **Frontend Dashboard (`dashboard/`)**: A web-based user interface (built with Vite) for monitoring, managing, and interacting with the homelab services and the GitOps pipeline.
+*   **Infrastructure (`infrastructure/`)**: Infrastructure-as-Code (IaC) configurations for core services like Traefik (reverse proxy), Grafana/Prometheus (monitoring), and Cloudflare (networking).
+*   **MCP Services (`mcp-servers/`, `mcp-integrations/`)**: A set of modular, specialized microservices (Model Context Protocol servers) that manage specific hardware or software integrations, such as TrueNAS, Proxmox, and WikiJS.
+*   **Automation Scripts (`scripts/`)**: A collection of shell, Python, and JavaScript scripts that automate deployment, backups, health checks, and other operational tasks.
+*   **AI & Documentation Agents (`wikijs-ai-agent/`)**: Specialized agents that automate content processing, synchronization, and documentation management with the WikiJS platform.
+
+Deployments are managed via Docker Compose and orchestrated through a combination of Git webhooks and cron jobs, adhering to GitOps principles where the `main` branch represents the desired state of the infrastructure.
 
 ## 3. Key Files
 
--   `README.md`: The main entry point for understanding the project's overview and setup.
--   `PROJECT_OVERVIEW.md`: A more detailed explanation of the project's goals and structure.
--   `docker-compose.production.yml`: Defines the core services and their configurations for the production environment.
--   `api/server.js`: The primary entry point for the backend Node.js application that orchestrates the entire system.
--   `dashboard/vite.config.ts`: The build and development configuration file for the frontend dashboard application.
--   `config/deployment-config.json`: Central configuration file that dictates deployment parameters across various services.
--   `scripts/deploy.sh`: Key deployment script used in the CI/CD pipeline to apply changes to the environment.
--   `mcp-servers/`: Directory containing the various microservices that provide specialized functionality for interacting with homelab systems.
--   `PHASE3A-VISION.md`: Outlines the strategic vision and future roadmap for the project.
--   `STANDARD_MCP_CONFIG.json`: Defines the standard configuration for the Model Context Protocol (MCP) used by custom agents.
+*   **`docker-compose.production.yml`**: Defines the core services, networking, and volumes for the production environment. It is the primary file used for service orchestration.
+*   **`api/server.js`**: The main entry point for the backend API, responsible for initializing routes, middleware, and websocket connections.
+*   **`package.json`**: (Root and `api/`) Lists Node.js dependencies and defines key scripts for development, testing, and running the application.
+*   **`dashboard/vite.config.ts`**: The build configuration file for the frontend dashboard application.
+*   **`scripts/deploy.sh`**: A primary deployment script used to apply changes and restart services according to the GitOps workflow.
+*   **`PROJECT_OVERVIEW.md` / `README.md`**: Provide a high-level overview of the project's goals, structure, and status.
+*   **`PHASE*.md` (e.g., `PHASE3A-VISION.md`)**: A series of documents outlining the strategic vision, roadmap, and implementation details for different project phases.
 
 ## 4. Dependencies
 
--   **Core Technologies:** Docker, Node.js, Python, Bash.
--   **Key Services:**
-    -   **Proxy:** Traefik
-    -   **Monitoring:** Prometheus, Grafana, Loki
-    -   **Documentation:** WikiJS
-    -   **Secrets:** Infisical
--   **Primary Libraries:**
-    -   **Backend:** Express.js, Socket.IO, Mongoose, Winston
-    -   **Frontend:** Vite, TypeScript (likely with a framework like React or Vue)
-    -   **Testing:** Jest
--   **Infrastructure Platforms:**
-    -   Proxmox (Virtualization)
-    -   TrueNAS (Storage)
-    -   Cloudflare (Networking/DNS)
+*   **Languages**: JavaScript (Node.js), Python, Shell (Bash)
+*   **Backend**: Express.js, Socket.IO, Mongoose, Winston (logging)
+*   **Frontend**: Vite, React/Vue (inferred from `vite.config.ts` and typical dashboard stacks)
+*   **Orchestration**: Docker, Docker Compose
+*   **Infrastructure & Services**: Nginx, Traefik, Prometheus, Grafana, Loki, Infisical, WikiJS
+*   **Databases**: MongoDB/PostgreSQL (inferred from dependencies), Redis
+*   **CI/CD & Version Control**: Git, GitHub Actions, Pre-commit hooks
