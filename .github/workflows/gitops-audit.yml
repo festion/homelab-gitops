@@ -188,8 +188,8 @@ jobs:
           [ "$mismatched" -gt 0 ] && body+="| Mismatched (remote conflicts) | $mismatched |\n"
           body+="\n### Affected Repositories\n\n"
 
-          # List affected repos (exclude missing status)
-          body+=$(jq -r '.repos[] | select(.status != "missing") | "- **\(.name)**: \(.status) — \(.mitigation)"' audit-history/latest.json)
+          # List only actionable repos (dirty, extra, mismatched)
+          body+=$(jq -r '.repos[] | select(.status == "dirty" or .status == "extra" or .status == "mismatched") | "- **\(.name)**: \(.status) — \(.mitigation)"' audit-history/latest.json)
 
           body+="\n\n> Auto-created by GitOps Audit workflow. Missing repos are excluded (expected in CI simulation)."
 
