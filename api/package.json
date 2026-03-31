@@ -57,6 +57,7 @@
     "glob": "^11.0.0",
     "rimraf": "^6.0.0",
     "fast-xml-parser": "^5.5.7",
-    "picomatch": "^4.0.4"
+    "picomatch": "^4.0.4",
+    "path-to-regexp": "^0.1.13"
   }
 }
