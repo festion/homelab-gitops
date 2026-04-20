@@ -11,6 +11,16 @@ const app = express();
 app.use(express.json());
 app.use('/api/v2', phase2Router);
 
+const { createApp } = require('../../createApp');
+
+describe('createApp — smoke', () => {
+  it('returns an Express app that 404s on unknown routes', async () => {
+    const factoryApp = createApp({});
+    const res = await request(factoryApp).get('/does-not-exist');
+    expect(res.status).toBe(404);
+  });
+});
+
 // SKIP: awaiting Option-A refactor (createApp factory + AuthService DI +
 // compliance persistence decision). This suite seeds the non-existent
 // pipelines table via TestHelpers.insertTestData and uses phase2Router
