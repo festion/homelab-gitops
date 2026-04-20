@@ -1909,16 +1909,23 @@ phase2Router.get('/status', (req, res) => {
 
 // Import compliance service
 const ComplianceService = require('./services/compliance/complianceService');
+const TemplateEngine = require('./services/compliance/templateEngine');
 let complianceService = null;
 
 // Initialize compliance service
 function initializeComplianceService(app) {
   const ConfigLoader = require('./config-loader');
   const config = new ConfigLoader();
-  
-  complianceService = new ComplianceService(config, {
+
+  const templateEngine = new TemplateEngine({
     projectRoot: process.cwd(),
-    verbose: process.env.NODE_ENV === 'development'
+    verbose: process.env.NODE_ENV === 'development',
+  });
+
+  complianceService = new ComplianceService({
+    config,
+    templateEngine,
+    githubMCP: app.locals?.githubMCP,
   });
   
   // Set up compliance event listeners for WebSocket
