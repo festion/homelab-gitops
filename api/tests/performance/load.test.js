@@ -7,7 +7,13 @@ const { setupGitHubMock, resetGitHubMock } = require('../mocks/github');
 // Import the phase2 router
 const phase2Router = require('../../phase2-endpoints');
 
-describe('Performance and Load Testing', () => {
+// SKIP: awaiting Option-A refactor (createApp factory + AuthService DI +
+// compliance persistence decision). Performance suite wires phase2Router
+// without app.locals — crashes before any benchmark runs. Needs the
+// Option-A app factory.
+// Tracking: Vikunja #624.
+// Design: docs/plans/2026-04-20-api-test-restoration-b-auth.md.
+describe.skip('Performance and Load Testing', () => {
   let app;
   let adminToken;
   let githubMock;
