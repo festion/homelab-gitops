@@ -17,6 +17,11 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  # secrets context is not allowed inside `if:` expressions, so precompute
+  # availability flags here where it IS allowed. Downstream steps gate on
+  # `env.HAS_*` instead of `${{ secrets.* }}`.
+  HAS_PRODUCTION_SSH: ${{ secrets.PRODUCTION_SSH_KEY != '' && secrets.PRODUCTION_HOST != '' }}
+  HAS_PRODUCTION_URL: ${{ secrets.PRODUCTION_URL != '' }}
 
 jobs:
   pre-deployment-checks:
@@ -146,7 +151,7 @@ jobs:
         labels: ${{ steps.meta.outputs.labels }}
         
     - name: Create backup
-      if: ${{ secrets.PRODUCTION_SSH_KEY && secrets.PRODUCTION_HOST }}
+      if: env.HAS_PRODUCTION_SSH == 'true'
       run: |
         echo "${{ secrets.PRODUCTION_SSH_KEY }}" > prod_key
         chmod 600 prod_key
@@ -178,7 +183,7 @@ jobs:
         rm -f prod_key
         
     - name: Deploy to production (Blue-Green)
-      if: ${{ secrets.PRODUCTION_SSH_KEY && secrets.PRODUCTION_HOST }}
+      if: env.HAS_PRODUCTION_SSH == 'true'
       run: |
         echo "${{ secrets.PRODUCTION_SSH_KEY }}" > prod_key
         chmod 600 prod_key
@@ -322,7 +327,7 @@ jobs:
         rm -f prod_key
         
     - name: Post-deployment validation
-      if: ${{ secrets.PRODUCTION_URL }}
+      if: env.HAS_PRODUCTION_URL == 'true'
       run: |
         # Wait for deployment to stabilize
         sleep 120
@@ -348,7 +353,7 @@ jobs:
         npm run test:smoke:production || echo "Smoke tests not configured"
         
     - name: Update deployment status
-      if: ${{ secrets.PRODUCTION_URL }}
+      if: env.HAS_PRODUCTION_URL == 'true'
       run: |
         # Record successful deployment
         curl -X POST "${{ secrets.PRODUCTION_URL }}/api/deployments/record" \
@@ -404,7 +409,7 @@ jobs:
     
     steps:
     - name: Monitor deployment health
-      if: ${{ secrets.PRODUCTION_URL }}
+      if: env.HAS_PRODUCTION_URL == 'true'
       run: |
         echo "Monitoring deployment health for 10 minutes..."
         FAILED_CHECKS=0
@@ -432,7 +437,7 @@ jobs:
         echo "Health monitoring completed successfully"
         
     - name: Check performance metrics
-      if: ${{ secrets.PRODUCTION_URL }}
+      if: env.HAS_PRODUCTION_URL == 'true'
       run: |
         echo "Checking performance metrics..."
         
