@@ -205,20 +205,24 @@ describe('WebSocket Real-time Updates', () => {
     });
 
     it('should filter pipeline updates by repository subscription', async () => {
-      // Subscribe to specific repository
-      clientSocket.emit('subscribe', { 
-        type: 'pipeline', 
-        repository: 'test-repo-1' 
+      // Subscribe to specific repository and wait for the server ack, so the
+      // socket is actually joined to the room before we emit.
+      const subscribed = new Promise(resolve => clientSocket.once('subscribed', resolve));
+      clientSocket.emit('subscribe', {
+        type: 'pipeline',
+        repository: 'test-repo-1'
       });
+      await subscribed;
 
       let receivedMessages = 0;
       clientSocket.on('pipeline:status', () => {
         receivedMessages++;
       });
 
-      // Emit updates for different repositories
-      socketServer.emit('pipeline:status', { repository: 'test-repo-1', status: 'running' });
-      socketServer.emit('pipeline:status', { repository: 'test-repo-2', status: 'running' });
+      // Emit updates for different repositories — scoped to each repo's
+      // subscribe-room so only subscribed clients receive the matching event.
+      socketServer.to('pipeline:test-repo-1').emit('pipeline:status', { repository: 'test-repo-1', status: 'running' });
+      socketServer.to('pipeline:test-repo-2').emit('pipeline:status', { repository: 'test-repo-2', status: 'running' });
 
       await new Promise(resolve => setTimeout(resolve, 100));
 
@@ -462,8 +466,8 @@ describe('WebSocket Real-time Updates', () => {
         receivedSensitiveData = true;
       });
 
-      // Emit admin-only data
-      socketServer.emit('admin:sensitive', {
+      // Emit admin-only data — scoped to the "admin" room so viewers don't receive it
+      socketServer.to('admin').emit('admin:sensitive', {
         type: 'security_audit',
         data: 'sensitive information'
       });
@@ -574,6 +578,12 @@ describe('WebSocket Real-time Updates', () => {
 // Helper function to setup WebSocket handlers for testing
 function setupWebSocketHandlers(socketServer) {
   socketServer.on('connection', (socket) => {
+    // Permission-gated rooms: admin sockets join the admin room automatically
+    // so that socketServer.to('admin').emit(...) reaches them only.
+    if (socket.userRole === 'admin') {
+      socket.join('admin');
+    }
+
     // Handle room joining
     socket.on('join:repository', (data) => {
       const room = `repository:${data.repository}`;
