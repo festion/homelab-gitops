@@ -418,7 +418,12 @@ router.get('/repositories/suggest',
 );
 
 // WebSocket endpoints for real-time updates
-router.ws('/stream/:orchestrationId', (ws, req) => {
+// Guard the registration: in live server setup, express-ws augments this
+// router with .ws(). In test environments that load this module without
+// wiring express-ws, router.ws is undefined and the call would throw at
+// module load, taking every test that imports this route with it.
+if (typeof router.ws === 'function') {
+  router.ws('/stream/:orchestrationId', (ws, req) => {
   const { orchestrationId } = req.params;
   
   logger.info(`WebSocket connection established for orchestration: ${orchestrationId}`);
@@ -494,6 +499,7 @@ router.ws('/stream/:orchestrationId', (ws, req) => {
       orchestrator.removeListener(event, handler);
     }
   });
-});
+  });
+}
 
 module.exports = router;
