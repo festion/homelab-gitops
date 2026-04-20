@@ -14,7 +14,8 @@ const phase2Router = require('../../phase2-endpoints');
 // workflow across compliance + pipelines + orchestrations tables, none
 // of which exist in the production Database schema.
 // Tracking: Vikunja #624.
-// Design: docs/plans/2026-04-20-api-test-restoration-b-auth.md.
+// Design: docs/plans/2026-04-20-api-test-restoration-b-auth.md
+//         docs/plans/2026-04-20-option-a-createapp-di.md (un-skip plan — PR 3 of #624)
 describe.skip('End-to-End Workflow Integration', () => {
   let app;
   let httpServer;

@@ -589,7 +589,11 @@ phase2Router.get('/pipelines', (req, res) => {
 });
 
 // Get specific pipeline details
-phase2Router.get('/pipelines/:id', (req, res) => {
+phase2Router.get('/pipelines/:id', (req, res, next) => {
+  // Don't shadow more specific sibling routes registered later in this router.
+  if (['status', 'metrics', 'history', 'trigger', 'validate'].includes(req.params.id)) {
+    return next();
+  }
   const pipeline = storage.pipelines.get(req.params.id);
   if (!pipeline) {
     return res.status(404).json({ error: 'Pipeline not found' });
@@ -1702,13 +1706,19 @@ function initializePipelineService(app) {
   return pipelineService;
 }
 
+// Resolve the pipelineService: prefer a DI-injected instance from app.locals
+// (tests pass one via createApp), fall back to the module-level lazy init.
+function getPipelineService(req) {
+  if (req.app.locals.pipelineService) return req.app.locals.pipelineService;
+  if (!pipelineService) pipelineService = initializePipelineService(req.app);
+  return pipelineService;
+}
+
 // GET /api/v2/pipelines/status - Get current pipeline status for all repositories
 phase2Router.get('/pipelines/status', async (req, res) => {
   try {
-    if (!pipelineService) {
-      pipelineService = initializePipelineService(req.app);
-    }
-    
+    const pipelineService = getPipelineService(req);
+
     const { repo, branch, status, limit } = req.query;
     const options = {
       repo,
@@ -1738,10 +1748,8 @@ phase2Router.get('/pipelines/status', async (req, res) => {
 // GET /api/v2/pipelines/history/:repo - Get pipeline run history for a specific repository
 phase2Router.get('/pipelines/history/:repo', async (req, res) => {
   try {
-    if (!pipelineService) {
-      pipelineService = initializePipelineService(req.app);
-    }
-    
+    const pipelineService = getPipelineService(req);
+
     const repository = req.params.repo;
     const { page, per_page, workflow_id, branch } = req.query;
     
@@ -1775,13 +1783,11 @@ phase2Router.get('/pipelines/history/:repo', async (req, res) => {
 phase2Router.post('/pipelines/trigger', 
   authenticate, 
   authorize(Permission.RESOURCES.PIPELINES, Permission.ACTIONS.TRIGGER),
-  validateRequest(['repository', 'workflow']), 
+  validateRequest(['repository', 'workflow']),
   async (req, res) => {
   try {
-    if (!pipelineService) {
-      pipelineService = initializePipelineService(req.app);
-    }
-    
+    const pipelineService = getPipelineService(req);
+
     const { repository, workflow, branch, inputs } = req.body;
     
     const request = {
@@ -1815,10 +1821,8 @@ phase2Router.post('/pipelines/trigger',
 // GET /api/v2/pipelines/metrics - Get pipeline metrics and analytics
 phase2Router.get('/pipelines/metrics', async (req, res) => {
   try {
-    if (!pipelineService) {
-      pipelineService = initializePipelineService(req.app);
-    }
-    
+    const pipelineService = getPipelineService(req);
+
     const { repository, timeRange, branch } = req.query;
     
     const options = {
