@@ -8,10 +8,11 @@
 const EventEmitter = require('events');
 
 class PipelineService extends EventEmitter {
-    constructor(githubMCP, config) {
+    constructor({ config, githubMCP } = {}) {
         super();
-        this.githubMCP = githubMCP;
+        if (!config) throw new Error('PipelineService requires { config }');
         this.config = config;
+        this.githubMCP = githubMCP || null;
         this.cache = new Map();
         this.cacheTimeout = 60000; // 1 minute cache
         this.retryDelay = 1000; // Initial retry delay

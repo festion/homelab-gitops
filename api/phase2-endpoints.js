@@ -1687,8 +1687,8 @@ function initializePipelineService(app) {
   
   // Get GitHub MCP instance from app context if available
   const githubMCP = app.locals?.githubMCP || null;
-  
-  pipelineService = new PipelineService(githubMCP, config);
+
+  pipelineService = new PipelineService({ config, githubMCP });
   
   // Set up pipeline event listeners for WebSocket
   pipelineService.on('pipeline:triggered', (data) => {
