@@ -23,6 +23,11 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  # secrets context is not allowed inside `if:` expressions, so precompute
+  # availability flags here.
+  HAS_PRODUCTION_SSH: ${{ secrets.PRODUCTION_SSH_KEY != '' && secrets.PRODUCTION_HOST != '' }}
+  HAS_STAGING_SSH: ${{ secrets.STAGING_SSH_KEY != '' && secrets.STAGING_HOST != '' }}
+  HAS_PRODUCTION_URL: ${{ secrets.PRODUCTION_URL != '' }}
 
 jobs:
   validate-rollback:
@@ -91,7 +96,7 @@ jobs:
         ref: ${{ needs.validate-rollback.outputs.rollback_version }}
         
     - name: Create emergency backup
-      if: ${{ secrets.PRODUCTION_SSH_KEY && secrets.PRODUCTION_HOST }}
+      if: env.HAS_PRODUCTION_SSH == 'true'
       run: |
         echo "${{ secrets.PRODUCTION_SSH_KEY }}" > prod_key
         chmod 600 prod_key
@@ -151,7 +156,7 @@ jobs:
         fi
         
     - name: Execute production rollback
-      if: ${{ secrets.PRODUCTION_SSH_KEY && secrets.PRODUCTION_HOST }}
+      if: env.HAS_PRODUCTION_SSH == 'true'
       run: |
         echo "${{ secrets.PRODUCTION_SSH_KEY }}" > prod_key
         chmod 600 prod_key
@@ -248,7 +253,7 @@ jobs:
         rm -f prod_key
         
     - name: Validate rollback
-      if: ${{ secrets.PRODUCTION_URL }}
+      if: env.HAS_PRODUCTION_URL == 'true'
       run: |
         echo "Validating production rollback..."
         
@@ -275,7 +280,7 @@ jobs:
         curl -f "${{ secrets.PRODUCTION_URL }}/api/deployments/status" || echo "API functionality test failed"
         
     - name: Record rollback
-      if: ${{ secrets.PRODUCTION_URL }}
+      if: env.HAS_PRODUCTION_URL == 'true'
       run: |
         # Record rollback in deployment history
         curl -X POST "${{ secrets.PRODUCTION_URL }}/api/deployments/record" \
@@ -316,7 +321,7 @@ jobs:
         cd ../dashboard && npm ci && npm run build
         
     - name: Execute staging rollback
-      if: ${{ secrets.STAGING_SSH_KEY && secrets.STAGING_HOST }}
+      if: env.HAS_STAGING_SSH == 'true'
       run: |
         echo "${{ secrets.STAGING_SSH_KEY }}" > staging_key
         chmod 600 staging_key
