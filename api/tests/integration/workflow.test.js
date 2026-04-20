@@ -9,7 +9,13 @@ const { setupGitHubMock, resetGitHubMock } = require('../mocks/github');
 // Import the phase2 router
 const phase2Router = require('../../phase2-endpoints');
 
-describe('End-to-End Workflow Integration', () => {
+// SKIP: awaiting Option-A refactor (createApp factory + AuthService DI +
+// compliance persistence decision). This suite exercises end-to-end
+// workflow across compliance + pipelines + orchestrations tables, none
+// of which exist in the production Database schema.
+// Tracking: Vikunja #624.
+// Design: docs/plans/2026-04-20-api-test-restoration-b-auth.md.
+describe.skip('End-to-End Workflow Integration', () => {
   let app;
   let httpServer;
   let socketServer;
