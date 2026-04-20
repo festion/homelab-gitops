@@ -256,13 +256,19 @@ jobs:
         
     - name: Create deployment package
       run: |
-        tar -czf homelab-gitops-auditor-${{ github.sha }}.tar.gz \
+        # Write the archive to RUNNER_TEMP so creating it doesn't touch the
+        # directory being archived (previously triggered `tar: .: file changed
+        # as we read it` exit-1). Move the artifact back afterward so later
+        # steps (docker build, upload) see it at the expected path.
+        tar -czf "${RUNNER_TEMP}/homelab-gitops-auditor-${{ github.sha }}.tar.gz" \
+          --warning=no-file-changed \
           --exclude='.git' \
           --exclude='node_modules' \
           --exclude='*.tar.gz' \
           --exclude='coverage' \
           --exclude='.nyc_output' \
           .
+        mv "${RUNNER_TEMP}/homelab-gitops-auditor-${{ github.sha }}.tar.gz" .
         
     - name: Build Docker image
       run: |

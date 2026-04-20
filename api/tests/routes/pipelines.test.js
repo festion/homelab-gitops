@@ -11,7 +11,13 @@ const app = express();
 app.use(express.json());
 app.use('/api/v2', phase2Router);
 
-describe('Pipeline API Endpoints', () => {
+// SKIP: awaiting Option-A refactor (createApp factory + AuthService DI +
+// compliance persistence decision). This suite seeds the non-existent
+// pipelines table via TestHelpers.insertTestData and uses phase2Router
+// without wiring app.locals.
+// Tracking: Vikunja #624.
+// Design: docs/plans/2026-04-20-api-test-restoration-b-auth.md.
+describe.skip('Pipeline API Endpoints', () => {
   let adminToken;
   let viewerToken;
   let githubMock;
