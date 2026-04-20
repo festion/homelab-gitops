@@ -37,13 +37,13 @@ jobs:
       
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         fetch-depth: 0
         token: ${{ secrets.GITHUB_TOKEN }}
         
     - name: Setup Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v5
       with:
         node-version: '20'
         cache: 'npm'
@@ -177,12 +177,12 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         ref: ${{ needs.prepare-release.outputs.tag }}
         
     - name: Setup Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v5
       with:
         node-version: '20'
         cache: 'npm'
@@ -239,12 +239,12 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         ref: ${{ needs.prepare-release.outputs.tag }}
         
     - name: Setup Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v5
       with:
         node-version: '20'
         cache: 'npm'
@@ -312,7 +312,7 @@ jobs:
         sha256sum homelab-gitops-auditor-${{ needs.prepare-release.outputs.version }}-source.tar.gz >> checksums.txt
         
     - name: Upload release artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: release-assets-${{ needs.prepare-release.outputs.version }}
         path: |
@@ -328,12 +328,12 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         ref: ${{ needs.prepare-release.outputs.tag }}
         
     - name: Download release artifacts
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v5
       with:
         name: release-assets-${{ needs.prepare-release.outputs.version }}
         
@@ -387,7 +387,7 @@ jobs:
     
     steps:
     - name: Trigger staging deployment
-      uses: actions/github-script@v7
+      uses: actions/github-script@v8
       with:
         script: |
           await github.rest.actions.createWorkflowDispatch({
@@ -404,7 +404,7 @@ jobs:
         sleep 180 # Wait 3 minutes for staging
         
     - name: Trigger production deployment
-      uses: actions/github-script@v7
+      uses: actions/github-script@v8
       with:
         script: |
           // Only deploy stable releases to production automatically
@@ -453,7 +453,7 @@ jobs:
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
         
     - name: Update documentation
-      uses: actions/github-script@v7
+      uses: actions/github-script@v8
       with:
         script: |
           // Create documentation update issue
@@ -512,7 +512,7 @@ jobs:
         EOF
         
     - name: Upload release report
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: release-report-${{ needs.prepare-release.outputs.version }}
         path: RELEASE_REPORT.md
