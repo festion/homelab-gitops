@@ -33,10 +33,10 @@ jobs:
           
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       
     - name: Setup Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v5
       with:
         node-version: '20'
         cache: 'npm'
@@ -276,7 +276,7 @@ jobs:
         fi
         
     - name: Upload performance artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: performance-results-${{ github.sha }}
         path: |
@@ -309,10 +309,10 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       
     - name: Setup Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v5
       with:
         node-version: '20'
         cache: 'npm'
@@ -368,7 +368,7 @@ jobs:
         fi
         
     - name: Upload Lighthouse results
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: lighthouse-results-${{ github.sha }}
         path: |
@@ -385,7 +385,7 @@ jobs:
     
     steps:
     - name: Download performance artifacts
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v5
       with:
         pattern: '*-results-${{ github.sha }}'
         merge-multiple: true
@@ -436,7 +436,7 @@ jobs:
         echo "- Review error rates during peak load testing" >> PERFORMANCE_SUMMARY.md
         
     - name: Upload performance summary
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: performance-summary-${{ github.sha }}
         path: PERFORMANCE_SUMMARY.md
