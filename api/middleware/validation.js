@@ -319,10 +319,31 @@ function sanitizeInput(req, res, next) {
   next();
 }
 
+/**
+ * Factory that returns Express middleware rejecting requests missing any of
+ * the given fields from req.body. Used by routes/orchestration.js and
+ * routes/health.js.
+ */
+function validateRequest(requiredFields) {
+  return (req, res, next) => {
+    const missingFields = (requiredFields || []).filter(
+      (field) => req.body == null || req.body[field] === undefined
+    );
+    if (missingFields.length > 0) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        fields: missingFields,
+      });
+    }
+    next();
+  };
+}
+
 module.exports = {
   validateSearchQuery,
   validateBulkActionParams,
   validateSavedViewParams,
   validatePagination,
-  sanitizeInput
+  sanitizeInput,
+  validateRequest
 };
