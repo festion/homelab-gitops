@@ -13,8 +13,7 @@ describe('Authentication System Tests', () => {
     await testDb.connect();
     await testDb.initializeSchema();
     
-    authService = new AuthService();
-    authService.db = testDb; // Override with test database
+    authService = new AuthService({ db: testDb });
   });
 
   afterEach(async () => {

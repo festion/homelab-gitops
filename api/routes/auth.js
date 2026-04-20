@@ -1,10 +1,16 @@
 const express = require('express');
-const AuthService = require('../services/auth/authService');
 const { authenticate, rateLimitAuth, requireAdmin } = require('../middleware/auth');
 const { User, UserRole, Permission } = require('../models/user');
 
 const router = express.Router();
-const authService = new AuthService();
+
+function getAuthService(req) {
+  const svc = req && req.app && req.app.locals && req.app.locals.authService;
+  if (!svc) {
+    throw new Error('authService not wired to app.locals — construct via createApp({ authService })');
+  }
+  return svc;
+}
 
 /**
  * @route POST /api/v2/auth/login
@@ -24,17 +30,17 @@ router.post('/login', rateLimitAuth(), async (req, res) => {
     }
 
     // Authenticate user
-    const user = await authService.authenticateUser(username, password);
+    const user = await getAuthService(req).authenticateUser(username, password);
     
     // Generate JWT token
-    const token = authService.generateToken(user);
+    const token = getAuthService(req).generateToken(user);
     
     // Calculate expiration time (24 hours from now)
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + 24);
 
     // Log successful login
-    await authService.logAuthEvent(
+    await getAuthService(req).logAuthEvent(
       user.id,
       user.username,
       'login',
@@ -54,7 +60,7 @@ router.post('/login', rateLimitAuth(), async (req, res) => {
     console.error('Login error:', error.message);
     
     // Log failed login
-    await authService.logAuthEvent(
+    await getAuthService(req).logAuthEvent(
       null,
       req.body.username || null,
       'login',
@@ -80,7 +86,7 @@ router.post('/logout', authenticate, async (req, res) => {
     // For JWT tokens, we could maintain a blacklist in production
     // For now, we'll just log the logout event
     
-    await authService.logAuthEvent(
+    await getAuthService(req).logAuthEvent(
       req.auth.userId || null,
       req.auth.username || req.auth.keyName || null,
       'logout',
@@ -111,7 +117,7 @@ router.get('/me', authenticate, async (req, res) => {
   try {
     if (req.auth.type === 'jwt') {
       // Return user information
-      const user = await authService.getUserById(req.auth.userId);
+      const user = await getAuthService(req).getUserById(req.auth.userId);
       if (!user) {
         return res.status(404).json({
           error: 'Not found',
@@ -182,7 +188,7 @@ router.post('/api-keys', authenticate, requireAdmin(), async (req, res) => {
     }
 
     // Generate API key
-    const { apiKey, key } = await authService.generateApiKey(
+    const { apiKey, key } = await getAuthService(req).generateApiKey(
       name,
       permissions,
       expiresIn,
@@ -190,7 +196,7 @@ router.post('/api-keys', authenticate, requireAdmin(), async (req, res) => {
     );
 
     // Log API key creation
-    await authService.logAuthEvent(
+    await getAuthService(req).logAuthEvent(
       req.auth.userId,
       req.auth.username,
       'api_key_created',
@@ -231,7 +237,7 @@ router.get('/api-keys', authenticate, async (req, res) => {
     }
 
     // Get user's API keys from database
-    const keyRows = await authService.db.all(
+    const keyRows = await getAuthService(req).db.all(
       'SELECT * FROM api_keys WHERE user_id = ? ORDER BY created_at DESC',
       [req.auth.userId]
     );
@@ -277,7 +283,7 @@ router.delete('/api-keys/:id', authenticate, async (req, res) => {
     }
 
     // Check if API key exists and belongs to user (or user is admin)
-    const keyRow = await authService.db.get(
+    const keyRow = await getAuthService(req).db.get(
       'SELECT * FROM api_keys WHERE id = ?',
       [id]
     );
@@ -298,10 +304,10 @@ router.delete('/api-keys/:id', authenticate, async (req, res) => {
     }
 
     // Revoke the API key
-    await authService.revokeApiKey(id);
+    await getAuthService(req).revokeApiKey(id);
 
     // Log API key deletion
-    await authService.logAuthEvent(
+    await getAuthService(req).logAuthEvent(
       req.auth.userId,
       req.auth.username,
       'api_key_revoked',
@@ -355,7 +361,7 @@ router.post('/change-password', authenticate, async (req, res) => {
     }
 
     // Get user from database
-    const user = await authService.getUserById(req.auth.userId);
+    const user = await getAuthService(req).getUserById(req.auth.userId);
     if (!user) {
       return res.status(404).json({
         error: 'Not found',
@@ -364,7 +370,7 @@ router.post('/change-password', authenticate, async (req, res) => {
     }
 
     // Verify current password
-    const isValidPassword = await authService.verifyPassword(currentPassword, user.passwordHash);
+    const isValidPassword = await getAuthService(req).verifyPassword(currentPassword, user.passwordHash);
     if (!isValidPassword) {
       return res.status(400).json({
         error: 'Bad request',
@@ -373,16 +379,16 @@ router.post('/change-password', authenticate, async (req, res) => {
     }
 
     // Hash new password
-    const newPasswordHash = await authService.hashPassword(newPassword);
+    const newPasswordHash = await getAuthService(req).hashPassword(newPassword);
 
     // Update password in database
-    await authService.db.run(
+    await getAuthService(req).db.run(
       'UPDATE users SET password_hash = ? WHERE id = ?',
       [newPasswordHash, user.id]
     );
 
     // Log password change
-    await authService.logAuthEvent(
+    await getAuthService(req).logAuthEvent(
       user.id,
       user.username,
       'password_changed',

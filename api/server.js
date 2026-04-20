@@ -22,6 +22,7 @@ const phase2Router = require('./phase2-endpoints');
 
 // Authentication System
 const Database = require('./models/database');
+const AuthService = require('./services/auth/authService');
 const SecurityMiddleware = require('./middleware/security');
 const authRoutes = require('./routes/auth');
 
@@ -62,6 +63,7 @@ async function initializeAuth() {
     await db.connect();
     await db.initializeSchema();
     await db.createDefaultAdmin();
+    app.locals.authService = new AuthService({ db });
     console.log('Authentication system initialized');
   } catch (error) {
     console.error('Failed to initialize authentication:', error);
