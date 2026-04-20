@@ -8,6 +8,10 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  # secrets context is not allowed inside `if:` expressions, so precompute
+  # availability flags here.
+  HAS_STAGING_SSH: ${{ secrets.STAGING_SSH_KEY != '' && secrets.STAGING_HOST != '' }}
+  HAS_STAGING_URL: ${{ secrets.STAGING_URL != '' }}
 
 jobs:
   deploy-staging:
@@ -102,7 +106,7 @@ jobs:
         retention-days: 7
         
     - name: Deploy to staging server
-      if: ${{ secrets.STAGING_SSH_KEY && secrets.STAGING_HOST }}
+      if: env.HAS_STAGING_SSH == 'true'
       run: |
         # Setup SSH key
         echo "${{ secrets.STAGING_SSH_KEY }}" > staging_key
@@ -175,7 +179,7 @@ jobs:
         rm -f staging_key
         
     - name: Run staging tests
-      if: ${{ secrets.STAGING_URL }}
+      if: env.HAS_STAGING_URL == 'true'
       run: |
         # Wait for deployment to stabilize
         sleep 60
@@ -188,7 +192,7 @@ jobs:
         curl -f ${{ secrets.STAGING_URL }}/api/deployments/status || echo "Deployment status endpoint not available"
         
     - name: Update deployment status
-      if: ${{ secrets.STAGING_URL }}
+      if: env.HAS_STAGING_URL == 'true'
       run: |
         # Record successful deployment
         curl -X POST "${{ secrets.STAGING_URL }}/api/deployments/record" \
@@ -258,7 +262,7 @@ jobs:
         npm ci
         
     - name: Run comprehensive staging tests
-      if: ${{ secrets.STAGING_URL }}
+      if: env.HAS_STAGING_URL == 'true'
       run: |
         # API endpoint tests
         curl -f ${{ secrets.STAGING_URL }}/api/health
