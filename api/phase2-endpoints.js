@@ -1948,7 +1948,15 @@ function initializeComplianceService(app) {
   complianceService.on('compliance:application-completed', (data) => {
     emitWSEvent(app.locals?.phase2WS?.req || {}, 'compliance', 'compliance.application-completed', data);
   });
-  
+
+  return complianceService;
+}
+
+// Resolve the complianceService: prefer a DI-injected instance from app.locals
+// (tests pass one via createApp), fall back to the module-level lazy init.
+function getComplianceService(req) {
+  if (req.app.locals.complianceService) return req.app.locals.complianceService;
+  if (!complianceService) complianceService = initializeComplianceService(req.app);
   return complianceService;
 }
 
@@ -2029,10 +2037,8 @@ phase2Router.get('/orchestration-metrics', async (req, res) => {
 // GET /api/v2/compliance/status - Get compliance status for all repositories
 phase2Router.get('/compliance/status', async (req, res) => {
   try {
-    if (!complianceService) {
-      complianceService = initializeComplianceService(req.app);
-    }
-    
+    const complianceService = getComplianceService(req);
+
     const { repository, template, includeDetails } = req.query;
     const options = {
       repository,
@@ -2062,10 +2068,8 @@ phase2Router.get('/compliance/status', async (req, res) => {
 // GET /api/v2/compliance/repository/:repo - Detailed compliance report for specific repository
 phase2Router.get('/compliance/repository/:repo', async (req, res) => {
   try {
-    if (!complianceService) {
-      complianceService = initializeComplianceService(req.app);
-    }
-    
+    const complianceService = getComplianceService(req);
+
     const repository = req.params.repo;
     const { templates, includeHistory } = req.query;
     
@@ -2100,10 +2104,8 @@ phase2Router.post('/compliance/check',
   authorize(Permission.RESOURCES.TEMPLATES, Permission.ACTIONS.APPLY),
   async (req, res) => {
   try {
-    if (!complianceService) {
-      complianceService = initializeComplianceService(req.app);
-    }
-    
+    const complianceService = getComplianceService(req);
+
     const { repositories = [], templates = [], priority = 'normal' } = req.body;
     
     const result = await complianceService.triggerComplianceCheck({
@@ -2133,10 +2135,8 @@ phase2Router.post('/compliance/check',
 // GET /api/v2/compliance/templates - List available templates and their requirements
 phase2Router.get('/compliance/templates', async (req, res) => {
   try {
-    if (!complianceService) {
-      complianceService = initializeComplianceService(req.app);
-    }
-    
+    const complianceService = getComplianceService(req);
+
     const result = await complianceService.getAvailableTemplates();
     
     // Emit WebSocket event
@@ -2157,10 +2157,8 @@ phase2Router.get('/compliance/templates', async (req, res) => {
 // GET /api/v2/compliance/history - Template application history
 phase2Router.get('/compliance/history', async (req, res) => {
   try {
-    if (!complianceService) {
-      complianceService = initializeComplianceService(req.app);
-    }
-    
+    const complianceService = getComplianceService(req);
+
     const { repository, template, limit, offset } = req.query;
     
     const options = {
@@ -2192,10 +2190,8 @@ phase2Router.get('/compliance/history', async (req, res) => {
 // POST /api/v2/compliance/apply - Apply templates to non-compliant repositories
 phase2Router.post('/compliance/apply', validateRequest(['repository', 'templates']), async (req, res) => {
   try {
-    if (!complianceService) {
-      complianceService = initializeComplianceService(req.app);
-    }
-    
+    const complianceService = getComplianceService(req);
+
     const { repository, templates, createPR = false, dryRun = true } = req.body;
     
     if (!Array.isArray(templates) || templates.length === 0) {
