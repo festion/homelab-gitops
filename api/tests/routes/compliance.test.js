@@ -348,10 +348,47 @@ describe('Compliance API Endpoints', () => {
       expect(res.body.templates).toEqual(['standard-devops']);
     });
 
-    // Original suite asserted a synchronous `compliance.score` response from
-    // /compliance/check. Implementation is async (jobId + setImmediate worker).
-    // Tracked as a discovery task — tests for job-completion via the WebSocket
-    // `compliance:job-completed` event belong in a separate suite.
+    it('?wait=true returns sync {jobId, status:completed, results:[...]} (A11)', async () => {
+      const res = await request(app)
+        .post('/api/v2/compliance/check?wait=true')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ repositories: ['repo-alpha'], templates: ['standard-devops'] })
+        .expect(200);
+
+      expect(res.body).toHaveProperty('jobId');
+      expect(res.body).toHaveProperty('status', 'completed');
+      expect(res.body).toHaveProperty('results');
+      expect(Array.isArray(res.body.results)).toBe(true);
+      expect(res.body.results).toHaveLength(1);
+      expect(res.body.results[0]).toHaveProperty('repository', 'repo-alpha');
+      expect(res.body.results[0]).toHaveProperty('success');
+    });
+
+    it('?wait=true returns 504 {jobId, status:timeout} when job exceeds timeout (A11)', async () => {
+      // Force the job to hang indefinitely so the route hits its wait timeout.
+      const originalProcess = complianceService.processComplianceJob.bind(complianceService);
+      jest.spyOn(complianceService, 'processComplianceJob').mockImplementation(async (jobId) => {
+        // Mark job running but never complete within the test timeout window
+        const job = complianceService.jobQueue.get(jobId);
+        if (job) {
+          job.status = 'running';
+          job.startedAt = new Date().toISOString();
+        }
+        await new Promise(() => {});
+      });
+
+      // Short wait timeout override lets the test complete quickly
+      const res = await request(app)
+        .post('/api/v2/compliance/check?wait=true&waitTimeoutMs=100')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ repositories: ['repo-alpha'], templates: ['standard-devops'] });
+
+      expect(res.status).toBe(504);
+      expect(res.body).toHaveProperty('jobId');
+      expect(res.body).toHaveProperty('status', 'timeout');
+
+      complianceService.processComplianceJob.mockRestore();
+    });
   });
 
   describe('GET /api/v2/compliance/templates', () => {

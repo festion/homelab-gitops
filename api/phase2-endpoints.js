@@ -2113,21 +2113,25 @@ phase2Router.get('/compliance/repository/:repo', async (req, res) => {
 });
 
 // POST /api/v2/compliance/check - Trigger compliance check for repositories
-phase2Router.post('/compliance/check', 
-  authenticate, 
+//   ?wait=true  — block until job completes (or times out at waitTimeoutMs,
+//                 default 30000ms). Returns {jobId, status:'completed', results}
+//                 on success or 504 {jobId, status:'timeout'} if exceeded.
+//   default     — fire-and-forget; returns {jobId, estimatedDuration, ...}
+phase2Router.post('/compliance/check',
+  authenticate,
   authorize(Permission.RESOURCES.TEMPLATES, Permission.ACTIONS.APPLY),
   async (req, res) => {
   try {
     const complianceService = getComplianceService(req);
 
     const { repositories = [], templates = [], priority = 'normal' } = req.body;
-    
+
     const result = await complianceService.triggerComplianceCheck({
       repositories,
       templates,
       priority
     });
-    
+
     // Emit WebSocket event
     emitWSEvent(req, 'compliance', 'check.triggered', {
       jobId: result.jobId,
@@ -2135,13 +2139,36 @@ phase2Router.post('/compliance/check',
       templates: result.templates,
       estimatedDuration: result.estimatedDuration
     });
-    
+
+    if (req.query.wait === 'true') {
+      const timeoutMs = req.query.waitTimeoutMs
+        ? parseInt(req.query.waitTimeoutMs, 10)
+        : 30000;
+      const outcome = await complianceService.waitForJob(result.jobId, { timeoutMs });
+      if (outcome.status === 'timeout') {
+        return res.status(504).json({
+          jobId: result.jobId,
+          status: 'timeout',
+          message: `compliance check did not complete within ${timeoutMs}ms`,
+        });
+      }
+      return res.json({
+        jobId: result.jobId,
+        status: outcome.status,
+        repositories: result.repositories,
+        templates: result.templates,
+        results: outcome.job.results,
+        progress: outcome.job.progress,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
     res.json(result);
   } catch (error) {
     console.error('Error triggering compliance check:', error);
-    res.status(500).json({ 
-      error: 'Failed to trigger compliance check', 
-      details: error.message 
+    res.status(500).json({
+      error: 'Failed to trigger compliance check',
+      details: error.message
     });
   }
 });

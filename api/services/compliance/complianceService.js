@@ -313,8 +313,14 @@ class ComplianceService extends EventEmitter {
     // Emit job created event
     this.emit('compliance:job-created', { jobId, job });
 
-    // Process job asynchronously
-    setImmediate(() => this.processComplianceJob(jobId));
+    // Process job asynchronously. We expose the promise on the job so a sync
+    // caller (POST /compliance/check?wait=true) can await completion without
+    // changing the default fire-and-forget contract.
+    const processingPromise = Promise.resolve().then(() => this.processComplianceJob(jobId));
+    job.processingPromise = processingPromise;
+    // Swallow unhandled rejections if no one awaits; processComplianceJob
+    // itself already sets job.status='failed' on throw.
+    processingPromise.catch(() => {});
 
     return {
       jobId,
@@ -324,6 +330,42 @@ class ComplianceService extends EventEmitter {
       estimatedDuration: repoList.length * 2, // 2 seconds per repo estimate
       timestamp: new Date().toISOString()
     };
+  }
+
+  /**
+   * Wait for a compliance check job to reach a terminal state.
+   *
+   * Returns { status: 'completed' | 'failed', job } when the job finishes
+   * within timeoutMs, or { status: 'timeout', job } otherwise. The job object
+   * remains in jobQueue either way so a caller can poll later.
+   */
+  async waitForJob(jobId, { timeoutMs = 30000 } = {}) {
+    const job = this.jobQueue.get(jobId);
+    if (!job) {
+      const err = new Error(`unknown job '${jobId}'`);
+      err.code = 'UNKNOWN_JOB';
+      throw err;
+    }
+    if (!job.processingPromise) {
+      // Job created via another path; nothing to wait on.
+      return { status: job.status, job };
+    }
+    let timer;
+    const timeout = new Promise(resolve => {
+      timer = setTimeout(() => resolve('__timeout__'), timeoutMs);
+    });
+    try {
+      const outcome = await Promise.race([
+        job.processingPromise.then(() => 'done'),
+        timeout,
+      ]);
+      if (outcome === '__timeout__') {
+        return { status: 'timeout', job };
+      }
+      return { status: job.status, job };
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
   }
 
   /**
