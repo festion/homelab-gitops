@@ -16,7 +16,8 @@ app.use('/api/v2', phase2Router);
 // repositories/compliance tables via TestHelpers.insertTestData and uses
 // phase2Router without wiring app.locals.
 // Tracking: Vikunja #624.
-// Design: docs/plans/2026-04-20-api-test-restoration-b-auth.md.
+// Design: docs/plans/2026-04-20-api-test-restoration-b-auth.md
+//         docs/plans/2026-04-20-option-a-createapp-di.md (un-skip plan — PR 2 of #624)
 describe.skip('Compliance API Endpoints', () => {
   let adminToken;
   let viewerToken;
