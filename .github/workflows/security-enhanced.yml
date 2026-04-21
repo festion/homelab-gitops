@@ -54,7 +54,8 @@ jobs:
       uses: github/codeql-action/init@v3
       with:
         languages: javascript
-        
+        config-file: ./.github/codeql/codeql-config.yml
+
     - name: Setup Node.js
       uses: actions/setup-node@v5
       with:

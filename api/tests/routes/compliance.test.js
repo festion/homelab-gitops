@@ -174,10 +174,85 @@ describe('Compliance API Endpoints', () => {
       expect(res.body.summary).toHaveProperty('totalRepos');
     });
 
-    // Original suite asserted ?compliant=true, ?minScore=N, ?limit=N&offset=N
-    // filter/pagination on /compliance/status. The service ignores all of
-    // these params today — only `repository` / `template` / `includeDetails`
-    // are read. Tracked as a discovery task for a future feature PR.
+    it('filters to compliant repos when ?filter=compliant', async () => {
+      templateEngine.checkCompliance = jest.fn(async (repoPath, templateName) => {
+        const compliant = repoPath.endsWith('repo-alpha');
+        return {
+          compliant,
+          issues: compliant ? [] : [new ComplianceIssue({
+            type: ComplianceIssueType.MISSING,
+            template: templateName,
+            file: 'README.md',
+            severity: ComplianceSeverity.HIGH,
+            description: 'missing README',
+            recommendation: 'add README',
+          })],
+          template: { id: templateName, version: '1.0.0', getRequiredFiles: () => [] },
+        };
+      });
+
+      const res = await request(app)
+        .get('/api/v2/compliance/status?filter=compliant')
+        .expect(200);
+
+      expect(res.body.repositories).toHaveLength(1);
+      expect(res.body.repositories.every(r => r.compliant === true)).toBe(true);
+      expect(res.body.repositories[0].name).toBe('repo-alpha');
+    });
+
+    it('filters to non-compliant repos when ?filter=non-compliant', async () => {
+      templateEngine.checkCompliance = jest.fn(async (repoPath, templateName) => {
+        const compliant = repoPath.endsWith('repo-alpha');
+        return {
+          compliant,
+          issues: compliant ? [] : [new ComplianceIssue({
+            type: ComplianceIssueType.MISSING,
+            template: templateName,
+            file: 'README.md',
+            severity: ComplianceSeverity.HIGH,
+            description: 'missing README',
+            recommendation: 'add README',
+          })],
+          template: { id: templateName, version: '1.0.0', getRequiredFiles: () => [] },
+        };
+      });
+
+      const res = await request(app)
+        .get('/api/v2/compliance/status?filter=non-compliant')
+        .expect(200);
+
+      expect(res.body.repositories).toHaveLength(1);
+      expect(res.body.repositories.every(r => r.compliant === false)).toBe(true);
+      expect(res.body.repositories[0].name).toBe('repo-bravo');
+    });
+
+    it('returns all repos when ?filter=all', async () => {
+      const res = await request(app)
+        .get('/api/v2/compliance/status?filter=all')
+        .expect(200);
+
+      expect(res.body.repositories).toHaveLength(2);
+    });
+
+    it('returns 400 on invalid ?filter=bogus', async () => {
+      const res = await request(app)
+        .get('/api/v2/compliance/status?filter=bogus');
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/invalid.*filter/i);
+    });
+
+    it('includes summary.lastUpdated + totalRepos + compliantCount fields (NEW-1)', async () => {
+      const res = await request(app)
+        .get('/api/v2/compliance/status')
+        .expect(200);
+
+      expect(res.body.summary).toHaveProperty('lastUpdated');
+      expect(res.body.summary.lastUpdated).toBeTruthy();
+      expect(res.body.summary).toHaveProperty('totalRepos', 2);
+      expect(res.body.summary).toHaveProperty('compliantCount');
+      expect(typeof res.body.summary.compliantCount).toBe('number');
+    });
   });
 
   describe('GET /api/v2/compliance/repository/:repo', () => {
@@ -229,9 +304,13 @@ describe('Compliance API Endpoints', () => {
       expect(res.body.issues.length).toBeGreaterThan(0);
     });
 
-    // Original suite asserted 404 for nonexistent repos — service constructs
-    // a path without checking repo existence, so a 404 is never produced.
-    // Tracked as a follow-up.
+    it('returns 404 for an unknown repository', async () => {
+      const res = await request(app)
+        .get('/api/v2/compliance/repository/does-not-exist');
+
+      expect(res.status).toBe(404);
+      expect(res.body.error).toMatch(/not found/i);
+    });
   });
 
   describe('POST /api/v2/compliance/check', () => {
@@ -269,10 +348,42 @@ describe('Compliance API Endpoints', () => {
       expect(res.body.templates).toEqual(['standard-devops']);
     });
 
-    // Original suite asserted a synchronous `compliance.score` response from
-    // /compliance/check. Implementation is async (jobId + setImmediate worker).
-    // Tracked as a discovery task — tests for job-completion via the WebSocket
-    // `compliance:job-completed` event belong in a separate suite.
+    it('?wait=true returns sync {jobId, status:completed, results:[...]} (A11)', async () => {
+      const res = await request(app)
+        .post('/api/v2/compliance/check?wait=true')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ repositories: ['repo-alpha'], templates: ['standard-devops'] })
+        .expect(200);
+
+      expect(res.body).toHaveProperty('jobId');
+      expect(res.body).toHaveProperty('status', 'completed');
+      expect(res.body).toHaveProperty('results');
+      expect(Array.isArray(res.body.results)).toBe(true);
+      expect(res.body.results).toHaveLength(1);
+      expect(res.body.results[0]).toHaveProperty('repository', 'repo-alpha');
+      expect(res.body.results[0]).toHaveProperty('success');
+    });
+
+    it('?wait=true returns 504 {jobId, status:timeout} when job exceeds timeout (A11)', async () => {
+      // Stub waitForJob to resolve as a timeout directly — deterministic and
+      // independent of real clock. Route exposes no user-tunable timeout to
+      // avoid user-controlled setTimeout duration (CodeQL js/resource-exhaustion).
+      jest.spyOn(complianceService, 'waitForJob').mockResolvedValue({
+        status: 'timeout',
+        job: { id: 'stub', status: 'running' },
+      });
+
+      const res = await request(app)
+        .post('/api/v2/compliance/check?wait=true')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ repositories: ['repo-alpha'], templates: ['standard-devops'] });
+
+      expect(res.status).toBe(504);
+      expect(res.body).toHaveProperty('jobId');
+      expect(res.body).toHaveProperty('status', 'timeout');
+
+      complianceService.waitForJob.mockRestore();
+    });
   });
 
   describe('GET /api/v2/compliance/templates', () => {
@@ -419,6 +530,49 @@ describe('Compliance API Endpoints', () => {
       expect(res.body.results[0]).toHaveProperty('success', false);
       expect(res.body.results[0]).toHaveProperty('error', 'template not found');
     });
+
+    it('exposes top-level {success, prUrl, repository, templates} (NEW-2, A12)', async () => {
+      templateEngine.state.applyResult = {
+        success: true,
+        output: 'applied',
+        error: null,
+        filesWritten: ['.github/workflows/ci.yml'],
+        prUrl: 'https://github.com/test/repo/pull/42',
+      };
+
+      const res = await request(app)
+        .post('/api/v2/compliance/apply')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ repository: 'repo-alpha', templates: ['standard-devops'] })
+        .expect(200);
+
+      expect(res.body).toHaveProperty('success', true);
+      expect(res.body).toHaveProperty('prUrl', 'https://github.com/test/repo/pull/42');
+      expect(res.body).toHaveProperty('repository', 'repo-alpha');
+      expect(res.body).toHaveProperty('templates', ['standard-devops']);
+      expect(res.body).toHaveProperty('results');
+    });
+
+    it('sets top-level success=false when any template fails (A12)', async () => {
+      // First call succeeds, second fails, overall success=false.
+      let call = 0;
+      templateEngine.applyTemplate = jest.fn(async () => {
+        call += 1;
+        if (call === 1) return { success: true, output: 'ok', error: null };
+        return { success: false, output: '', error: 'boom' };
+      });
+
+      const res = await request(app)
+        .post('/api/v2/compliance/apply')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          repository: 'repo-alpha',
+          templates: ['standard-devops', 'security-hardening'],
+        })
+        .expect(200);
+
+      expect(res.body.success).toBe(false);
+    });
   });
 
   describe('GET /api/v2/compliance/history', () => {
@@ -474,7 +628,109 @@ describe('Compliance API Endpoints', () => {
       });
     });
 
-    // Original suite asserted ?timeRange=24h filtering; service has no such
-    // parameter — only repository/template/limit/offset are honored.
+    it('filters by ?timeRange=24h (A7)', async () => {
+      // Seed two applications: one fresh, one old.
+      const now = new Date();
+      const old = new Date(now.getTime() - 48 * 60 * 60 * 1000); // 2 days ago
+      const { TemplateApplication, ApplicationStatus } = require('../../models/compliance');
+      complianceService.applicationHistory.set('fresh', new TemplateApplication({
+        id: 'fresh',
+        repository: 'repo-alpha',
+        templateName: 'standard-devops',
+        appliedAt: now.toISOString(),
+        appliedBy: 'test',
+        status: ApplicationStatus.SUCCESS,
+      }));
+      complianceService.applicationHistory.set('stale', new TemplateApplication({
+        id: 'stale',
+        repository: 'repo-alpha',
+        templateName: 'standard-devops',
+        appliedAt: old.toISOString(),
+        appliedBy: 'test',
+        status: ApplicationStatus.SUCCESS,
+      }));
+
+      const res = await request(app)
+        .get('/api/v2/compliance/history?timeRange=24h')
+        .expect(200);
+
+      expect(res.body.applications).toHaveLength(1);
+      expect(res.body.applications[0].id).toBe('fresh');
+    });
+
+    it('filters by ?timeRange=7d (A7)', async () => {
+      const now = new Date();
+      const within = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000); // 3 days ago
+      const outside = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000); // 10 days ago
+      const { TemplateApplication, ApplicationStatus } = require('../../models/compliance');
+      complianceService.applicationHistory.set('within', new TemplateApplication({
+        id: 'within',
+        repository: 'repo-alpha',
+        templateName: 'standard-devops',
+        appliedAt: within.toISOString(),
+        appliedBy: 'test',
+        status: ApplicationStatus.SUCCESS,
+      }));
+      complianceService.applicationHistory.set('outside', new TemplateApplication({
+        id: 'outside',
+        repository: 'repo-alpha',
+        templateName: 'standard-devops',
+        appliedAt: outside.toISOString(),
+        appliedBy: 'test',
+        status: ApplicationStatus.SUCCESS,
+      }));
+
+      const res = await request(app)
+        .get('/api/v2/compliance/history?timeRange=7d')
+        .expect(200);
+
+      expect(res.body.applications.map(a => a.id)).toEqual(['within']);
+    });
+
+    it('returns 400 on invalid ?timeRange (A8)', async () => {
+      const res = await request(app)
+        .get('/api/v2/compliance/history?timeRange=bogus');
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/invalid.*time.*range/i);
+    });
+
+    it('accepts all four documented timeRange values (A7)', async () => {
+      for (const tr of ['24h', '7d', '30d', '90d']) {
+        const res = await request(app)
+          .get(`/api/v2/compliance/history?timeRange=${tr}`);
+        expect(res.status).toBe(200);
+      }
+    });
+
+    it('returns aggregated summary when ?aggregated=true (A10)', async () => {
+      const { TemplateApplication, ApplicationStatus } = require('../../models/compliance');
+      complianceService.applicationHistory.set('a', new TemplateApplication({
+        id: 'a', repository: 'repo-alpha', templateName: 'standard-devops',
+        appliedAt: new Date().toISOString(), appliedBy: 'test',
+        status: ApplicationStatus.SUCCESS,
+      }));
+      complianceService.applicationHistory.set('b', new TemplateApplication({
+        id: 'b', repository: 'repo-bravo', templateName: 'standard-devops',
+        appliedAt: new Date().toISOString(), appliedBy: 'test',
+        status: ApplicationStatus.FAILED,
+      }));
+      complianceService.applicationHistory.set('c', new TemplateApplication({
+        id: 'c', repository: 'repo-alpha', templateName: 'security-hardening',
+        appliedAt: new Date().toISOString(), appliedBy: 'test',
+        status: ApplicationStatus.SUCCESS,
+      }));
+
+      const res = await request(app)
+        .get('/api/v2/compliance/history?aggregated=true')
+        .expect(200);
+
+      expect(res.body).toHaveProperty('totalApplications', 3);
+      expect(res.body).toHaveProperty('successCount', 2);
+      expect(res.body).toHaveProperty('failureCount', 1);
+      expect(res.body).toHaveProperty('byTemplate');
+      expect(res.body.byTemplate['standard-devops']).toBeDefined();
+      expect(res.body.byTemplate['security-hardening']).toBeDefined();
+    });
   });
 });

@@ -51,12 +51,29 @@ class ComplianceService extends EventEmitter {
 
   /**
    * Get compliance status for all repositories
+   *
+   * Supported options:
+   *   - repository:     single-repo filter (unchanged)
+   *   - template:       template restriction (unchanged)
+   *   - includeDetails: full vs simplified repo JSON
+   *   - filter:         'compliant' | 'non-compliant' | 'all' (default 'all')
+   *                     Invalid values throw `ComplianceFilterError` which the
+   *                     route layer converts to HTTP 400.
    */
   async getComplianceStatus(options = {}) {
-    const { repository, template, includeDetails = false } = options;
+    const { repository, template, includeDetails = false, filter = 'all' } = options;
+
+    const validFilters = ['compliant', 'non-compliant', 'all'];
+    if (!validFilters.includes(filter)) {
+      const err = new Error(
+        `invalid filter value '${filter}'; expected one of: ${validFilters.join(', ')}`
+      );
+      err.code = 'INVALID_FILTER';
+      throw err;
+    }
 
     try {
-      // Check cache first
+      // Cache key must include filter so different filters don't collide
       const cacheKey = `status_${JSON.stringify(options)}`;
       if (this.cache.has(cacheKey)) {
         const cached = this.cache.get(cacheKey);
@@ -101,14 +118,37 @@ class ComplianceService extends EventEmitter {
         }
       }
 
-      // Calculate summary
+      // Summary is computed across the UNFILTERED set so clients see a true
+      // overview regardless of which slice they requested.
       const summary = new ComplianceSummary(repositories);
+      const summaryJSON = summary.toJSON();
+      // Add fields required by dashboard (NEW-1):
+      //   - lastUpdated: most recent lastChecked across repos (or now() if none)
+      //   - compliantCount: alias for compliantRepos (dashboard-friendly name)
+      summaryJSON.compliantCount = summaryJSON.compliantRepos;
+      summaryJSON.nonCompliantCount = summaryJSON.nonCompliantRepos;
+      const lastCheckedTimes = repositories
+        .map(r => r.lastChecked)
+        .filter(Boolean)
+        .map(t => new Date(t).getTime())
+        .filter(t => Number.isFinite(t));
+      summaryJSON.lastUpdated = lastCheckedTimes.length > 0
+        ? new Date(Math.max(...lastCheckedTimes)).toISOString()
+        : new Date().toISOString();
+
+      // Apply filter AFTER summary — filter only trims the `repositories` list.
+      let filteredRepos = repositories;
+      if (filter === 'compliant') {
+        filteredRepos = repositories.filter(r => r.compliant === true);
+      } else if (filter === 'non-compliant') {
+        filteredRepos = repositories.filter(r => r.compliant === false);
+      }
 
       const result = {
-        repositories: repositories.map(repo => 
+        repositories: filteredRepos.map(repo =>
           includeDetails ? repo.toJSON() : this.simplifyRepositoryData(repo)
         ),
-        summary: summary.toJSON(),
+        summary: summaryJSON,
         timestamp: new Date().toISOString()
       };
 
@@ -121,6 +161,7 @@ class ComplianceService extends EventEmitter {
       return result;
 
     } catch (error) {
+      if (error.code === 'INVALID_FILTER') throw error;
       console.error('Error getting compliance status:', error);
       throw new Error(`Failed to get compliance status: ${error.message}`);
     }
@@ -131,6 +172,16 @@ class ComplianceService extends EventEmitter {
    */
   async getRepositoryCompliance(repositoryName, options = {}) {
     const { templates = this.enabledTemplates, includeHistory = false } = options;
+
+    // 404 gate: the repo must be in the monitored list. We only check the
+    // explicit monitored set here (not the default fallback), since an
+    // unmonitored repo has no meaningful compliance data.
+    const monitored = await this.getMonitoredRepositories();
+    if (!monitored.includes(repositoryName)) {
+      const err = new Error(`repository '${repositoryName}' not found in monitored list`);
+      err.code = 'REPO_NOT_FOUND';
+      throw err;
+    }
 
     try {
       const compliance = await this.checkRepositoryCompliance(repositoryName, templates);
@@ -262,8 +313,14 @@ class ComplianceService extends EventEmitter {
     // Emit job created event
     this.emit('compliance:job-created', { jobId, job });
 
-    // Process job asynchronously
-    setImmediate(() => this.processComplianceJob(jobId));
+    // Process job asynchronously. We expose the promise on the job so a sync
+    // caller (POST /compliance/check?wait=true) can await completion without
+    // changing the default fire-and-forget contract.
+    const processingPromise = Promise.resolve().then(() => this.processComplianceJob(jobId));
+    job.processingPromise = processingPromise;
+    // Swallow unhandled rejections if no one awaits; processComplianceJob
+    // itself already sets job.status='failed' on throw.
+    processingPromise.catch(() => {});
 
     return {
       jobId,
@@ -273,6 +330,48 @@ class ComplianceService extends EventEmitter {
       estimatedDuration: repoList.length * 2, // 2 seconds per repo estimate
       timestamp: new Date().toISOString()
     };
+  }
+
+  /**
+   * Wait for a compliance check job to reach a terminal state.
+   *
+   * Returns { status: 'completed' | 'failed', job } when the job finishes
+   * within timeoutMs, or { status: 'timeout', job } otherwise. The job object
+   * remains in jobQueue either way so a caller can poll later.
+   */
+  async waitForJob(jobId, { timeoutMs = 30000 } = {}) {
+    const job = this.jobQueue.get(jobId);
+    if (!job) {
+      const err = new Error(`unknown job '${jobId}'`);
+      err.code = 'UNKNOWN_JOB';
+      throw err;
+    }
+    if (!job.processingPromise) {
+      // Job created via another path; nothing to wait on.
+      return { status: job.status, job };
+    }
+    // Defensive clamp: timeoutMs may flow from user input. Route layer also
+    // clamps, but service-level bound prevents resource exhaustion if the
+    // service is called from a path that forgot to validate.
+    const safeTimeoutMs = Number.isFinite(timeoutMs)
+      ? Math.min(Math.max(timeoutMs, 0), 60000)
+      : 30000;
+    let timer;
+    const timeout = new Promise(resolve => {
+      timer = setTimeout(() => resolve('__timeout__'), safeTimeoutMs);
+    });
+    try {
+      const outcome = await Promise.race([
+        job.processingPromise.then(() => 'done'),
+        timeout,
+      ]);
+      if (outcome === '__timeout__') {
+        return { status: 'timeout', job };
+      }
+      return { status: job.status, job };
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
   }
 
   /**
@@ -388,9 +487,43 @@ class ComplianceService extends EventEmitter {
 
   /**
    * Get application history
+   *
+   * Supported options:
+   *   - repository:  filter by repo name
+   *   - template:    filter by template id
+   *   - limit/offset: pagination
+   *   - timeRange:   '24h' | '7d' | '30d' | '90d' (invalid → ComplianceTimeRangeError)
+   *   - aggregated:  when true, returns {totalApplications, successCount,
+   *                  failureCount, byTemplate} instead of the paginated list.
    */
   async getApplicationHistory(options = {}) {
-    const { repository, template, limit = 50, offset = 0 } = options;
+    const {
+      repository,
+      template,
+      limit = 50,
+      offset = 0,
+      timeRange,
+      aggregated = false,
+    } = options;
+
+    // Validate timeRange up-front (route layer maps code to 400).
+    const timeRangeHours = {
+      '24h': 24,
+      '7d': 24 * 7,
+      '30d': 24 * 30,
+      '90d': 24 * 90,
+    };
+    let cutoff = null;
+    if (timeRange !== undefined) {
+      if (!Object.prototype.hasOwnProperty.call(timeRangeHours, timeRange)) {
+        const err = new Error(
+          `invalid time range '${timeRange}'; expected one of: ${Object.keys(timeRangeHours).join(', ')}`
+        );
+        err.code = 'INVALID_TIME_RANGE';
+        throw err;
+      }
+      cutoff = Date.now() - timeRangeHours[timeRange] * 60 * 60 * 1000;
+    }
 
     let applications = Array.from(this.applicationHistory.values());
 
@@ -403,8 +536,38 @@ class ComplianceService extends EventEmitter {
       applications = applications.filter(app => app.templateName === template);
     }
 
+    if (cutoff !== null) {
+      applications = applications.filter(app => {
+        const t = new Date(app.appliedAt).getTime();
+        return Number.isFinite(t) && t >= cutoff;
+      });
+    }
+
     // Sort by applied date (newest first)
     applications.sort((a, b) => new Date(b.appliedAt) - new Date(a.appliedAt));
+
+    if (aggregated) {
+      const successCount = applications.filter(a => a.isSuccessful()).length;
+      const failureCount = applications.filter(a => a.isFailed()).length;
+      const byTemplate = {};
+      for (const app of applications) {
+        const tpl = app.templateName || 'unknown';
+        if (!byTemplate[tpl]) {
+          byTemplate[tpl] = { total: 0, success: 0, failed: 0 };
+        }
+        byTemplate[tpl].total += 1;
+        if (app.isSuccessful()) byTemplate[tpl].success += 1;
+        if (app.isFailed()) byTemplate[tpl].failed += 1;
+      }
+      return {
+        totalApplications: applications.length,
+        successCount,
+        failureCount,
+        byTemplate,
+        timeRange: timeRange || null,
+        timestamp: new Date().toISOString(),
+      };
+    }
 
     // Apply pagination
     const paginatedApps = applications.slice(offset, offset + limit);
@@ -500,6 +663,8 @@ class ComplianceService extends EventEmitter {
           dryRun,
           output: result.output,
           error: result.error,
+          prUrl: result.prUrl || null,
+          filesWritten: result.filesWritten || null,
           duration,
           applicationId
         });
@@ -516,7 +681,20 @@ class ComplianceService extends EventEmitter {
       }
     }
 
+    // Top-level rollup fields (NEW-2): success is true iff EVERY template
+    // succeeded. prUrl is pulled from the first result that carried one (the
+    // engine may PR-per-template, but clients today expect one URL).
+    const overallSuccess = results.length > 0 && results.every(r => r.success === true);
+    const prUrl = (() => {
+      for (const r of results) {
+        if (r.prUrl) return r.prUrl;
+      }
+      return null;
+    })();
+
     return {
+      success: overallSuccess,
+      prUrl,
       repository,
       templates,
       results,
