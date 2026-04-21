@@ -1877,7 +1877,10 @@ phase2Router.get('/pipelines/metrics', async (req, res) => {
 // System Status Endpoint
 // ===============================
 
-phase2Router.get('/status', (req, res) => {
+// GET /api/v2/platform/health — platform component summary. Renamed from
+// /api/v2/status as part of Vikunja #624 / #666 / Decision 4. Backwards-
+// compatible (no dashboard callers of the old path — see plan Audit 1).
+phase2Router.get('/platform/health', (req, res) => {
   const recentOperations = Array.from(storage.operations.values())
     .slice(-10)
     .map(op => ({
@@ -1909,9 +1912,11 @@ phase2Router.get('/status', (req, res) => {
         status: 'operational',
         gatesActive: Array.from(storage.qualityGates.values()).filter(g => g.status === 'active').length,
         gatesTotal: storage.qualityGates.size,
-        overallPassRate: Math.round(
-          Array.from(storage.qualityGates.values()).reduce((sum, g) => sum + g.passRate, 0) / storage.qualityGates.size
-        )
+        overallPassRate: storage.qualityGates.size > 0
+          ? Math.round(
+              Array.from(storage.qualityGates.values()).reduce((sum, g) => sum + g.passRate, 0) / storage.qualityGates.size
+            )
+          : 0
       }
     },
     statistics: {
@@ -1929,6 +1934,74 @@ phase2Router.get('/status', (req, res) => {
     },
     lastUpdated: new Date().toISOString()
   });
+});
+
+// GET /api/v2/status — aggregate cross-service status. New handler per
+// Vikunja #624 / #666 / Decision 4. Composes from the DI pipelineService +
+// complianceService; falls back to empty objects when a service is absent.
+phase2Router.get('/status', async (req, res) => {
+  try {
+    const pipelineService = req.app.locals.pipelineService;
+    const complianceService = req.app.locals.complianceService;
+
+    let pipelines = {};
+    let metrics = {};
+    if (pipelineService) {
+      try {
+        const [pipeRes, metricsRes] = await Promise.all([
+          pipelineService.getPipelineStatus ? pipelineService.getPipelineStatus({}) : Promise.resolve({ pipelines: [] }),
+          pipelineService.getPipelineMetrics ? pipelineService.getPipelineMetrics({ timeRange: '30d' }) : Promise.resolve({ metrics: {} }),
+        ]);
+        const runs = Array.isArray(pipeRes.pipelines) ? pipeRes.pipelines : [];
+        pipelines = {
+          total: runs.length,
+          active: runs.filter(p => p && p.status === 'running').length,
+          lastRuns: runs.slice(0, 5),
+        };
+
+        // Flatten metrics for the aggregate `totalRuns`.
+        const rawMetrics = metricsRes && metricsRes.metrics ? metricsRes.metrics : {};
+        let totalRuns = 0;
+        let successTotal = 0;
+        Object.values(rawMetrics).forEach((m) => {
+          if (m && typeof m.total === 'number') totalRuns += m.total;
+          if (m && typeof m.successful === 'number') successTotal += m.successful;
+        });
+        metrics = {
+          totalRuns,
+          successRate: totalRuns > 0 ? Math.round((successTotal / totalRuns) * 100) : 0,
+          timeRange: metricsRes && metricsRes.timeRange ? metricsRes.timeRange : '30d',
+          timestamp: new Date().toISOString(),
+        };
+      } catch (err) {
+        pipelines = { error: err.message };
+      }
+    }
+
+    let compliance = {};
+    if (complianceService && typeof complianceService.getComplianceStatus === 'function') {
+      try {
+        const compRes = await complianceService.getComplianceStatus({});
+        compliance = {
+          totalRepos: compRes.summary ? compRes.summary.totalRepos : (compRes.repositories || []).length,
+          compliantRepos: compRes.summary ? compRes.summary.compliantRepos : undefined,
+          averageScore: compRes.summary ? compRes.summary.averageScore : undefined,
+        };
+      } catch (err) {
+        compliance = { error: err.message };
+      }
+    }
+
+    res.json({
+      pipelines,
+      compliance,
+      metrics,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('Error building aggregate status:', error);
+    res.status(500).json({ error: 'Failed to build aggregate status', details: error.message });
+  }
 });
 
 // ===============================
@@ -1974,6 +2047,7 @@ function initializeComplianceService(app) {
 const WIRED_COMPLIANCE_WS = Symbol.for('homelab-gitops.compliance.wsWired');
 function wireComplianceWSListeners(service, app) {
   if (!service || service[WIRED_COMPLIANCE_WS]) return;
+  if (typeof service.on !== 'function') return;  // not an EventEmitter
   service[WIRED_COMPLIANCE_WS] = true;
 
   // We synthesize a minimal `req`-shaped object for emitWSEvent to pull
