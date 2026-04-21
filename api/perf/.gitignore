@@ -1,0 +1,3 @@
+# Transient benchmark results (baseline.json is the committed reference)
+results-*.json
+results-concurrent-*.json

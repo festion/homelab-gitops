@@ -22,8 +22,6 @@ tests/
 │   └── realtime.test.js    # Real-time update tests
 ├── integration/            # End-to-end tests
 │   └── workflow.test.js    # Complete workflow tests
-├── performance/            # Performance tests
-│   └── load.test.js        # Load and performance tests
 └── utils/                  # Test utilities
     └── testResultsProcessor.js # Custom test results processor
 ```
@@ -58,13 +56,11 @@ tests/
 - Multi-user collaboration scenarios
 - Error recovery and resilience testing
 
-### 4. Performance Tests (`tests/performance/`)
-- API response time benchmarks
-- Concurrent request handling
-- Large dataset performance
-- Memory usage monitoring
-- Rate limiting effectiveness
-- Stress testing under load
+### 4. Performance Benchmarks (retired from jest — see `../perf/`)
+Jest is the wrong tool for wall-time perf benchmarks. Performance is now measured via autocannon in `api/perf/`:
+- `npm run bench` — response-time benchmark (3 endpoints × 10 conn × 10s)
+- `npm run bench:concurrent` — concurrent-load benchmark (50 conn × 15s)
+- Results checked in at `api/perf/baseline.json`; see `api/perf/README.md`
 
 ## Test Configuration
 
@@ -96,7 +92,8 @@ npm run test:ci           # CI mode (no watch)
 npm run test:unit         # Unit tests only
 npm run test:integration  # Integration tests only
 npm run test:websocket    # WebSocket tests only
-npm run test:performance  # Performance tests only
+npm run bench              # Response-time benchmark (autocannon)
+npm run bench:concurrent   # Concurrent-load benchmark (autocannon)
 ```
 
 ### Development
@@ -158,7 +155,7 @@ The test suite runs automatically on:
 1. **Unit Tests**: Run on multiple Node.js versions
 2. **Integration Tests**: Full workflow validation
 3. **WebSocket Tests**: Real-time functionality
-4. **Performance Tests**: Benchmark validation
+4. **Performance Benchmarks**: run via `npm run bench` (autocannon, on-demand)
 5. **Coverage Report**: Generate and upload coverage
 6. **Quality Checks**: ESLint and security audits
 
