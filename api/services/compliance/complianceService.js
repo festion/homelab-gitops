@@ -173,6 +173,16 @@ class ComplianceService extends EventEmitter {
   async getRepositoryCompliance(repositoryName, options = {}) {
     const { templates = this.enabledTemplates, includeHistory = false } = options;
 
+    // 404 gate: the repo must be in the monitored list. We only check the
+    // explicit monitored set here (not the default fallback), since an
+    // unmonitored repo has no meaningful compliance data.
+    const monitored = await this.getMonitoredRepositories();
+    if (!monitored.includes(repositoryName)) {
+      const err = new Error(`repository '${repositoryName}' not found in monitored list`);
+      err.code = 'REPO_NOT_FOUND';
+      throw err;
+    }
+
     try {
       const compliance = await this.checkRepositoryCompliance(repositoryName, templates);
       

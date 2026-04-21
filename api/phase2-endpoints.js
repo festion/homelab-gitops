@@ -2101,10 +2101,13 @@ phase2Router.get('/compliance/repository/:repo', async (req, res) => {
     
     res.json(result);
   } catch (error) {
+    if (error && error.code === 'REPO_NOT_FOUND') {
+      return res.status(404).json({ error: error.message });
+    }
     console.error(`Error getting repository compliance for ${req.params.repo}:`, error);
-    res.status(500).json({ 
-      error: 'Failed to get repository compliance', 
-      details: error.message 
+    res.status(500).json({
+      error: 'Failed to get repository compliance',
+      details: error.message
     });
   }
 });

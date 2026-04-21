@@ -304,9 +304,13 @@ describe('Compliance API Endpoints', () => {
       expect(res.body.issues.length).toBeGreaterThan(0);
     });
 
-    // Original suite asserted 404 for nonexistent repos — service constructs
-    // a path without checking repo existence, so a 404 is never produced.
-    // Tracked as a follow-up.
+    it('returns 404 for an unknown repository', async () => {
+      const res = await request(app)
+        .get('/api/v2/compliance/repository/does-not-exist');
+
+      expect(res.status).toBe(404);
+      expect(res.body.error).toMatch(/not found/i);
+    });
   });
 
   describe('POST /api/v2/compliance/check', () => {
