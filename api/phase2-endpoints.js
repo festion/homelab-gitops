@@ -28,6 +28,12 @@ const phase2Router = express.Router();
 
 module.exports = phase2Router;
 
+// Named export so `createApp` can wire the WS bridge onto DI-injected
+// complianceService instances at construction time (instead of lazily on first
+// request). See phase2-endpoints.js:wireComplianceWSListeners for the impl.
+module.exports.wireComplianceWSListeners = (service, app) =>
+  wireComplianceWSListeners(service, app);
+
 // Helper function to emit WebSocket events
 function emitWSEvent(req, channel, event, data) {
   const phase2WS = req.app.locals.phase2WS;
@@ -1806,7 +1812,7 @@ phase2Router.post('/pipelines/trigger',
     
     const result = await pipelineService.triggerPipeline(request);
     
-    // Emit WebSocket event
+    // Emit WebSocket event — legacy request-tracking name retained.
     emitWSEvent(req, 'pipelines', 'pipeline.triggered', {
       repository,
       workflow,
@@ -1814,7 +1820,18 @@ phase2Router.post('/pipelines/trigger',
       inputs: request.inputs,
       success: result.success
     });
-    
+
+    // Emit canonical lifecycle `pipeline:status` event (Vikunja #624 / #667
+    // Decision 5 / Task B5). This is what workflow.test.js listens for.
+    emitWSEvent(req, 'pipelines', 'pipeline:status', {
+      runId: result.runId,
+      repository,
+      workflow,
+      branch: request.branch,
+      status: result.status || 'pending',
+      timestamp: new Date().toISOString(),
+    });
+
     res.json(result);
   } catch (error) {
     console.error('Error triggering pipeline:', error);
@@ -1825,33 +1842,71 @@ phase2Router.post('/pipelines/trigger',
   }
 });
 
-// GET /api/v2/pipelines/metrics - Get pipeline metrics and analytics
+// GET /api/v2/pipelines/metrics - Get pipeline metrics and analytics.
+// Vikunja #624 / NEW-3 / B10: response includes top-level `totalRuns`,
+// `successRate`, `averageDuration` summed across repos; emits
+// `metrics:updated` WS event on each refresh.
 phase2Router.get('/pipelines/metrics', async (req, res) => {
   try {
     const pipelineService = getPipelineService(req);
 
     const { repository, timeRange, branch } = req.query;
-    
+
     const options = {
       repository,
       timeRange: timeRange || '30d',
       branch
     };
-    
+
     const result = await pipelineService.getPipelineMetrics(options);
-    
-    // Emit WebSocket event
+
+    // Aggregate across all repos for the top-level fields workflow.test.js /
+    // dashboards need without drilling into `metrics[repo]`.
+    const perRepo = (result && result.metrics) || {};
+    let totalRuns = 0;
+    let successTotal = 0;
+    let durationWeighted = 0;
+    let runsWithDuration = 0;
+    Object.values(perRepo).forEach((m) => {
+      if (!m) return;
+      if (typeof m.total === 'number') totalRuns += m.total;
+      if (typeof m.successful === 'number') successTotal += m.successful;
+      if (typeof m.averageDuration === 'number' && typeof m.total === 'number') {
+        durationWeighted += m.averageDuration * m.total;
+        runsWithDuration += m.total;
+      }
+    });
+    const successRate = totalRuns > 0 ? Math.round((successTotal / totalRuns) * 100) : 0;
+    const averageDuration = runsWithDuration > 0 ? Math.round(durationWeighted / runsWithDuration) : 0;
+    const timestamp = new Date().toISOString();
+
+    // Emit informational request-tracking event (existing contract).
     emitWSEvent(req, 'pipelines', 'metrics.requested', {
       options,
-      repositoryCount: Object.keys(result.metrics).length
+      repositoryCount: Object.keys(perRepo).length
     });
-    
-    res.json(result);
+
+    // Emit canonical metrics:updated event (NEW-3).
+    emitWSEvent(req, 'metrics', 'updated', {
+      totalRuns,
+      successRate,
+      averageDuration,
+      timeRange: options.timeRange,
+      timestamp,
+    });
+
+    res.json({
+      ...result,
+      totalRuns,
+      successRate,
+      averageDuration,
+      timestamp,
+    });
   } catch (error) {
     console.error('Error getting pipeline metrics:', error);
-    res.status(500).json({ 
-      error: 'Failed to get pipeline metrics', 
-      details: error.message 
+    res.status(500).json({
+      error: 'Failed to get pipeline metrics',
+      details: error.message
     });
   }
 });
@@ -1860,7 +1915,10 @@ phase2Router.get('/pipelines/metrics', async (req, res) => {
 // System Status Endpoint
 // ===============================
 
-phase2Router.get('/status', (req, res) => {
+// GET /api/v2/platform/health — platform component summary. Renamed from
+// /api/v2/status as part of Vikunja #624 / #666 / Decision 4. Backwards-
+// compatible (no dashboard callers of the old path — see plan Audit 1).
+phase2Router.get('/platform/health', (req, res) => {
   const recentOperations = Array.from(storage.operations.values())
     .slice(-10)
     .map(op => ({
@@ -1892,9 +1950,11 @@ phase2Router.get('/status', (req, res) => {
         status: 'operational',
         gatesActive: Array.from(storage.qualityGates.values()).filter(g => g.status === 'active').length,
         gatesTotal: storage.qualityGates.size,
-        overallPassRate: Math.round(
-          Array.from(storage.qualityGates.values()).reduce((sum, g) => sum + g.passRate, 0) / storage.qualityGates.size
-        )
+        overallPassRate: storage.qualityGates.size > 0
+          ? Math.round(
+              Array.from(storage.qualityGates.values()).reduce((sum, g) => sum + g.passRate, 0) / storage.qualityGates.size
+            )
+          : 0
       }
     },
     statistics: {
@@ -1912,6 +1972,74 @@ phase2Router.get('/status', (req, res) => {
     },
     lastUpdated: new Date().toISOString()
   });
+});
+
+// GET /api/v2/status — aggregate cross-service status. New handler per
+// Vikunja #624 / #666 / Decision 4. Composes from the DI pipelineService +
+// complianceService; falls back to empty objects when a service is absent.
+phase2Router.get('/status', async (req, res) => {
+  try {
+    const pipelineService = req.app.locals.pipelineService;
+    const complianceService = req.app.locals.complianceService;
+
+    let pipelines = {};
+    let metrics = {};
+    if (pipelineService) {
+      try {
+        const [pipeRes, metricsRes] = await Promise.all([
+          pipelineService.getPipelineStatus ? pipelineService.getPipelineStatus({}) : Promise.resolve({ pipelines: [] }),
+          pipelineService.getPipelineMetrics ? pipelineService.getPipelineMetrics({ timeRange: '30d' }) : Promise.resolve({ metrics: {} }),
+        ]);
+        const runs = Array.isArray(pipeRes.pipelines) ? pipeRes.pipelines : [];
+        pipelines = {
+          total: runs.length,
+          active: runs.filter(p => p && p.status === 'running').length,
+          lastRuns: runs.slice(0, 5),
+        };
+
+        // Flatten metrics for the aggregate `totalRuns`.
+        const rawMetrics = metricsRes && metricsRes.metrics ? metricsRes.metrics : {};
+        let totalRuns = 0;
+        let successTotal = 0;
+        Object.values(rawMetrics).forEach((m) => {
+          if (m && typeof m.total === 'number') totalRuns += m.total;
+          if (m && typeof m.successful === 'number') successTotal += m.successful;
+        });
+        metrics = {
+          totalRuns,
+          successRate: totalRuns > 0 ? Math.round((successTotal / totalRuns) * 100) : 0,
+          timeRange: metricsRes && metricsRes.timeRange ? metricsRes.timeRange : '30d',
+          timestamp: new Date().toISOString(),
+        };
+      } catch (err) {
+        pipelines = { error: err.message };
+      }
+    }
+
+    let compliance = {};
+    if (complianceService && typeof complianceService.getComplianceStatus === 'function') {
+      try {
+        const compRes = await complianceService.getComplianceStatus({});
+        compliance = {
+          totalRepos: compRes.summary ? compRes.summary.totalRepos : (compRes.repositories || []).length,
+          compliantRepos: compRes.summary ? compRes.summary.compliantRepos : undefined,
+          averageScore: compRes.summary ? compRes.summary.averageScore : undefined,
+        };
+      } catch (err) {
+        compliance = { error: err.message };
+      }
+    }
+
+    res.json({
+      pipelines,
+      compliance,
+      metrics,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('Error building aggregate status:', error);
+    res.status(500).json({ error: 'Failed to build aggregate status', details: error.message });
+  }
 });
 
 // ===============================
@@ -1938,31 +2066,58 @@ function initializeComplianceService(app) {
     templateEngine,
     githubMCP: app.locals?.githubMCP,
   });
-  
-  // Set up compliance event listeners for WebSocket
-  complianceService.on('compliance:checked', (data) => {
-    emitWSEvent(app.locals?.phase2WS?.req || {}, 'compliance', 'compliance.checked', data);
-  });
-  
-  complianceService.on('compliance:job-started', (data) => {
-    emitWSEvent(app.locals?.phase2WS?.req || {}, 'compliance', 'compliance.job-started', data);
-  });
-  
-  complianceService.on('compliance:job-completed', (data) => {
-    emitWSEvent(app.locals?.phase2WS?.req || {}, 'compliance', 'compliance.job-completed', data);
-  });
-  
-  complianceService.on('compliance:application-completed', (data) => {
-    emitWSEvent(app.locals?.phase2WS?.req || {}, 'compliance', 'compliance.application-completed', data);
-  });
+
+  // Wire WS bridge for the lazy-built service.
+  wireComplianceWSListeners(complianceService, app);
 
   return complianceService;
 }
 
+// Attach WS event listeners to a ComplianceService instance. Idempotent — a
+// Symbol marker on the service records that it's already been wired, so
+// repeated calls (e.g. from getComplianceService on every request) don't
+// pile duplicate listeners.
+//
+// Decision 5 (#667 / Task B4): the wire event names are the canonical form —
+// `updated`, `job-started`, `job-completed`, `application-completed` —
+// which `phase2-websocket.js` emit() then serializes as
+// `compliance:updated`, `compliance:job-started`, etc. on the wire.
+const WIRED_COMPLIANCE_WS = Symbol.for('homelab-gitops.compliance.wsWired');
+function wireComplianceWSListeners(service, app) {
+  if (!service || service[WIRED_COMPLIANCE_WS]) return;
+  if (typeof service.on !== 'function') return;  // not an EventEmitter
+  service[WIRED_COMPLIANCE_WS] = true;
+
+  // We synthesize a minimal `req`-shaped object for emitWSEvent to pull
+  // `app.locals.phase2WS` off of.
+  const reqStub = { app };
+
+  service.on('compliance:checked', (data) => {
+    emitWSEvent(reqStub, 'compliance', 'updated', data);
+  });
+
+  service.on('compliance:job-started', (data) => {
+    emitWSEvent(reqStub, 'compliance', 'job-started', data);
+  });
+
+  service.on('compliance:job-completed', (data) => {
+    emitWSEvent(reqStub, 'compliance', 'job-completed', data);
+  });
+
+  service.on('compliance:application-completed', (data) => {
+    emitWSEvent(reqStub, 'compliance', 'application-completed', data);
+  });
+}
+
 // Resolve the complianceService: prefer a DI-injected instance from app.locals
 // (tests pass one via createApp), fall back to the module-level lazy init.
+// In both cases ensure WS bridge listeners are wired (idempotent).
 function getComplianceService(req) {
-  if (req.app.locals.complianceService) return req.app.locals.complianceService;
+  const injected = req.app.locals.complianceService;
+  if (injected) {
+    wireComplianceWSListeners(injected, req.app);
+    return injected;
+  }
   if (!complianceService) complianceService = initializeComplianceService(req.app);
   return complianceService;
 }
@@ -1997,20 +2152,62 @@ function initializeOrchestrationService(app) {
 // Add orchestration routes
 const orchestrationRouter = require('./routes/orchestration');
 
+// Attach WS bridge listeners to an orchestrator. Idempotent. Forwards
+// PipelineOrchestrator lifecycle events to phase2WS on channel `orchestration`
+// with canonical event names `progress` / `completed` / `failed` / etc.
+// Vikunja #624 / #667 / B8.
+const WIRED_ORCH_WS = Symbol.for('homelab-gitops.orchestration.wsWired');
+function wireOrchestrationWSListeners(orchestrator, app) {
+  if (!orchestrator || orchestrator[WIRED_ORCH_WS]) return;
+  if (typeof orchestrator.on !== 'function') return;  // not an EventEmitter
+  orchestrator[WIRED_ORCH_WS] = true;
+
+  const reqStub = { app };
+  orchestrator.on('orchestration:completed', (orchestration) => {
+    emitWSEvent(reqStub, 'orchestration', 'completed', {
+      orchestrationId: orchestration.id,
+      status: orchestration.status,
+      results: orchestration.results,
+      timestamp: new Date().toISOString(),
+    });
+  });
+  orchestrator.on('orchestration:failed', (orchestration, error) => {
+    emitWSEvent(reqStub, 'orchestration', 'failed', {
+      orchestrationId: orchestration.id,
+      error: error && error.message,
+      timestamp: new Date().toISOString(),
+    });
+  });
+  orchestrator.on('stage:completed', (orchestration, stage) => {
+    emitWSEvent(reqStub, 'orchestration', 'progress', {
+      orchestrationId: orchestration.id,
+      stage: stage.name,
+      percentComplete: stage.percentComplete || null,
+      timestamp: new Date().toISOString(),
+    });
+  });
+}
+
 // Mount orchestration router with middleware
 phase2Router.use('/orchestration', (req, res, next) => {
-  // Ensure orchestration service is available
+  // Ensure orchestration service is available. Prefer a DI-injected instance
+  // from app.locals (tests + refactored server bootstrap); fall back to the
+  // module-level lazy init.
   if (!req.orchestrator) {
-    req.orchestrator = initializeOrchestrationService(req.app);
+    req.orchestrator = req.app.locals?.orchestrator
+      || initializeOrchestrationService(req.app);
   }
-  
+
+  // Wire WS bridge (idempotent per-orchestrator).
+  wireOrchestrationWSListeners(req.orchestrator, req.app);
+
   // Pass services through request
   req.services = {
     websocket: req.app.locals?.phase2WS,
     github: req.app.locals?.githubMCP,
     metrics: req.app.locals?.metricsService
   };
-  
+
   next();
 }, orchestrationRouter);
 
@@ -2494,5 +2691,3 @@ phase2Router.post('/webhooks/test', (req, res) => {
     res.status(500).json({ error: 'Failed to create test webhook' });
   }
 });
-
-module.exports = phase2Router;

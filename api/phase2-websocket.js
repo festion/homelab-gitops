@@ -29,16 +29,29 @@ class Phase2WebSocketExtension {
       {
         name: 'pipelines',
         description: 'Pipeline execution and status updates',
+        // Canonical lifecycle events (#624 / #667 Decision 5): wire format
+        //   `pipelines:pipeline:status` — catch-all lifecycle-transition event
+        //   used by dashboard + workflow.test.js. Other names below are
+        //   retained for existing emitters.
         events: [
-          'pipeline.started', 
-          'pipeline.progress', 
-          'pipeline.completed', 
-          'pipeline.failed', 
+          'pipeline:status',
+          'pipeline.started',
+          'pipeline.progress',
+          'pipeline.completed',
+          'pipeline.failed',
           'pipeline.stage.update',
           'pipeline.triggered',
           'pipeline.step-update',
           'pipeline.metrics',
-          'pipeline.status-summary'
+          'pipeline.status-summary',
+          'pipeline.validated',
+          'workflow.generated',
+          'workflow.deployment.started',
+          'workflow.deployment.completed',
+          'workflow.deployment.failed',
+          'status.requested',
+          'history.requested',
+          'metrics.requested',
         ]
       },
       {
@@ -54,27 +67,57 @@ class Phase2WebSocketExtension {
       {
         name: 'compliance',
         description: 'Template compliance tracking and application updates',
+        // Canonical event names (Vikunja #624 / #667 Decision 5). Wire format:
+        //   `compliance:updated`, `compliance:job-started`, etc.
+        // Legacy names (`compliance.checked`, `compliance.job-started`, ...)
+        // are retained for one release to ease rolling upgrades of any ad-hoc
+        // clients not yet moved to the canonical names. New emitters MUST use
+        // the canonical names (no `compliance.` prefix).
         events: [
-          'compliance.checked',
-          'compliance.job-started',
-          'compliance.job-progress', 
-          'compliance.job-completed',
-          'compliance.job-failed',
-          'compliance.application-started',
-          'compliance.application-completed',
-          'compliance.application-failed',
+          // Canonical lifecycle events
+          'updated',
+          'job-started',
+          'job-progress',
+          'job-completed',
+          'job-failed',
+          'application-started',
+          'application-completed',
+          'application-failed',
+          // Route-level request-tracking events (unchanged names)
           'status.requested',
           'repository.checked',
           'check.triggered',
           'templates.requested',
           'history.requested',
-          'template.applied'
+          'template.applied',
+          // Legacy — remove in the next major release
+          'compliance.checked',
+          'compliance.job-started',
+          'compliance.job-progress',
+          'compliance.job-completed',
+          'compliance.job-failed',
+          'compliance.application-started',
+          'compliance.application-completed',
+          'compliance.application-failed'
         ]
       },
       {
         name: 'operations',
         description: 'General operation status updates',
         events: ['operation.started', 'operation.progress', 'operation.completed', 'operation.failed']
+      },
+      {
+        // Vikunja #624 / #667 / B8+B10: new channels for orchestration and
+        // metrics lifecycle events. Wire format: `orchestration:progress`,
+        // `orchestration:completed`, `metrics:updated`.
+        name: 'orchestration',
+        description: 'Orchestration lifecycle updates (profile execution stages)',
+        events: ['progress', 'completed', 'failed', 'started', 'cancelled']
+      },
+      {
+        name: 'metrics',
+        description: 'Aggregate metrics refresh notifications',
+        events: ['updated']
       }
     ];
 
@@ -274,8 +317,12 @@ class Phase2WebSocketExtension {
       return;
     }
 
+    // Wire format (Vikunja #624 / #667 Decision 5): the top-level `type` is
+    // the concatenated `{channel}:{event}` so clients can listen for a single
+    // event name (e.g. `compliance:updated`). `channel` and `event` are kept
+    // as discrete fields for debuggability and backwards compatibility.
     const message = JSON.stringify({
-      type: 'phase2.event',
+      type: `${channelName}:${eventType}`,
       channel: channelName,
       event: eventType,
       data,
