@@ -16,7 +16,6 @@ class EnhancedWebhookHandler extends EventEmitter {
     this.secret = process.env.GITHUB_WEBHOOK_SECRET;
     this.auditService = services.audit;
     this.complianceService = services.compliance;
-    this.websocketService = services.websocket;
     this.pipelineService = services.pipeline;
     this.metricsService = services.metrics;
     
@@ -478,30 +477,6 @@ class EnhancedWebhookHandler extends EventEmitter {
       });
     }
 
-    // Emit real-time update
-    if (this.websocketService?.emitToRepository) {
-      this.websocketService.emitToRepository(repository.full_name, 'repo:push', {
-        repository: repository.full_name,
-        branch,
-        commits: commits.length,
-        pusher: pusher.name,
-        files: affectedFiles.length,
-        before: before.substring(0, 7),
-        after: after.substring(0, 7),
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    // Broadcast general push event
-    if (this.websocketService?.broadcast) {
-      this.websocketService.broadcast('activity:push', {
-        repository: repository.full_name,
-        branch,
-        pusher: pusher.name,
-        commits: commits.length,
-        timestamp: new Date().toISOString()
-      });
-    }
   }
 
   /**
@@ -542,43 +517,9 @@ class EnhancedWebhookHandler extends EventEmitter {
       });
     }
 
-    // Emit real-time update
-    if (this.websocketService?.emitToRepository) {
-      this.websocketService.emitToRepository(repository.full_name, 'pipeline:status', {
-        repository: repository.full_name,
-        workflow: workflow_run.name,
-        status: workflow_run.status,
-        conclusion: workflow_run.conclusion,
-        runId: workflow_run.id,
-        url: workflow_run.html_url,
-        branch: workflow_run.head_branch,
-        timestamp: new Date().toISOString()
-      });
-    }
-
     // Handle completed workflows
     if (workflow_run.status === 'completed') {
       await this.handleWorkflowCompletion(workflow_run, repository, deliveryId);
-    }
-
-    // Handle failed critical workflows
-    if (workflow_run.conclusion === 'failure' && this.isCriticalWorkflow(workflow_run)) {
-      if (this.websocketService?.broadcast) {
-        this.websocketService.broadcast('system:alert', {
-          level: 'error',
-          type: 'critical_workflow_failure',
-          message: `Critical workflow failed: ${workflow_run.name} in ${repository.full_name}`,
-          details: {
-            workflow: workflow_run.name,
-            repository: repository.full_name,
-            runId: workflow_run.id,
-            url: workflow_run.html_url,
-            branch: workflow_run.head_branch,
-            conclusion: workflow_run.conclusion
-          },
-          timestamp: new Date().toISOString()
-        });
-      }
     }
   }
 
@@ -603,19 +544,6 @@ class EnhancedWebhookHandler extends EventEmitter {
       });
     }
 
-    // Emit real-time job status
-    if (this.websocketService?.emitToRepository) {
-      this.websocketService.emitToRepository(repository.full_name, 'pipeline:job', {
-        repository: repository.full_name,
-        workflow: workflow_job.workflow_name,
-        job: workflow_job.name,
-        status: workflow_job.status,
-        conclusion: workflow_job.conclusion,
-        url: workflow_job.html_url,
-        runner: workflow_job.runner_name,
-        timestamp: new Date().toISOString()
-      });
-    }
   }
 
   /**
@@ -670,19 +598,6 @@ class EnhancedWebhookHandler extends EventEmitter {
       });
     }
 
-    // Emit real-time update
-    if (this.websocketService?.broadcast) {
-      this.websocketService.broadcast('repo:pr', {
-        repository: repository.full_name,
-        action,
-        number: pull_request.number,
-        title: pull_request.title,
-        user: pull_request.user.login,
-        state: pull_request.state,
-        url: pull_request.html_url,
-        timestamp: new Date().toISOString()
-      });
-    }
   }
 
   /**
@@ -713,19 +628,6 @@ class EnhancedWebhookHandler extends EventEmitter {
       await this.cleanupRepositoryData(repository.full_name);
     }
 
-    // Broadcast repository event
-    if (this.websocketService?.broadcast) {
-      this.websocketService.broadcast('repo:repository', {
-        action,
-        repository: repository.full_name,
-        private: repository.private,
-        description: repository.description,
-        language: repository.language,
-        topics: repository.topics,
-        user: sender.login,
-        timestamp: new Date().toISOString()
-      });
-    }
   }
 
   /**
@@ -735,87 +637,24 @@ class EnhancedWebhookHandler extends EventEmitter {
     const { action, security_advisory, repository } = payload;
     
     console.log(`🔒 Security Advisory ${action}: ${repository?.full_name || 'Global'}`);
-
-    if (this.websocketService?.broadcast) {
-      this.websocketService.broadcast('security:advisory', {
-        action,
-        repository: repository?.full_name,
-        advisory: {
-          id: security_advisory.ghsa_id,
-          summary: security_advisory.summary,
-          severity: security_advisory.severity,
-          cve_id: security_advisory.cve_id,
-          published_at: security_advisory.published_at,
-          url: security_advisory.html_url
-        },
-        timestamp: new Date().toISOString()
-      });
-    }
   }
 
   async handleDependabotAlertEvent(payload, deliveryId) {
     const { action, alert, repository } = payload;
     
     console.log(`🤖 Dependabot Alert ${action}: ${repository.full_name} - ${alert.security_advisory.summary}`);
-
-    if (this.websocketService?.broadcast) {
-      this.websocketService.broadcast('security:dependabot', {
-        action,
-        repository: repository.full_name,
-        alert: {
-          number: alert.number,
-          state: alert.state,
-          dependency: alert.dependency.package.name,
-          severity: alert.security_advisory.severity,
-          summary: alert.security_advisory.summary,
-          url: alert.html_url
-        },
-        timestamp: new Date().toISOString()
-      });
-    }
   }
 
   async handleCodeScanningAlertEvent(payload, deliveryId) {
     const { action, alert, repository } = payload;
     
     console.log(`🔍 Code Scanning Alert ${action}: ${repository.full_name} - ${alert.rule.description}`);
-
-    if (this.websocketService?.broadcast) {
-      this.websocketService.broadcast('security:code_scanning', {
-        action,
-        repository: repository.full_name,
-        alert: {
-          number: alert.number,
-          state: alert.state,
-          severity: alert.rule.severity,
-          description: alert.rule.description,
-          tool: alert.tool.name,
-          url: alert.html_url
-        },
-        timestamp: new Date().toISOString()
-      });
-    }
   }
 
   async handleSecretScanningAlertEvent(payload, deliveryId) {
     const { action, alert, repository } = payload;
     
     console.log(`🔐 Secret Scanning Alert ${action}: ${repository.full_name} - ${alert.secret_type_display_name}`);
-
-    if (this.websocketService?.broadcast) {
-      this.websocketService.broadcast('security:secret_scanning', {
-        action,
-        repository: repository.full_name,
-        alert: {
-          number: alert.number,
-          state: alert.state,
-          secret_type: alert.secret_type_display_name,
-          resolution: alert.resolution,
-          url: alert.html_url
-        },
-        timestamp: new Date().toISOString()
-      });
-    }
   }
 
   /**
@@ -829,20 +668,6 @@ class EnhancedWebhookHandler extends EventEmitter {
     if (action === 'published') {
       // Trigger deployment pipelines if configured
       await this.triggerDeploymentPipelines(repository, release, deliveryId);
-    }
-
-    if (this.websocketService?.broadcast) {
-      this.websocketService.broadcast('repo:release', {
-        action,
-        repository: repository.full_name,
-        tag: release.tag_name,
-        name: release.name,
-        draft: release.draft,
-        prerelease: release.prerelease,
-        author: release.author.login,
-        url: release.html_url,
-        timestamp: new Date().toISOString()
-      });
     }
   }
 
@@ -926,14 +751,6 @@ class EnhancedWebhookHandler extends EventEmitter {
     // - Clearing cached data
     // - Removing metrics data
     // - Cleaning up pipeline data
-    
-    // Emit cleanup event
-    if (this.websocketService?.broadcast) {
-      this.websocketService.broadcast('repo:cleanup', {
-        repository: repositoryFullName,
-        timestamp: new Date().toISOString()
-      });
-    }
   }
 
   async triggerDeploymentPipelines(repository, release, deliveryId) {
@@ -1018,24 +835,6 @@ class EnhancedWebhookHandler extends EventEmitter {
   async handleIssuesEvent(payload, deliveryId) {
     const { action, issue, repository } = payload;
     console.log(`📝 Issue ${action}: ${repository.full_name}#${issue.number} - ${issue.title}`);
-    
-    // Track security-related issues
-    if (this.isSecurityIssue(issue)) {
-      if (this.websocketService?.broadcast) {
-        this.websocketService.broadcast('security:issue', {
-          action,
-          repository: repository.full_name,
-          issue: {
-            number: issue.number,
-            title: issue.title,
-            labels: issue.labels.map(l => l.name),
-            user: issue.user.login,
-            url: issue.html_url
-          },
-          timestamp: new Date().toISOString()
-        });
-      }
-    }
   }
 
   async handleIssueCommentEvent(payload, deliveryId) {
