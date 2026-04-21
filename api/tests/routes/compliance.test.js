@@ -535,6 +535,49 @@ describe('Compliance API Endpoints', () => {
       expect(res.body.results[0]).toHaveProperty('success', false);
       expect(res.body.results[0]).toHaveProperty('error', 'template not found');
     });
+
+    it('exposes top-level {success, prUrl, repository, templates} (NEW-2, A12)', async () => {
+      templateEngine.state.applyResult = {
+        success: true,
+        output: 'applied',
+        error: null,
+        filesWritten: ['.github/workflows/ci.yml'],
+        prUrl: 'https://github.com/test/repo/pull/42',
+      };
+
+      const res = await request(app)
+        .post('/api/v2/compliance/apply')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ repository: 'repo-alpha', templates: ['standard-devops'] })
+        .expect(200);
+
+      expect(res.body).toHaveProperty('success', true);
+      expect(res.body).toHaveProperty('prUrl', 'https://github.com/test/repo/pull/42');
+      expect(res.body).toHaveProperty('repository', 'repo-alpha');
+      expect(res.body).toHaveProperty('templates', ['standard-devops']);
+      expect(res.body).toHaveProperty('results');
+    });
+
+    it('sets top-level success=false when any template fails (A12)', async () => {
+      // First call succeeds, second fails, overall success=false.
+      let call = 0;
+      templateEngine.applyTemplate = jest.fn(async () => {
+        call += 1;
+        if (call === 1) return { success: true, output: 'ok', error: null };
+        return { success: false, output: '', error: 'boom' };
+      });
+
+      const res = await request(app)
+        .post('/api/v2/compliance/apply')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          repository: 'repo-alpha',
+          templates: ['standard-devops', 'security-hardening'],
+        })
+        .expect(200);
+
+      expect(res.body.success).toBe(false);
+    });
   });
 
   describe('GET /api/v2/compliance/history', () => {

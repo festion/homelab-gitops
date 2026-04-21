@@ -657,6 +657,8 @@ class ComplianceService extends EventEmitter {
           dryRun,
           output: result.output,
           error: result.error,
+          prUrl: result.prUrl || null,
+          filesWritten: result.filesWritten || null,
           duration,
           applicationId
         });
@@ -673,7 +675,20 @@ class ComplianceService extends EventEmitter {
       }
     }
 
+    // Top-level rollup fields (NEW-2): success is true iff EVERY template
+    // succeeded. prUrl is pulled from the first result that carried one (the
+    // engine may PR-per-template, but clients today expect one URL).
+    const overallSuccess = results.length > 0 && results.every(r => r.success === true);
+    const prUrl = (() => {
+      for (const r of results) {
+        if (r.prUrl) return r.prUrl;
+      }
+      return null;
+    })();
+
     return {
+      success: overallSuccess,
+      prUrl,
       repository,
       templates,
       results,
