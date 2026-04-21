@@ -1,0 +1,17 @@
+name: "CodeQL config — homelab-gitops"
+
+# Exclude paths that produce noise but are not under this repo's control:
+#   - **/venv/**             Python virtualenvs (only appear in CI environment, not tracked)
+#   - **/node_modules/**     Already excluded by default; explicit for clarity
+#   - usr/local/**           System paths that leak into the workspace on some runners
+#   - app/**                 Runner-side artifacts from previous jobs; not real project code
+#   - **/dist/**, **/build/** Build outputs
+paths-ignore:
+  - '**/venv/**'
+  - '**/node_modules/**'
+  - '**/dist/**'
+  - '**/build/**'
+  - '**/.venv/**'
+  - '**/__pycache__/**'
+  - 'usr/local/**'
+  - 'app/**'
