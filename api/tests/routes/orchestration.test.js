@@ -58,6 +58,15 @@ describe('Orchestration routes — flattened response shape (Decision 3)', () =>
       },
     }));
     orchestrator.listActiveOrchestrations = jest.fn(() => []);
+    orchestrator.getMetrics = jest.fn((timeRange = '1h') => ({
+      orchestrations: [{ id: 'orch-test-1', status: 'completed' }],
+      tasks: [{ id: 't1', status: 'completed' }],
+      system: { cpu: [], memory: [], disk: [], network: [] },
+      alerts: [],
+      performance: {},
+      timeRange,
+      generatedAt: new Date('2026-04-21T12:00:00Z'),
+    }));
 
     const calls = [];
     phase2WS = {
@@ -117,6 +126,32 @@ describe('Orchestration routes — flattened response shape (Decision 3)', () =>
       });
       expect(res.body).not.toHaveProperty('success');
       expect(res.body).not.toHaveProperty('orchestration');
+    });
+  });
+
+  describe('GET /orchestration-metrics — flat response (#683)', () => {
+    it('returns the monitor metrics flat with no `success` or `metrics` wrapper', async () => {
+      const res = await request(app)
+        .get('/api/v2/orchestration-metrics')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('orchestrations');
+      expect(res.body).toHaveProperty('tasks');
+      expect(res.body).toHaveProperty('system');
+      expect(res.body).toHaveProperty('timeRange');
+      expect(res.body).toHaveProperty('generatedAt');
+      expect(res.body).not.toHaveProperty('success');
+      expect(res.body).not.toHaveProperty('metrics');
+      expect(orchestrator.getMetrics).toHaveBeenCalledWith('1h');
+    });
+
+    it('passes req.query.timeRange through to getMetrics', async () => {
+      await request(app)
+        .get('/api/v2/orchestration-metrics?timeRange=24h')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(orchestrator.getMetrics).toHaveBeenCalledWith('24h');
     });
   });
 

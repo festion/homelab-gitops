@@ -2227,11 +2227,14 @@ phase2Router.get('/orchestration-status', async (req, res) => {
   }
 });
 
+// Response shape is flat (Vikunja #624 / #665 Decision 3, extended to this
+// legacy endpoint under #683): no `{success, metrics: {...}}` wrapper —
+// the monitor's metrics object is spread directly onto the response body.
 phase2Router.get('/orchestration-metrics', async (req, res) => {
   try {
-    const orchestrator = initializeOrchestrationService(req.app);
+    const orchestrator = req.app.locals?.orchestrator || initializeOrchestrationService(req.app);
     const metrics = orchestrator.getMetrics(req.query.timeRange || '1h');
-    
+
     res.json(metrics);
   } catch (error) {
     res.status(500).json({ error: 'Failed to get orchestration metrics', details: error.message });
