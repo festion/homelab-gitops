@@ -2,7 +2,6 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
-const Database = require('../../models/database');
 const { User, ApiKey, UserRole, Permission } = require('../../models/user');
 
 /**
@@ -10,15 +9,15 @@ const { User, ApiKey, UserRole, Permission } = require('../../models/user');
  * Handles JWT tokens, API keys, and user authentication
  */
 class AuthService {
-  constructor() {
-    this.jwtSecret = process.env.JWT_SECRET || this.generateSecret();
-    this.jwtExpiresIn = process.env.JWT_EXPIRES_IN || '24h';
-    this.db = Database.getInstance();
-    this.apiKeys = new Map(); // In-memory cache for API keys
-    this.sessions = new Map(); // In-memory cache for sessions
-    
-    // Warn if using default JWT secret
-    if (!process.env.JWT_SECRET) {
+  constructor({ db, jwtSecret, jwtExpiresIn } = {}) {
+    if (!db) throw new Error('AuthService requires { db }');
+    this.db = db;
+    this.jwtSecret = jwtSecret || process.env.JWT_SECRET || this.generateSecret();
+    this.jwtExpiresIn = jwtExpiresIn || process.env.JWT_EXPIRES_IN || '24h';
+    this.apiKeys = new Map();
+    this.sessions = new Map();
+
+    if (!process.env.JWT_SECRET && !jwtSecret) {
       console.warn('⚠️  Using generated JWT secret. Set JWT_SECRET environment variable for production!');
     }
   }
