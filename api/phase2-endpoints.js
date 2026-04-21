@@ -2042,18 +2042,21 @@ const orchestrationRouter = require('./routes/orchestration');
 
 // Mount orchestration router with middleware
 phase2Router.use('/orchestration', (req, res, next) => {
-  // Ensure orchestration service is available
+  // Ensure orchestration service is available. Prefer a DI-injected instance
+  // from app.locals (tests + refactored server bootstrap); fall back to the
+  // module-level lazy init.
   if (!req.orchestrator) {
-    req.orchestrator = initializeOrchestrationService(req.app);
+    req.orchestrator = req.app.locals?.orchestrator
+      || initializeOrchestrationService(req.app);
   }
-  
+
   // Pass services through request
   req.services = {
     websocket: req.app.locals?.phase2WS,
     github: req.app.locals?.githubMCP,
     metrics: req.app.locals?.metricsService
   };
-  
+
   next();
 }, orchestrationRouter);
 
