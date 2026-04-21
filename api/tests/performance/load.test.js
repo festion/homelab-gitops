@@ -7,13 +7,24 @@ const { setupGitHubMock, resetGitHubMock } = require('../mocks/github');
 // Import the phase2 router
 const phase2Router = require('../../phase2-endpoints');
 
-// SKIP: awaiting Option-A refactor (createApp factory + AuthService DI +
-// compliance persistence decision). Performance suite wires phase2Router
-// without app.locals — crashes before any benchmark runs. Needs the
-// Option-A app factory.
-// Tracking: Vikunja #624.
-// Design: docs/plans/2026-04-20-api-test-restoration-b-auth.md
-//         docs/plans/2026-04-20-option-a-createapp-di.md (un-skip plan — PR 4 of #624)
+// SKIP: deferred from the sequential Option-A un-skip track.
+//
+// A 2026-04-20 audit (after PR1+PR2 landed) showed this suite's scope
+// is wrong for jest. It asserts hard timing thresholds (avg < 200ms,
+// max < 500ms, memory growth < 50%, "500-record dataset in < 1s") that
+// are CI-runner-dependent and flake-prone — landing red CI on timing
+// trains reviewers to ignore failures, which is worse than no perf test.
+//
+// Architectural mismatches also exist (pipelineService reads from
+// githubMCP not a DB, so "large dataset" has no meaningful fake shape;
+// rate-limiting middleware is off in dev/test mode; WS naming is
+// inconsistent — see #667).
+//
+// Tracking: Vikunja #657 (this bead) + discovery task #668 (move perf
+// tests to a dedicated harness — k6/autocannon — not jest).
+//
+// Design: docs/plans/2026-04-20-option-a-createapp-di.md (un-skip plan —
+//         PR 4 of #624; deferred 2026-04-20)
 describe.skip('Performance and Load Testing', () => {
   let app;
   let adminToken;
