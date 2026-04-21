@@ -2113,10 +2113,13 @@ phase2Router.get('/compliance/repository/:repo', async (req, res) => {
 });
 
 // POST /api/v2/compliance/check - Trigger compliance check for repositories
-//   ?wait=true  — block until job completes (or times out at waitTimeoutMs,
-//                 default 30000ms). Returns {jobId, status:'completed', results}
-//                 on success or 504 {jobId, status:'timeout'} if exceeded.
+//   ?wait=true  — block until job completes (or times out at a fixed 30s).
+//                 Returns {jobId, status:'completed', results} on success
+//                 or 504 {jobId, status:'timeout'} if exceeded.
+//                 Timeout is a server-side constant to avoid user-controlled
+//                 timer duration (DoS vector).
 //   default     — fire-and-forget; returns {jobId, estimatedDuration, ...}
+const WAIT_TIMEOUT_MS = 30000;
 phase2Router.post('/compliance/check',
   authenticate,
   authorize(Permission.RESOURCES.TEMPLATES, Permission.ACTIONS.APPLY),
@@ -2141,21 +2144,12 @@ phase2Router.post('/compliance/check',
     });
 
     if (req.query.wait === 'true') {
-      const WAIT_TIMEOUT_MIN_MS = 1000;
-      const WAIT_TIMEOUT_MAX_MS = 60000;
-      const rawTimeoutMs = req.query.waitTimeoutMs
-        ? parseInt(req.query.waitTimeoutMs, 10)
-        : 30000;
-      // Clamp to sane bounds — user-controlled timer duration is a DoS vector.
-      const timeoutMs = Number.isFinite(rawTimeoutMs)
-        ? Math.min(Math.max(rawTimeoutMs, WAIT_TIMEOUT_MIN_MS), WAIT_TIMEOUT_MAX_MS)
-        : 30000;
-      const outcome = await complianceService.waitForJob(result.jobId, { timeoutMs });
+      const outcome = await complianceService.waitForJob(result.jobId, { timeoutMs: WAIT_TIMEOUT_MS });
       if (outcome.status === 'timeout') {
         return res.status(504).json({
           jobId: result.jobId,
           status: 'timeout',
-          message: `compliance check did not complete within ${timeoutMs}ms`,
+          message: `compliance check did not complete within ${WAIT_TIMEOUT_MS}ms`,
         });
       }
       return res.json({
