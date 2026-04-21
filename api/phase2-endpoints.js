@@ -2188,7 +2188,11 @@ phase2Router.get('/compliance/history', async (req, res) => {
 });
 
 // POST /api/v2/compliance/apply - Apply templates to non-compliant repositories
-phase2Router.post('/compliance/apply', validateRequest(['repository', 'templates']), async (req, res) => {
+phase2Router.post('/compliance/apply',
+  authenticate,
+  authorize(Permission.RESOURCES.TEMPLATES, Permission.ACTIONS.APPLY),
+  validateRequest(['repository', 'templates']),
+  async (req, res) => {
   try {
     const complianceService = getComplianceService(req);
 
