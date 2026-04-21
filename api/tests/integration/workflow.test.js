@@ -9,13 +9,33 @@ const { setupGitHubMock, resetGitHubMock } = require('../mocks/github');
 // Import the phase2 router
 const phase2Router = require('../../phase2-endpoints');
 
-// SKIP: awaiting Option-A refactor (createApp factory + AuthService DI +
-// compliance persistence decision). This suite exercises end-to-end
-// workflow across compliance + pipelines + orchestrations tables, none
-// of which exist in the production Database schema.
-// Tracking: Vikunja #624.
-// Design: docs/plans/2026-04-20-api-test-restoration-b-auth.md
-//         docs/plans/2026-04-20-option-a-createapp-di.md (un-skip plan — PR 3 of #624)
+// SKIP: deferred from the sequential Option-A un-skip track.
+//
+// A 2026-04-20 contract audit (after PR1+PR2 landed the createApp/DI
+// foundation) showed this suite asserts response shapes and WebSocket
+// event names that the real service/route layer does not produce. It's
+// not an un-skip PR — it's a contract-alignment effort that needs its
+// own brainstorming pass.
+//
+// Representative gaps:
+//   - orchestration routes return {success, orchestration: {...}} (nested)
+//     but tests expect top-level {orchestrationId, status, results}
+//   - /api/v2/status returns a platform-health snapshot
+//     ({platformVersion, phase, components}) but tests expect an
+//     aggregate data shape ({pipelines, compliance, metrics})
+//   - WS events emitted as compliance:checked / pipeline:triggered but
+//     tests listen for compliance:updated / pipeline:status
+//   - /compliance/check is async (jobId) but test expects sync
+//     {compliance: {score, status}}
+//   - /compliance/apply returns {repository, templates, results, ...}
+//     but test expects {success: true, prUrl}
+//
+// Tracking: Vikunja #656 (this bead) + discovery tasks #661 (compliance
+// sync), #660 (compliance apply/history shapes), #665 (orchestration
+// shapes), #666 (/api/v2/status shape), #667 (WS event naming).
+//
+// Design: docs/plans/2026-04-20-option-a-createapp-di.md (un-skip plan —
+//         PR 3 of #624; deferred 2026-04-20)
 describe.skip('End-to-End Workflow Integration', () => {
   let app;
   let httpServer;

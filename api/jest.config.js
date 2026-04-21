@@ -47,13 +47,32 @@ module.exports = {
     '!**/logs/**'
   ],
 
-  // Coverage thresholds removed as part of #623 B-auth slice. The original
-  // thresholds referenced files (complianceService.js, pipelineService.js,
-  // phase2-endpoints.js) whose coverage comes from the suites skipped in this
-  // PR — leaving the thresholds in place caused Jest's CoverageReporter to
-  // crash (Vikunja #632) and CI to exit non-zero despite all running tests
-  // passing. Restore both the global (80%) and per-file (85-90%) thresholds
-  // as part of Option A (Vikunja #624) when those suites are un-skipped.
+  // Coverage thresholds — partial restoration as part of Option A PR5 (#635).
+  //
+  // The original pre-B-auth config enforced 80% global + 85-90% per-file on
+  // complianceService.js / pipelineService.js / phase2-endpoints.js. Those
+  // targets assumed all 4 deferred suites would provide the coverage —
+  // workflow.test.js + load.test.js are now deferred indefinitely (#656/#657),
+  // so the 80/90/85 values are unachievable without a broader testing strategy.
+  //
+  // We restore a single gate on complianceService.js — the file PR2 (#655)
+  // actually exercises well — at values ~3pt under current reality so small
+  // refactors don't flake the suite. Global, pipelineService, and
+  // phase2-endpoints thresholds stay off until workflow un-skip (#656) or a
+  // dedicated unit-test push raises their coverage. Re-open #635 if thresholds
+  // need to be tightened or extended.
+  //
+  // Prerequisite: glob@7 override scoped to @jest/reporters (see package.json)
+  // — keeps #632's CoverageReporter crash from recurring now that the
+  // threshold is back.
+  coverageThreshold: {
+    './services/compliance/complianceService.js': {
+      statements: 75,
+      branches: 55,
+      functions: 70,
+      lines: 78,
+    },
+  },
 
 
   // Coverage reporting
