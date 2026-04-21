@@ -1,0 +1,58 @@
+{
+  "startedAt": "2026-04-21T14:10:19.634Z",
+  "suite": "response-time",
+  "connections": 10,
+  "durationSec": 10,
+  "results": [
+    {
+      "url": "http://127.0.0.1:3099/api/v2/status",
+      "title": "platform-status",
+      "connections": 10,
+      "durationSec": 10,
+      "avgLatencyMs": 3.3,
+      "p50LatencyMs": 3,
+      "p99LatencyMs": 12,
+      "maxLatencyMs": 52,
+      "reqPerSec": 2633.6,
+      "totalRequests": 26332,
+      "bytesPerSec": 3256934.4,
+      "errors": 0,
+      "timeouts": 0,
+      "non2xx": 0
+    },
+    {
+      "url": "http://127.0.0.1:3099/api/v2/compliance/status",
+      "title": "compliance-status",
+      "connections": 10,
+      "durationSec": 10,
+      "avgLatencyMs": 2.55,
+      "p50LatencyMs": 2,
+      "p99LatencyMs": 6,
+      "maxLatencyMs": 25,
+      "reqPerSec": 3185.6,
+      "totalRequests": 31849,
+      "bytesPerSec": 3312435.2,
+      "errors": 0,
+      "timeouts": 0,
+      "non2xx": 0
+    },
+    {
+      "url": "http://127.0.0.1:3099/api/v2/pipelines/status",
+      "title": "pipelines-status",
+      "connections": 10,
+      "durationSec": 10,
+      "avgLatencyMs": 2.59,
+      "p50LatencyMs": 2,
+      "p99LatencyMs": 9,
+      "maxLatencyMs": 52,
+      "reqPerSec": 3145.8,
+      "totalRequests": 31452,
+      "bytesPerSec": 1720192,
+      "errors": 0,
+      "timeouts": 0,
+      "non2xx": 0
+    }
+  ],
+  "completedAt": "2026-04-21T14:10:49.719Z",
+  "note": "Baseline reference numbers captured on dev env CT 128 (Intel N100 equivalent, NodeJS 20+). Refresh this file when intentional perf changes land; see api/perf/README.md."
+}
