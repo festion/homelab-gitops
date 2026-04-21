@@ -151,7 +151,8 @@ class SecurityMiddleware {
         message: 'Too many sensitive operations from this IP, please try again later.'
       },
       standardHeaders: true,
-      legacyHeaders: false
+      legacyHeaders: false,
+      skip: () => process.env.NODE_ENV === 'test',
     });
   }
 
