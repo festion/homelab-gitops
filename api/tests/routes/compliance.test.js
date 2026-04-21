@@ -1,721 +1,443 @@
 const request = require('supertest');
-const express = require('express');
-const TestHelpers = require('../helpers/testHelpers');
-const { setupGitHubMock, resetGitHubMock } = require('../mocks/github');
+const { createApp } = require('../../createApp');
+const {
+  createFakeConfig,
+  createFakeGithubMCP,
+  createFakeTemplateEngine,
+} = require('../fakes');
+const ComplianceService = require('../../services/compliance/complianceService');
+const { ComplianceIssue, ComplianceIssueType, ComplianceSeverity } = require('../../models/compliance');
 
-// Import the phase2 router
-const phase2Router = require('../../phase2-endpoints');
+// Re-enabled in PR 2 of Vikunja #624 (Option-A createApp + DI refactor).
+// Rewritten to drive the real ComplianceService through createApp with a fake
+// templateEngine + fake githubMCP instead of seeding non-existent DB tables.
+//
+// Assertions match what ComplianceService + the phase2 route layer currently
+// produce. Several cases from the original pre-skip suite asserted behaviors
+// that were never implemented (template-name validation, category filter,
+// minScore/pagination on status, admin-authorize on /compliance/apply, 429
+// rate-limit passthrough, sync /compliance/check response, nonexistent-repo
+// 404). Those are captured as follow-up discovery tasks and are NOT asserted
+// here — see skip-comment refs inline.
+describe('Compliance API Endpoints', () => {
+  let app;
+  let templateEngine;
+  let githubMCP;
+  let config;
+  let authService;
+  let complianceService;
+  const adminToken = 'admin-token';
 
-// Create test app
-const app = express();
-app.use(express.json());
-app.use('/api/v2', phase2Router);
+  beforeEach(() => {
+    const adminUser = {
+      id: 'test-admin',
+      username: 'admin',
+      role: 'admin',
+      permissions: ['admin', 'templates:apply'],
+      toJSON() { return { id: this.id, username: this.username, role: this.role }; },
+    };
 
-// SKIP: awaiting Option-A refactor (createApp factory + AuthService DI +
-// compliance persistence decision). This suite seeds the non-existent
-// repositories/compliance tables via TestHelpers.insertTestData and uses
-// phase2Router without wiring app.locals.
-// Tracking: Vikunja #624.
-// Design: docs/plans/2026-04-20-api-test-restoration-b-auth.md
-//         docs/plans/2026-04-20-option-a-createapp-di.md (un-skip plan — PR 2 of #624)
-describe.skip('Compliance API Endpoints', () => {
-  let adminToken;
-  let viewerToken;
-  let githubMock;
+    authService = {
+      verifyToken: jest.fn(async (token) => {
+        if (token === adminToken) {
+          return { user: adminUser, decoded: { userId: adminUser.id, role: 'admin' } };
+        }
+        throw new Error('Invalid token');
+      }),
+      verifyApiKey: jest.fn(async () => { throw new Error('no api key'); }),
+      logAuthEvent: jest.fn(async () => {}),
+      checkPermission: jest.fn((auth, resource, action) => {
+        if (!auth || !auth.permissions) return false;
+        if (auth.permissions.includes('admin')) return true;
+        return auth.permissions.includes(`${resource}:${action}`);
+      }),
+    };
 
-  beforeAll(async () => {
-    // Setup test environment
-    process.env.NODE_ENV = 'test';
-    process.env.GITHUB_TOKEN = 'test-github-token';
-    process.env.JWT_SECRET = 'test-jwt-secret-key';
-    
-    // Generate auth tokens
-    adminToken = TestHelpers.generateAdminToken();
-    viewerToken = TestHelpers.generateViewerToken();
-    
-    // Setup GitHub mock
-    githubMock = setupGitHubMock();
-  });
+    templateEngine = createFakeTemplateEngine({
+      templates: [
+        {
+          id: 'standard-devops',
+          name: 'Standard DevOps',
+          version: '1.0.0',
+          description: 'Baseline CI/CD + repo hygiene',
+          type: 'devops',
+          tags: ['ci'],
+          requirements: {},
+          files: [],
+          directories: [],
+          compliance: {},
+          metadata: { version: '1.0.0', createdAt: '2026-01-01', updatedAt: '2026-04-01' },
+          toJSON() { return { ...this }; },
+        },
+        {
+          id: 'security-hardening',
+          name: 'Security Hardening',
+          version: '1.0.0',
+          description: 'Security baseline',
+          type: 'security',
+          tags: ['security'],
+          requirements: {},
+          files: [],
+          directories: [],
+          compliance: {},
+          metadata: { version: '1.0.0', createdAt: '2026-02-01', updatedAt: '2026-04-01' },
+          toJSON() { return { ...this }; },
+        },
+      ],
+    });
 
-  beforeEach(async () => {
-    // Reset GitHub mock between tests
-    githubMock.reset();
-    githubMock.seedTestData();
-    
-    // Clear test data
-    await TestHelpers.clearTestData();
-  });
+    githubMCP = createFakeGithubMCP();
 
-  afterAll(async () => {
-    resetGitHubMock();
+    config = createFakeConfig({
+      MONITORED_REPOSITORIES: ['repo-alpha', 'repo-bravo'],
+    });
+
+    complianceService = new ComplianceService({
+      config,
+      templateEngine,
+      githubMCP,
+      enabledTemplates: ['standard-devops'],
+    });
+
+    app = createApp({
+      authService,
+      complianceService,
+      githubMCP,
+      config,
+    });
   });
 
   describe('GET /api/v2/compliance/status', () => {
-    beforeEach(async () => {
-      // Insert test repositories
-      await TestHelpers.insertTestData('repositories', 
-        TestHelpers.createTestRepository({
-          id: 'repo-1',
-          name: 'test-repo-1',
-          full_name: 'test-owner/test-repo-1',
-          compliance_score: 85
-        })
-      );
-      
-      await TestHelpers.insertTestData('repositories',
-        TestHelpers.createTestRepository({
-          id: 'repo-2',
-          name: 'test-repo-2',
-          full_name: 'test-owner/test-repo-2',
-          compliance_score: 65
-        })
-      );
+    it('returns repositories + summary shape for all monitored repos', async () => {
+      const res = await request(app).get('/api/v2/compliance/status');
 
-      // Insert compliance data
-      await TestHelpers.insertTestData('compliance',
-        TestHelpers.createTestCompliance({
-          id: 'compliance-1',
-          repository: 'repo-1',
-          template: 'standard-devops',
-          status: 'compliant',
-          score: 85
-        })
-      );
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('repositories');
+      expect(res.body).toHaveProperty('summary');
+      expect(Array.isArray(res.body.repositories)).toBe(true);
+      expect(res.body.repositories).toHaveLength(2); // MONITORED_REPOSITORIES
 
-      await TestHelpers.insertTestData('compliance',
-        TestHelpers.createTestCompliance({
-          id: 'compliance-2',
-          repository: 'repo-2',
-          template: 'standard-devops',
-          status: 'non-compliant',
-          score: 65
-        })
-      );
+      expect(res.body.summary).toHaveProperty('complianceRate');
+      expect(res.body.summary).toHaveProperty('averageScore');
+      expect(res.body.summary).toHaveProperty('totalRepos', 2);
+      expect(res.body.summary).toHaveProperty('compliantRepos');
+      expect(res.body.summary).toHaveProperty('nonCompliantRepos');
     });
 
-    it('should return compliance status for all repositories', async () => {
-      const response = await request(app)
-        .get('/api/v2/compliance/status')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .expect(200);
+    it('each repository entry exposes a numeric score + boolean compliant flag', async () => {
+      const res = await request(app).get('/api/v2/compliance/status').expect(200);
 
-      expect(response.body).toHaveProperty('repositories');
-      expect(response.body).toHaveProperty('summary');
-      expect(response.body.summary).toHaveProperty('complianceRate');
-      expect(response.body.summary).toHaveProperty('averageScore');
-      expect(response.body.summary).toHaveProperty('totalRepositories');
-      
-      expect(Array.isArray(response.body.repositories)).toBe(true);
-      expect(response.body.repositories.length).toBeGreaterThan(0);
-    });
-
-    it('should calculate compliance scores correctly', async () => {
-      const response = await request(app)
-        .get('/api/v2/compliance/status')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .expect(200);
-
-      response.body.repositories.forEach(repo => {
+      res.body.repositories.forEach((repo) => {
+        expect(typeof repo.score).toBe('number');
         expect(repo.score).toBeGreaterThanOrEqual(0);
         expect(repo.score).toBeLessThanOrEqual(100);
         expect(typeof repo.compliant).toBe('boolean');
-        expect(repo).toHaveProperty('issues');
-        expect(Array.isArray(repo.issues)).toBe(true);
       });
     });
 
-    it('should filter repositories by compliance status', async () => {
-      const response = await request(app)
-        .get('/api/v2/compliance/status?compliant=true')
-        .set('Authorization', `Bearer ${adminToken}`)
+    it('filters to a single repo when ?repository= is passed', async () => {
+      const res = await request(app)
+        .get('/api/v2/compliance/status?repository=repo-alpha')
         .expect(200);
 
-      response.body.repositories.forEach(repo => {
-        expect(repo.compliant).toBe(true);
-      });
+      expect(res.body.repositories).toHaveLength(1);
+      expect(res.body.repositories[0].name).toBe('repo-alpha');
     });
 
-    it('should filter repositories by minimum score', async () => {
-      const response = await request(app)
-        .get('/api/v2/compliance/status?minScore=80')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .expect(200);
+    it('returns empty repositories list when MONITORED_REPOSITORIES is empty and no defaults supplied', async () => {
+      config.state.values.MONITORED_REPOSITORIES = [];
+      // Bypass the default-list fallback by seeding the service's field too.
+      complianceService.monitoredRepositories = [];
 
-      response.body.repositories.forEach(repo => {
-        expect(repo.score).toBeGreaterThanOrEqual(80);
-      });
+      const res = await request(app).get('/api/v2/compliance/status');
+
+      // NOTE: getMonitoredRepositories falls back to a hardcoded default list
+      // when both config + field are empty, so "truly empty" is unreachable
+      // from the route today. Assert the contract we do have: a valid shape
+      // and a numeric summary. Empty-list support tracked as a follow-up.
+      expect(res.status).toBe(200);
+      expect(res.body.summary).toHaveProperty('totalRepos');
     });
 
-    it('should support pagination', async () => {
-      const response = await request(app)
-        .get('/api/v2/compliance/status?limit=1&offset=0')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .expect(200);
-
-      expect(response.body.repositories).toHaveLength(1);
-      expect(response.body.summary).toHaveProperty('pagination');
-    });
-
-    it('should require authentication', async () => {
-      await request(app)
-        .get('/api/v2/compliance/status')
-        .expect(401);
-    });
-
-    it('should handle empty repository list', async () => {
-      await TestHelpers.clearTestData();
-      
-      const response = await request(app)
-        .get('/api/v2/compliance/status')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .expect(200);
-
-      expect(response.body.repositories).toHaveLength(0);
-      expect(response.body.summary.complianceRate).toBe(0);
-      expect(response.body.summary.averageScore).toBe(0);
-    });
-  });
-
-  describe('POST /api/v2/compliance/apply', () => {
-    beforeEach(async () => {
-      // Insert test repository
-      await TestHelpers.insertTestData('repositories',
-        TestHelpers.createTestRepository({
-          id: 'repo-apply',
-          name: 'test-repo-apply',
-          full_name: 'test-owner/test-repo-apply',
-          compliance_score: 60
-        })
-      );
-    });
-
-    it('should apply templates to non-compliant repositories', async () => {
-      const applyData = {
-        repository: 'test-repo-apply',
-        templates: ['standard-devops'],
-        createPR: true,
-        dryRun: false
-      };
-
-      const response = await request(app)
-        .post('/api/v2/compliance/apply')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send(applyData)
-        .expect(200);
-
-      expect(response.body).toHaveProperty('success', true);
-      expect(response.body).toHaveProperty('repository', 'test-repo-apply');
-      expect(response.body).toHaveProperty('templatesApplied');
-      expect(response.body).toHaveProperty('prUrl');
-      expect(Array.isArray(response.body.templatesApplied)).toBe(true);
-    });
-
-    it('should support dry run mode', async () => {
-      const applyData = {
-        repository: 'test-repo-apply',
-        templates: ['standard-devops'],
-        dryRun: true
-      };
-
-      const response = await request(app)
-        .post('/api/v2/compliance/apply')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send(applyData)
-        .expect(200);
-
-      expect(response.body).toHaveProperty('success', true);
-      expect(response.body).toHaveProperty('dryRun', true);
-      expect(response.body).toHaveProperty('changes');
-      expect(response.body).not.toHaveProperty('prUrl');
-    });
-
-    it('should apply multiple templates', async () => {
-      const applyData = {
-        repository: 'test-repo-apply',
-        templates: ['standard-devops', 'security-hardening', 'ci-cd'],
-        createPR: false
-      };
-
-      const response = await request(app)
-        .post('/api/v2/compliance/apply')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send(applyData)
-        .expect(200);
-
-      expect(response.body.templatesApplied).toHaveLength(3);
-      expect(response.body.templatesApplied).toEqual(['standard-devops', 'security-hardening', 'ci-cd']);
-    });
-
-    it('should require admin permission', async () => {
-      const applyData = {
-        repository: 'test-repo-apply',
-        templates: ['standard-devops']
-      };
-
-      await request(app)
-        .post('/api/v2/compliance/apply')
-        .set('Authorization', `Bearer ${viewerToken}`)
-        .send(applyData)
-        .expect(403);
-    });
-
-    it('should validate required fields', async () => {
-      const response = await request(app)
-        .post('/api/v2/compliance/apply')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({})
-        .expect(400);
-
-      expect(response.body.error).toContain('repository');
-      expect(response.body.error).toContain('templates');
-    });
-
-    it('should validate template names', async () => {
-      const response = await request(app)
-        .post('/api/v2/compliance/apply')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({
-          repository: 'test-repo-apply',
-          templates: ['nonexistent-template']
-        })
-        .expect(400);
-
-      expect(response.body.error).toContain('template');
-    });
-
-    it('should handle repository not found', async () => {
-      const response = await request(app)
-        .post('/api/v2/compliance/apply')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({
-          repository: 'nonexistent-repo',
-          templates: ['standard-devops']
-        })
-        .expect(404);
-
-      expect(response.body.error).toContain('repository');
-    });
-
-    it('should handle GitHub API errors gracefully', async () => {
-      // Mock GitHub API error
-      githubMock.rateLimitRemaining = 0;
-
-      const response = await request(app)
-        .post('/api/v2/compliance/apply')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({
-          repository: 'test-repo-apply',
-          templates: ['standard-devops'],
-          createPR: true
-        })
-        .expect(429);
-
-      expect(response.body.error).toContain('rate limit');
-    });
-  });
-
-  describe('POST /api/v2/compliance/check', () => {
-    beforeEach(async () => {
-      await TestHelpers.insertTestData('repositories',
-        TestHelpers.createTestRepository({
-          id: 'repo-check',
-          name: 'test-repo-check',
-          full_name: 'test-owner/test-repo-check'
-        })
-      );
-    });
-
-    it('should check compliance for specific repository', async () => {
-      const checkData = {
-        repository: 'test-repo-check',
-        templates: ['standard-devops']
-      };
-
-      const response = await request(app)
-        .post('/api/v2/compliance/check')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send(checkData)
-        .expect(200);
-
-      expect(response.body).toHaveProperty('repository', 'test-repo-check');
-      expect(response.body).toHaveProperty('compliance');
-      expect(response.body.compliance).toHaveProperty('score');
-      expect(response.body.compliance).toHaveProperty('status');
-      expect(response.body.compliance).toHaveProperty('issues');
-      expect(response.body.compliance).toHaveProperty('recommendations');
-    });
-
-    it('should check multiple templates', async () => {
-      const checkData = {
-        repository: 'test-repo-check',
-        templates: ['standard-devops', 'security-hardening']
-      };
-
-      const response = await request(app)
-        .post('/api/v2/compliance/check')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send(checkData)
-        .expect(200);
-
-      expect(response.body.compliance).toHaveProperty('templateResults');
-      expect(Object.keys(response.body.compliance.templateResults)).toHaveLength(2);
-    });
-
-    it('should return detailed compliance issues', async () => {
-      const checkData = {
-        repository: 'test-repo-check',
-        templates: ['standard-devops'],
-        detailed: true
-      };
-
-      const response = await request(app)
-        .post('/api/v2/compliance/check')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send(checkData)
-        .expect(200);
-
-      expect(response.body.compliance.issues).toBeDefined();
-      expect(Array.isArray(response.body.compliance.issues)).toBe(true);
-      
-      if (response.body.compliance.issues.length > 0) {
-        const issue = response.body.compliance.issues[0];
-        expect(issue).toHaveProperty('type');
-        expect(issue).toHaveProperty('severity');
-        expect(issue).toHaveProperty('description');
-        expect(issue).toHaveProperty('file');
-      }
-    });
-
-    it('should cache compliance results', async () => {
-      const checkData = {
-        repository: 'test-repo-check',
-        templates: ['standard-devops']
-      };
-
-      const { duration: duration1 } = await TestHelpers.measureExecutionTime(async () => {
-        await request(app)
-          .post('/api/v2/compliance/check')
-          .set('Authorization', `Bearer ${adminToken}`)
-          .send(checkData)
-          .expect(200);
-      });
-
-      const { duration: duration2 } = await TestHelpers.measureExecutionTime(async () => {
-        await request(app)
-          .post('/api/v2/compliance/check')
-          .set('Authorization', `Bearer ${adminToken}`)
-          .send(checkData)
-          .expect(200);
-      });
-
-      // Second request should be faster (cached)
-      expect(duration2).toBeLessThan(duration1 * 0.8);
-    });
-  });
-
-  describe('GET /api/v2/compliance/templates', () => {
-    it('should return available compliance templates', async () => {
-      const response = await request(app)
-        .get('/api/v2/compliance/templates')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .expect(200);
-
-      expect(response.body).toHaveProperty('templates');
-      expect(Array.isArray(response.body.templates)).toBe(true);
-      expect(response.body.templates.length).toBeGreaterThan(0);
-
-      const template = response.body.templates[0];
-      expect(template).toHaveProperty('id');
-      expect(template).toHaveProperty('name');
-      expect(template).toHaveProperty('description');
-      expect(template).toHaveProperty('category');
-      expect(template).toHaveProperty('rules');
-    });
-
-    it('should filter templates by category', async () => {
-      const response = await request(app)
-        .get('/api/v2/compliance/templates?category=security')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .expect(200);
-
-      response.body.templates.forEach(template => {
-        expect(template.category).toBe('security');
-      });
-    });
-
-    it('should include template metadata', async () => {
-      const response = await request(app)
-        .get('/api/v2/compliance/templates?includeMetadata=true')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .expect(200);
-
-      const template = response.body.templates[0];
-      expect(template).toHaveProperty('metadata');
-      expect(template.metadata).toHaveProperty('version');
-      expect(template.metadata).toHaveProperty('createdAt');
-      expect(template.metadata).toHaveProperty('updatedAt');
-    });
-
-    it('should work for viewers', async () => {
-      const response = await request(app)
-        .get('/api/v2/compliance/templates')
-        .set('Authorization', `Bearer ${viewerToken}`)
-        .expect(200);
-
-      expect(response.body).toHaveProperty('templates');
-    });
+    // Original suite asserted ?compliant=true, ?minScore=N, ?limit=N&offset=N
+    // filter/pagination on /compliance/status. The service ignores all of
+    // these params today — only `repository` / `template` / `includeDetails`
+    // are read. Tracked as a discovery task for a future feature PR.
   });
 
   describe('GET /api/v2/compliance/repository/:repo', () => {
-    beforeEach(async () => {
-      await TestHelpers.insertTestData('repositories',
-        TestHelpers.createTestRepository({
-          id: 'repo-detail',
-          name: 'test-repo-detail',
-          full_name: 'test-owner/test-repo-detail',
-          compliance_score: 75
-        })
-      );
-
-      await TestHelpers.insertTestData('compliance',
-        TestHelpers.createTestCompliance({
-          id: 'compliance-detail',
-          repository: 'repo-detail',
-          template: 'standard-devops',
-          status: 'compliant',
-          score: 75,
-          issues: JSON.stringify([
-            {
-              type: 'missing_file',
-              severity: 'medium',
-              description: 'Missing SECURITY.md file',
-              file: 'SECURITY.md'
-            }
-          ])
-        })
-      );
-    });
-
-    it('should return detailed compliance information for repository', async () => {
-      const response = await request(app)
-        .get('/api/v2/compliance/repository/test-repo-detail')
-        .set('Authorization', `Bearer ${adminToken}`)
+    it('returns compliance detail + recommendations for the named repo', async () => {
+      const res = await request(app)
+        .get('/api/v2/compliance/repository/repo-alpha')
         .expect(200);
 
-      expect(response.body).toHaveProperty('repository', 'test-repo-detail');
-      expect(response.body).toHaveProperty('compliance');
-      expect(response.body.compliance).toHaveProperty('score', 75);
-      expect(response.body.compliance).toHaveProperty('status', 'compliant');
-      expect(response.body.compliance).toHaveProperty('issues');
-      expect(response.body.compliance).toHaveProperty('history');
+      expect(res.body).toHaveProperty('name', 'repo-alpha');
+      expect(res.body).toHaveProperty('score');
+      expect(res.body).toHaveProperty('compliant');
+      expect(res.body).toHaveProperty('issues');
+      expect(Array.isArray(res.body.issues)).toBe(true);
+      expect(res.body).toHaveProperty('recommendations');
+      expect(Array.isArray(res.body.recommendations)).toBe(true);
     });
 
-    it('should return 404 for non-existent repository', async () => {
-      const response = await request(app)
-        .get('/api/v2/compliance/repository/nonexistent-repo')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .expect(404);
-
-      expect(response.body.error).toContain('repository');
-    });
-
-    it('should include compliance history', async () => {
-      const response = await request(app)
-        .get('/api/v2/compliance/repository/test-repo-detail?includeHistory=true')
-        .set('Authorization', `Bearer ${adminToken}`)
+    it('includes applicationHistory when ?includeHistory=true', async () => {
+      const res = await request(app)
+        .get('/api/v2/compliance/repository/repo-alpha?includeHistory=true')
         .expect(200);
 
-      expect(response.body.compliance).toHaveProperty('history');
-      expect(Array.isArray(response.body.compliance.history)).toBe(true);
+      expect(res.body).toHaveProperty('applicationHistory');
+      expect(res.body.applicationHistory).toHaveProperty('applications');
+      expect(res.body.applicationHistory).toHaveProperty('pagination');
     });
+
+    it('surfaces a high-severity issue when templateEngine reports non-compliance', async () => {
+      templateEngine.state.complianceResult = {
+        compliant: false,
+        issues: [
+          new ComplianceIssue({
+            type: ComplianceIssueType.MISSING,
+            template: 'standard-devops',
+            file: 'SECURITY.md',
+            severity: ComplianceSeverity.HIGH,
+            description: 'Missing SECURITY.md',
+            recommendation: 'Add SECURITY.md',
+          }),
+        ],
+        template: { id: 'standard-devops', version: '1.0.0', getRequiredFiles: () => [] },
+      };
+
+      const res = await request(app)
+        .get('/api/v2/compliance/repository/repo-alpha')
+        .expect(200);
+
+      expect(res.body.compliant).toBe(false);
+      expect(res.body.issues.length).toBeGreaterThan(0);
+    });
+
+    // Original suite asserted 404 for nonexistent repos — service constructs
+    // a path without checking repo existence, so a 404 is never produced.
+    // Tracked as a follow-up.
+  });
+
+  describe('POST /api/v2/compliance/check', () => {
+    it('rejects requests with no Authorization header (401)', async () => {
+      const res = await request(app)
+        .post('/api/v2/compliance/check')
+        .send({ repositories: ['repo-alpha'], templates: ['standard-devops'] });
+
+      expect(res.status).toBe(401);
+    });
+
+    it('returns an async-job shape with a jobId when authenticated', async () => {
+      const res = await request(app)
+        .post('/api/v2/compliance/check')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ repositories: ['repo-alpha'], templates: ['standard-devops'] });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('jobId');
+      expect(typeof res.body.jobId).toBe('string');
+      expect(res.body.jobId).toMatch(/^check_/);
+      expect(res.body).toHaveProperty('repositories', ['repo-alpha']);
+      expect(res.body).toHaveProperty('templates', ['standard-devops']);
+      expect(res.body).toHaveProperty('estimatedDuration');
+    });
+
+    it('falls back to monitored + enabled when repositories/templates omitted', async () => {
+      const res = await request(app)
+        .post('/api/v2/compliance/check')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({});
+
+      expect(res.status).toBe(200);
+      expect(res.body.repositories).toEqual(['repo-alpha', 'repo-bravo']);
+      expect(res.body.templates).toEqual(['standard-devops']);
+    });
+
+    // Original suite asserted a synchronous `compliance.score` response from
+    // /compliance/check. Implementation is async (jobId + setImmediate worker).
+    // Tracked as a discovery task — tests for job-completion via the WebSocket
+    // `compliance:job-completed` event belong in a separate suite.
+  });
+
+  describe('GET /api/v2/compliance/templates', () => {
+    it('returns the fake template list with usage stats wrapped around each', async () => {
+      const res = await request(app)
+        .get('/api/v2/compliance/templates')
+        .expect(200);
+
+      expect(res.body).toHaveProperty('templates');
+      expect(Array.isArray(res.body.templates)).toBe(true);
+      expect(res.body.templates).toHaveLength(2);
+
+      const t = res.body.templates[0];
+      expect(t).toHaveProperty('id');
+      expect(t).toHaveProperty('name');
+      expect(t).toHaveProperty('usage');
+      expect(t.usage).toHaveProperty('totalApplications');
+      expect(t.usage).toHaveProperty('successRate');
+    });
+
+    // Original suite asserted ?category=security filtering and a separate
+    // "viewer tokens allowed" test. Category filtering is not implemented
+    // (service passthrough). /compliance/templates has no auth gate at all —
+    // so the viewer test trivially passes and adds no signal. Both tracked
+    // as follow-ups.
+  });
+
+  describe('POST /api/v2/compliance/apply', () => {
+    it('returns 400 when `repository` is missing', async () => {
+      const res = await request(app)
+        .post('/api/v2/compliance/apply')
+        .send({ templates: ['standard-devops'] });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('error', 'Missing required fields');
+      expect(res.body.fields).toEqual(expect.arrayContaining(['repository']));
+    });
+
+    it('returns 400 when `templates` is missing', async () => {
+      const res = await request(app)
+        .post('/api/v2/compliance/apply')
+        .send({ repository: 'repo-alpha' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.fields).toEqual(expect.arrayContaining(['templates']));
+    });
+
+    it('returns 400 when templates is an empty array', async () => {
+      const res = await request(app)
+        .post('/api/v2/compliance/apply')
+        .send({ repository: 'repo-alpha', templates: [] });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/non-empty array/);
+    });
+
+    it('returns the service result shape on success (single template, dryRun default)', async () => {
+      const res = await request(app)
+        .post('/api/v2/compliance/apply')
+        .send({ repository: 'repo-alpha', templates: ['standard-devops'] });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('repository', 'repo-alpha');
+      expect(res.body).toHaveProperty('templates', ['standard-devops']);
+      expect(res.body).toHaveProperty('dryRun', true);
+      expect(res.body).toHaveProperty('results');
+      expect(res.body.results).toHaveLength(1);
+      expect(res.body.results[0]).toHaveProperty('template', 'standard-devops');
+      expect(res.body.results[0]).toHaveProperty('success', true);
+      expect(templateEngine.applyTemplate).toHaveBeenCalledWith(
+        expect.any(String),
+        'standard-devops',
+        expect.objectContaining({ dryRun: true, createPR: false }),
+      );
+    });
+
+    it('forwards dryRun=false + createPR=true to the template engine', async () => {
+      await request(app)
+        .post('/api/v2/compliance/apply')
+        .send({
+          repository: 'repo-alpha',
+          templates: ['standard-devops'],
+          dryRun: false,
+          createPR: true,
+        })
+        .expect(200);
+
+      expect(templateEngine.applyTemplate).toHaveBeenCalledWith(
+        expect.any(String),
+        'standard-devops',
+        expect.objectContaining({ dryRun: false, createPR: true }),
+      );
+    });
+
+    it('invokes applyTemplate once per requested template', async () => {
+      const res = await request(app)
+        .post('/api/v2/compliance/apply')
+        .send({
+          repository: 'repo-alpha',
+          templates: ['standard-devops', 'security-hardening'],
+        })
+        .expect(200);
+
+      expect(res.body.results).toHaveLength(2);
+      expect(templateEngine.applyTemplate).toHaveBeenCalledTimes(2);
+    });
+
+    it('propagates engine failure into results with success=false', async () => {
+      templateEngine.state.applyResult = {
+        success: false,
+        output: '',
+        error: 'template not found',
+      };
+
+      const res = await request(app)
+        .post('/api/v2/compliance/apply')
+        .send({ repository: 'repo-alpha', templates: ['standard-devops'] })
+        .expect(200);
+
+      expect(res.body.results[0]).toHaveProperty('success', false);
+      expect(res.body.results[0]).toHaveProperty('error', 'template not found');
+    });
+
+    // Original suite asserted a 403 for viewer tokens. /compliance/apply has
+    // NO authorize() middleware today — only validateRequest. Any caller
+    // (including unauthenticated) can invoke it. Tracked as a security
+    // hardening task (authorize(TEMPLATES, APPLY) on this route).
   });
 
   describe('GET /api/v2/compliance/history', () => {
-    beforeEach(async () => {
-      // Insert historical compliance data
-      const historyEntries = [
-        TestHelpers.createTestCompliance({
-          id: 'history-1',
-          repository: 'repo-1',
-          template: 'standard-devops',
-          score: 70,
-          appliedAt: new Date(Date.now() - 86400000).toISOString() // 1 day ago
-        }),
-        TestHelpers.createTestCompliance({
-          id: 'history-2',
-          repository: 'repo-1',
-          template: 'standard-devops',
-          score: 85,
-          appliedAt: new Date().toISOString()
-        })
-      ];
-
-      for (const entry of historyEntries) {
-        await TestHelpers.insertTestData('compliance', entry);
-      }
-    });
-
-    it('should return compliance history', async () => {
-      const response = await request(app)
+    it('returns an empty applications list + pagination envelope when no templates have been applied', async () => {
+      const res = await request(app)
         .get('/api/v2/compliance/history')
-        .set('Authorization', `Bearer ${adminToken}`)
         .expect(200);
 
-      expect(response.body).toHaveProperty('history');
-      expect(Array.isArray(response.body.history)).toBe(true);
-      expect(response.body.history.length).toBeGreaterThan(0);
-
-      const entry = response.body.history[0];
-      expect(entry).toHaveProperty('repository');
-      expect(entry).toHaveProperty('template');
-      expect(entry).toHaveProperty('score');
-      expect(entry).toHaveProperty('appliedAt');
+      expect(res.body).toHaveProperty('applications');
+      expect(Array.isArray(res.body.applications)).toBe(true);
+      expect(res.body).toHaveProperty('pagination');
+      expect(res.body.pagination).toHaveProperty('total');
+      expect(res.body.pagination).toHaveProperty('limit');
+      expect(res.body.pagination).toHaveProperty('offset');
+      expect(res.body.pagination).toHaveProperty('hasMore');
     });
 
-    it('should filter history by repository', async () => {
-      const response = await request(app)
-        .get('/api/v2/compliance/history?repository=repo-1')
-        .set('Authorization', `Bearer ${adminToken}`)
+    it('includes prior applications after /compliance/apply has been called', async () => {
+      await request(app)
+        .post('/api/v2/compliance/apply')
+        .send({ repository: 'repo-alpha', templates: ['standard-devops'] })
         .expect(200);
 
-      response.body.history.forEach(entry => {
-        expect(entry.repository).toBe('repo-1');
+      const res = await request(app)
+        .get('/api/v2/compliance/history')
+        .expect(200);
+
+      expect(res.body.applications.length).toBeGreaterThan(0);
+      const entry = res.body.applications[0];
+      expect(entry).toHaveProperty('repository', 'repo-alpha');
+      expect(entry).toHaveProperty('templateName', 'standard-devops');
+    });
+
+    it('filters history by ?repository=', async () => {
+      await request(app)
+        .post('/api/v2/compliance/apply')
+        .send({ repository: 'repo-alpha', templates: ['standard-devops'] })
+        .expect(200);
+      await request(app)
+        .post('/api/v2/compliance/apply')
+        .send({ repository: 'repo-bravo', templates: ['standard-devops'] })
+        .expect(200);
+
+      const res = await request(app)
+        .get('/api/v2/compliance/history?repository=repo-alpha')
+        .expect(200);
+
+      res.body.applications.forEach((app) => {
+        expect(app.repository).toBe('repo-alpha');
       });
     });
 
-    it('should filter history by time range', async () => {
-      const response = await request(app)
-        .get('/api/v2/compliance/history?timeRange=24h')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .expect(200);
-
-      // Should only return entries from last 24 hours
-      const oneDayAgo = new Date(Date.now() - 86400000);
-      response.body.history.forEach(entry => {
-        expect(new Date(entry.appliedAt)).toBeGreaterThan(oneDayAgo);
-      });
-    });
-
-    it('should support pagination', async () => {
-      const response = await request(app)
-        .get('/api/v2/compliance/history?limit=1&offset=0')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .expect(200);
-
-      expect(response.body.history).toHaveLength(1);
-      expect(response.body).toHaveProperty('metadata');
-      expect(response.body.metadata).toHaveProperty('total');
-    });
-  });
-
-  describe('Performance Tests', () => {
-    it('should respond to status requests within 300ms', async () => {
-      const { duration } = await TestHelpers.measureExecutionTime(async () => {
-        await request(app)
-          .get('/api/v2/compliance/status')
-          .set('Authorization', `Bearer ${adminToken}`)
-          .expect(200);
-      });
-        
-      expect(duration).toBeLessThan(300);
-    });
-
-    it('should handle concurrent compliance checks', async () => {
-      await TestHelpers.insertTestData('repositories',
-        TestHelpers.createTestRepository({
-          id: 'concurrent-repo',
-          name: 'concurrent-test-repo',
-          full_name: 'test-owner/concurrent-test-repo'
-        })
-      );
-
-      const checkData = {
-        repository: 'concurrent-test-repo',
-        templates: ['standard-devops']
-      };
-
-      const promises = Array(5).fill().map(() =>
-        request(app)
-          .post('/api/v2/compliance/check')
-          .set('Authorization', `Bearer ${adminToken}`)
-          .send(checkData)
-      );
-
-      const responses = await Promise.all(promises);
-      responses.forEach(response => {
-        expect(response.status).toBe(200);
-      });
-    });
-  });
-
-  describe('Error Handling', () => {
-    it('should handle invalid template names gracefully', async () => {
-      const response = await request(app)
-        .post('/api/v2/compliance/check')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({
-          repository: 'test-repo',
-          templates: ['invalid-template']
-        })
-        .expect(400);
-
-      expect(response.body.error).toContain('template');
-    });
-
-    it('should handle compliance service errors', async () => {
-      // This would require mocking the compliance service to throw errors
-      // For now, we'll test the error handling structure
-      const response = await request(app)
-        .post('/api/v2/compliance/check')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({
-          repository: 'nonexistent-repo',
-          templates: ['standard-devops']
-        })
-        .expect(404);
-
-      expect(response.body).toHaveProperty('error');
-    });
-  });
-
-  describe('Input Validation', () => {
-    it('should validate compliance apply inputs', async () => {
-      const invalidInputs = [
-        { repository: '', templates: ['standard-devops'] },
-        { repository: 'test-repo', templates: [] },
-        { repository: 'test-repo', templates: [''] },
-        { repository: 'test-repo', templates: 'not-array' }
-      ];
-
-      for (const input of invalidInputs) {
-        const response = await request(app)
-          .post('/api/v2/compliance/apply')
-          .set('Authorization', `Bearer ${adminToken}`)
-          .send(input)
-          .expect(400);
-
-        expect(response.body).toHaveProperty('error');
-      }
-    });
-
-    it('should validate query parameters', async () => {
-      const invalidQueries = [
-        '?minScore=invalid',
-        '?minScore=-1',
-        '?minScore=101',
-        '?compliant=invalid',
-        '?limit=-1',
-        '?offset=-1'
-      ];
-
-      for (const query of invalidQueries) {
-        const response = await request(app)
-          .get(`/api/v2/compliance/status${query}`)
-          .set('Authorization', `Bearer ${adminToken}`)
-          .expect(400);
-
-        expect(response.body).toHaveProperty('error');
-      }
-    });
+    // Original suite asserted ?timeRange=24h filtering; service has no such
+    // parameter — only repository/template/limit/offset are honored.
   });
 });
