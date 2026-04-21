@@ -47,30 +47,33 @@ module.exports = {
     '!**/logs/**'
   ],
 
-  // Coverage thresholds — partial restoration as part of Option A PR5 (#635).
+  // Coverage thresholds — expanded in #624 PR E after workflow un-skip landed.
   //
   // The original pre-B-auth config enforced 80% global + 85-90% per-file on
   // complianceService.js / pipelineService.js / phase2-endpoints.js. Those
-  // targets assumed all 4 deferred suites would provide the coverage —
-  // workflow.test.js + load.test.js are now deferred indefinitely (#656/#657),
-  // so the 80/90/85 values are unachievable without a broader testing strategy.
+  // targets assumed full end-to-end coverage from workflow.test.js, which is
+  // now partially landed (1/8 blocks) — see #687 for remaining blocks.
   //
-  // We restore a single gate on complianceService.js — the file PR2 (#655)
-  // actually exercises well — at values ~3pt under current reality so small
-  // refactors don't flake the suite. Global, pipelineService, and
-  // phase2-endpoints thresholds stay off until workflow un-skip (#656) or a
-  // dedicated unit-test push raises their coverage. Re-open #635 if thresholds
-  // need to be tightened or extended.
+  // Current state gates two service files at ~3pt below measured reality
+  // so small refactors don't flake. phase2-endpoints.js is still at ~29%
+  // statement coverage — broader unit-test push needed before it can be
+  // gated; tracked under #635.
   //
   // Prerequisite: glob@7 override scoped to @jest/reporters (see package.json)
   // — keeps #632's CoverageReporter crash from recurring now that the
   // threshold is back.
   coverageThreshold: {
     './services/compliance/complianceService.js': {
-      statements: 75,
-      branches: 55,
-      functions: 70,
-      lines: 78,
+      statements: 79,
+      branches: 64,
+      functions: 77,
+      lines: 80,
+    },
+    './services/pipeline/pipelineService.js': {
+      statements: 38,
+      branches: 17,
+      functions: 47,
+      lines: 39,
     },
   },
 
