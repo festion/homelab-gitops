@@ -195,6 +195,8 @@ class PipelineService extends EventEmitter {
                 repository,
                 workflow,
                 branch,
+                runId: result.id,
+                status: result.status || 'queued',
                 message: 'Pipeline triggered successfully',
                 timestamp: new Date().toISOString()
             };
