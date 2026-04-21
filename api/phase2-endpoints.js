@@ -2046,28 +2046,32 @@ phase2Router.get('/compliance/status', async (req, res) => {
   try {
     const complianceService = getComplianceService(req);
 
-    const { repository, template, includeDetails } = req.query;
+    const { repository, template, includeDetails, filter } = req.query;
     const options = {
       repository,
       template,
-      includeDetails: includeDetails === 'true'
+      includeDetails: includeDetails === 'true',
+      ...(filter !== undefined ? { filter } : {}),
     };
-    
+
     const result = await complianceService.getComplianceStatus(options);
-    
+
     // Emit WebSocket event
     emitWSEvent(req, 'compliance', 'status.requested', {
       options,
       resultCount: result.repositories.length,
       complianceRate: result.summary.complianceRate
     });
-    
+
     res.json(result);
   } catch (error) {
+    if (error && error.code === 'INVALID_FILTER') {
+      return res.status(400).json({ error: error.message });
+    }
     console.error('Error getting compliance status:', error);
-    res.status(500).json({ 
-      error: 'Failed to get compliance status', 
-      details: error.message 
+    res.status(500).json({
+      error: 'Failed to get compliance status',
+      details: error.message
     });
   }
 });
@@ -2097,30 +2101,40 @@ phase2Router.get('/compliance/repository/:repo', async (req, res) => {
     
     res.json(result);
   } catch (error) {
+    if (error && error.code === 'REPO_NOT_FOUND') {
+      return res.status(404).json({ error: error.message });
+    }
     console.error(`Error getting repository compliance for ${req.params.repo}:`, error);
-    res.status(500).json({ 
-      error: 'Failed to get repository compliance', 
-      details: error.message 
+    res.status(500).json({
+      error: 'Failed to get repository compliance',
+      details: error.message
     });
   }
 });
 
 // POST /api/v2/compliance/check - Trigger compliance check for repositories
-phase2Router.post('/compliance/check', 
-  authenticate, 
+//   ?wait=true  — block until job completes (or times out at a fixed 30s).
+//                 Returns {jobId, status:'completed', results} on success
+//                 or 504 {jobId, status:'timeout'} if exceeded.
+//                 Timeout is a server-side constant to avoid user-controlled
+//                 timer duration (DoS vector).
+//   default     — fire-and-forget; returns {jobId, estimatedDuration, ...}
+const WAIT_TIMEOUT_MS = 30000;
+phase2Router.post('/compliance/check',
+  authenticate,
   authorize(Permission.RESOURCES.TEMPLATES, Permission.ACTIONS.APPLY),
   async (req, res) => {
   try {
     const complianceService = getComplianceService(req);
 
     const { repositories = [], templates = [], priority = 'normal' } = req.body;
-    
+
     const result = await complianceService.triggerComplianceCheck({
       repositories,
       templates,
       priority
     });
-    
+
     // Emit WebSocket event
     emitWSEvent(req, 'compliance', 'check.triggered', {
       jobId: result.jobId,
@@ -2128,13 +2142,33 @@ phase2Router.post('/compliance/check',
       templates: result.templates,
       estimatedDuration: result.estimatedDuration
     });
-    
+
+    if (req.query.wait === 'true') {
+      const outcome = await complianceService.waitForJob(result.jobId, { timeoutMs: WAIT_TIMEOUT_MS });
+      if (outcome.status === 'timeout') {
+        return res.status(504).json({
+          jobId: result.jobId,
+          status: 'timeout',
+          message: `compliance check did not complete within ${WAIT_TIMEOUT_MS}ms`,
+        });
+      }
+      return res.json({
+        jobId: result.jobId,
+        status: outcome.status,
+        repositories: result.repositories,
+        templates: result.templates,
+        results: outcome.job.results,
+        progress: outcome.job.progress,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
     res.json(result);
   } catch (error) {
     console.error('Error triggering compliance check:', error);
-    res.status(500).json({ 
-      error: 'Failed to trigger compliance check', 
-      details: error.message 
+    res.status(500).json({
+      error: 'Failed to trigger compliance check',
+      details: error.message
     });
   }
 });
@@ -2166,30 +2200,37 @@ phase2Router.get('/compliance/history', async (req, res) => {
   try {
     const complianceService = getComplianceService(req);
 
-    const { repository, template, limit, offset } = req.query;
-    
+    const { repository, template, limit, offset, timeRange, aggregated } = req.query;
+
     const options = {
       repository,
       template,
       limit: limit ? parseInt(limit) : undefined,
-      offset: offset ? parseInt(offset) : undefined
+      offset: offset ? parseInt(offset) : undefined,
+      ...(timeRange !== undefined ? { timeRange } : {}),
+      aggregated: aggregated === 'true',
     };
-    
+
     const result = await complianceService.getApplicationHistory(options);
-    
-    // Emit WebSocket event
+
+    // Emit WebSocket event — shape differs in aggregated mode so gate carefully.
+    const resultCount = result.applications ? result.applications.length : result.totalApplications;
+    const totalApplications = result.pagination ? result.pagination.total : result.totalApplications;
     emitWSEvent(req, 'compliance', 'history.requested', {
       options,
-      resultCount: result.applications.length,
-      totalApplications: result.pagination.total
+      resultCount,
+      totalApplications
     });
-    
+
     res.json(result);
   } catch (error) {
+    if (error && error.code === 'INVALID_TIME_RANGE') {
+      return res.status(400).json({ error: error.message });
+    }
     console.error('Error getting application history:', error);
-    res.status(500).json({ 
-      error: 'Failed to get application history', 
-      details: error.message 
+    res.status(500).json({
+      error: 'Failed to get application history',
+      details: error.message
     });
   }
 });
