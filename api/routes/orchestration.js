@@ -117,6 +117,23 @@ router.post('/execute/:profile',
       // Start orchestration (async)
       const orchestration = await req.orchestrator.orchestratePipeline(config);
 
+      // Emit initial progress event (Vikunja #624 / #667 / B8). The
+      // orchestrator itself emits stage transitions via EventEmitter; this
+      // is the kickoff.
+      const ws = req.services && req.services.websocket;
+      if (ws && typeof ws.emit === 'function') {
+        try {
+          ws.emit('orchestration', 'progress', {
+            orchestrationId: orchestration.id,
+            stage: (orchestration.stages && orchestration.stages[0] && orchestration.stages[0].name) || 'initial',
+            percentComplete: 0,
+            timestamp: new Date().toISOString(),
+          });
+        } catch (wsError) {
+          logger.warn('Failed to emit orchestration:progress', wsError);
+        }
+      }
+
       // Flat response (Vikunja #624 / #665 Decision 3) — no `success` wrapper.
       res.json({
         orchestrationId: orchestration.id,

@@ -2040,6 +2040,42 @@ function initializeOrchestrationService(app) {
 // Add orchestration routes
 const orchestrationRouter = require('./routes/orchestration');
 
+// Attach WS bridge listeners to an orchestrator. Idempotent. Forwards
+// PipelineOrchestrator lifecycle events to phase2WS on channel `orchestration`
+// with canonical event names `progress` / `completed` / `failed` / etc.
+// Vikunja #624 / #667 / B8.
+const WIRED_ORCH_WS = Symbol.for('homelab-gitops.orchestration.wsWired');
+function wireOrchestrationWSListeners(orchestrator, app) {
+  if (!orchestrator || orchestrator[WIRED_ORCH_WS]) return;
+  if (typeof orchestrator.on !== 'function') return;  // not an EventEmitter
+  orchestrator[WIRED_ORCH_WS] = true;
+
+  const reqStub = { app };
+  orchestrator.on('orchestration:completed', (orchestration) => {
+    emitWSEvent(reqStub, 'orchestration', 'completed', {
+      orchestrationId: orchestration.id,
+      status: orchestration.status,
+      results: orchestration.results,
+      timestamp: new Date().toISOString(),
+    });
+  });
+  orchestrator.on('orchestration:failed', (orchestration, error) => {
+    emitWSEvent(reqStub, 'orchestration', 'failed', {
+      orchestrationId: orchestration.id,
+      error: error && error.message,
+      timestamp: new Date().toISOString(),
+    });
+  });
+  orchestrator.on('stage:completed', (orchestration, stage) => {
+    emitWSEvent(reqStub, 'orchestration', 'progress', {
+      orchestrationId: orchestration.id,
+      stage: stage.name,
+      percentComplete: stage.percentComplete || null,
+      timestamp: new Date().toISOString(),
+    });
+  });
+}
+
 // Mount orchestration router with middleware
 phase2Router.use('/orchestration', (req, res, next) => {
   // Ensure orchestration service is available. Prefer a DI-injected instance
@@ -2049,6 +2085,9 @@ phase2Router.use('/orchestration', (req, res, next) => {
     req.orchestrator = req.app.locals?.orchestrator
       || initializeOrchestrationService(req.app);
   }
+
+  // Wire WS bridge (idempotent per-orchestrator).
+  wireOrchestrationWSListeners(req.orchestrator, req.app);
 
   // Pass services through request
   req.services = {

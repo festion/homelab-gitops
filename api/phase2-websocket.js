@@ -105,6 +105,19 @@ class Phase2WebSocketExtension {
         name: 'operations',
         description: 'General operation status updates',
         events: ['operation.started', 'operation.progress', 'operation.completed', 'operation.failed']
+      },
+      {
+        // Vikunja #624 / #667 / B8+B10: new channels for orchestration and
+        // metrics lifecycle events. Wire format: `orchestration:progress`,
+        // `orchestration:completed`, `metrics:updated`.
+        name: 'orchestration',
+        description: 'Orchestration lifecycle updates (profile execution stages)',
+        events: ['progress', 'completed', 'failed', 'started', 'cancelled']
+      },
+      {
+        name: 'metrics',
+        description: 'Aggregate metrics refresh notifications',
+        events: ['updated']
       }
     ];
 

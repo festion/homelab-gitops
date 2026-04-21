@@ -9,6 +9,7 @@ describe('Orchestration routes — flattened response shape (Decision 3)', () =>
   let app;
   let authService;
   let orchestrator;
+  let phase2WS;
   const adminToken = 'admin-token';
 
   beforeEach(() => {
@@ -34,31 +35,40 @@ describe('Orchestration routes — flattened response shape (Decision 3)', () =>
       }),
     };
 
-    // Fake orchestrator — matches the surface routes/orchestration.js calls.
-    orchestrator = {
-      orchestratePipeline: jest.fn(async (config) => ({
-        id: 'orch-test-1',
-        status: 'started',
-        profile: config.profile,
-        stages: [{ name: 'a' }, { name: 'b' }, { name: 'c' }],
-      })),
-      getOrchestrationStatus: jest.fn((id) => ({
-        id,
-        status: 'completed',
-        startedAt: '2026-04-21T10:00:00Z',
-        completedAt: '2026-04-21T10:01:00Z',
-        results: {
-          repositories: ['repo-a', 'repo-b'],
-          successful: ['repo-a'],
-          failed: ['repo-b'],
-        },
-      })),
-      listActiveOrchestrations: jest.fn(() => []),
+    // Fake orchestrator — extends EventEmitter so the phase2 WS bridge
+    // can attach lifecycle listeners. Matches the surface
+    // routes/orchestration.js uses.
+    const EventEmitter = require('events');
+    orchestrator = new EventEmitter();
+    orchestrator.orchestratePipeline = jest.fn(async (config) => ({
+      id: 'orch-test-1',
+      status: 'started',
+      profile: config.profile,
+      stages: [{ name: 'a' }, { name: 'b' }, { name: 'c' }],
+    }));
+    orchestrator.getOrchestrationStatus = jest.fn((id) => ({
+      id,
+      status: 'completed',
+      startedAt: '2026-04-21T10:00:00Z',
+      completedAt: '2026-04-21T10:01:00Z',
+      results: {
+        repositories: ['repo-a', 'repo-b'],
+        successful: ['repo-a'],
+        failed: ['repo-b'],
+      },
+    }));
+    orchestrator.listActiveOrchestrations = jest.fn(() => []);
+
+    const calls = [];
+    phase2WS = {
+      calls,
+      emit: jest.fn((channel, event, data) => calls.push({ channel, event, data })),
     };
 
     app = createApp({
       authService,
       orchestrator,
+      phase2WS,
       config: createFakeConfig({}),
     });
   });
@@ -107,6 +117,49 @@ describe('Orchestration routes — flattened response shape (Decision 3)', () =>
       });
       expect(res.body).not.toHaveProperty('success');
       expect(res.body).not.toHaveProperty('orchestration');
+    });
+  });
+
+  describe('POST /orchestration/execute/:profile — WS emission (B8)', () => {
+    it('emits orchestration/completed when the orchestrator fires its internal completed event', async () => {
+      // Kick off an execution to wire the WS bridge.
+      await request(app)
+        .post('/api/v2/orchestration/execute/full-gitops-audit')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({});
+
+      // Now simulate orchestrator completion.
+      orchestrator.emit('orchestration:completed', {
+        id: 'orch-test-1',
+        status: 'completed',
+        results: { successful: ['repo-a'], failed: [] },
+      });
+
+      const m = phase2WS.calls.find(
+        (c) => c.channel === 'orchestration' && c.event === 'completed',
+      );
+      expect(m).toBeDefined();
+      expect(m.data).toMatchObject({
+        orchestrationId: 'orch-test-1',
+        status: 'completed',
+      });
+      expect(m.data.results).toMatchObject({ successful: ['repo-a'], failed: [] });
+      expect(m.data.timestamp).toBeDefined();
+    });
+
+    it('emits orchestration/progress on profile execution start', async () => {
+      await request(app)
+        .post('/api/v2/orchestration/execute/full-gitops-audit')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({});
+
+      const m = phase2WS.calls.find(
+        (c) => c.channel === 'orchestration' && c.event === 'progress',
+      );
+      expect(m).toBeDefined();
+      expect(m.data).toHaveProperty('orchestrationId');
+      expect(m.data).toHaveProperty('stage');
+      expect(m.data).toHaveProperty('percentComplete');
     });
   });
 });
