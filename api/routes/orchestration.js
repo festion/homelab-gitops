@@ -95,9 +95,8 @@ router.post('/execute/:profile',
       const customConfig = req.body;
       
       if (!orchestrationProfiles[profile]) {
-        return res.status(404).json({ 
-          success: false, 
-          error: 'Profile not found' 
+        return res.status(404).json({
+          error: 'Profile not found'
         });
       }
 
@@ -117,9 +116,26 @@ router.post('/execute/:profile',
 
       // Start orchestration (async)
       const orchestration = await req.orchestrator.orchestratePipeline(config);
-      
+
+      // Emit initial progress event (Vikunja #624 / #667 / B8). The
+      // orchestrator itself emits stage transitions via EventEmitter; this
+      // is the kickoff.
+      const ws = req.services && req.services.websocket;
+      if (ws && typeof ws.emit === 'function') {
+        try {
+          ws.emit('orchestration', 'progress', {
+            orchestrationId: orchestration.id,
+            stage: (orchestration.stages && orchestration.stages[0] && orchestration.stages[0].name) || 'initial',
+            percentComplete: 0,
+            timestamp: new Date().toISOString(),
+          });
+        } catch (wsError) {
+          logger.warn('Failed to emit orchestration:progress', wsError);
+        }
+      }
+
+      // Flat response (Vikunja #624 / #665 Decision 3) — no `success` wrapper.
       res.json({
-        success: true,
         orchestrationId: orchestration.id,
         status: orchestration.status,
         profile,
@@ -129,9 +145,8 @@ router.post('/execute/:profile',
       });
     } catch (error) {
       logger.error(`Failed to execute orchestration ${req.params.profile}`, error);
-      res.status(500).json({ 
-        success: false, 
-        error: error.message 
+      res.status(500).json({
+        error: error.message
       });
     }
   }
@@ -185,22 +200,29 @@ router.get('/status/:orchestrationId',
       const { orchestrationId } = req.params;
       
       const status = req.orchestrator.getOrchestrationStatus(orchestrationId);
-      
+
+      // Flat response (Vikunja #624 / #665 Decision 3) — no `{success, orchestration}`
+      // wrapper. Spread the status object directly and guarantee `orchestrationId`
+      // is present at the top level (the status object uses `id` internally).
       res.json({
-        success: true,
-        orchestration: status
+        orchestrationId: status.id || orchestrationId,
+        status: status.status,
+        startedAt: status.startedAt,
+        completedAt: status.completedAt,
+        results: status.results,
+        stages: status.stages,
+        profile: status.profile,
+        error: status.error,
       });
     } catch (error) {
       if (error.message.includes('not found')) {
-        res.status(404).json({ 
-          success: false, 
-          error: error.message 
+        res.status(404).json({
+          error: error.message
         });
       } else {
         logger.error(`Failed to get orchestration status ${req.params.orchestrationId}`, error);
-        res.status(500).json({ 
-          success: false, 
-          error: error.message 
+        res.status(500).json({
+          error: error.message
         });
       }
     }

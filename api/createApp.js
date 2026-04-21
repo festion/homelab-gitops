@@ -12,6 +12,7 @@ const { exec } = require('child_process');
 const SecurityMiddleware = require('./middleware/security');
 const authRoutes = require('./routes/auth');
 const phase2Router = require('./phase2-endpoints');
+const { wireComplianceWSListeners } = require('./phase2-endpoints');
 const { handleCSVExport } = require('./csv-export');
 const { handleEmailSummary } = require('./email-notifications');
 // NOTE: routes/wiki is NOT required at module top because it transitively pulls
@@ -72,6 +73,13 @@ function createApp({
 
   // Mount Phase 2 routes.
   app.use('/api/v2', phase2Router);
+
+  // Wire the WS bridge onto a DI-injected complianceService (if any) so
+  // compliance lifecycle events reach phase2WS even when the service was not
+  // built via the lazy initializer. Idempotent — safe to call multiple times.
+  if (complianceService) {
+    wireComplianceWSListeners(complianceService, app);
+  }
 
   // Mount WikiJS Agent routes — reads wikiAgentManager from app.locals so the
   // bootstrap can finish its async init after createApp returns. The router is
