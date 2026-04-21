@@ -8,7 +8,6 @@
 const EventEmitter = require('events');
 const path = require('path');
 const fs = require('fs').promises;
-const TemplateEngine = require('./templateEngine');
 const {
   RepositoryCompliance,
   ComplianceIssue,
@@ -21,26 +20,33 @@ const {
 } = require('../../models/compliance');
 
 class ComplianceService extends EventEmitter {
-  constructor(config, options = {}) {
+  constructor({
+    config,
+    templateEngine,
+    githubMCP,
+    cacheTimeout,
+    enabledTemplates,
+    monitoredRepositories,
+  } = {}) {
     super();
+    if (!config) throw new Error('ComplianceService requires { config }');
+    if (!templateEngine) throw new Error('ComplianceService requires { templateEngine }');
     this.config = config;
-    this.templateEngine = new TemplateEngine({
-      projectRoot: options.projectRoot || process.cwd(),
-      verbose: options.verbose || false
-    });
-    
+    this.templateEngine = templateEngine;
+    this.githubMCP = githubMCP || null;
+
     // Caching
     this.cache = new Map();
-    this.cacheTimeout = options.cacheTimeout || 300000; // 5 minutes default
-    
+    this.cacheTimeout = cacheTimeout || 300000; // 5 minutes default
+
     // In-memory storage for demo (replace with database in production)
     this.complianceData = new Map();
     this.applicationHistory = new Map();
     this.jobQueue = new Map();
-    
+
     // Configuration
-    this.enabledTemplates = options.enabledTemplates || ['standard-devops'];
-    this.monitoredRepositories = options.monitoredRepositories || [];
+    this.enabledTemplates = enabledTemplates || ['standard-devops'];
+    this.monitoredRepositories = monitoredRepositories || [];
   }
 
   /**

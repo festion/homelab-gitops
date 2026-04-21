@@ -1,12 +1,19 @@
-const AuthService = require('../services/auth/authService');
 const { Permission } = require('../models/user');
+
+function getAuthService(req) {
+  const svc = req && req.app && req.app.locals && req.app.locals.authService;
+  if (!svc) {
+    throw new Error('authService not wired to app.locals — construct via createApp({ authService })');
+  }
+  return svc;
+}
 
 /**
  * Authentication middleware for Express.js
  */
 class AuthMiddleware {
   constructor() {
-    this.authService = new AuthService();
+    // authService is resolved per-request from req.app.locals (wired by createApp).
   }
 
   /**
@@ -34,7 +41,7 @@ class AuthMiddleware {
         });
       }
 
-      const { user, decoded } = await this.authService.verifyToken(token);
+      const { user, decoded } = await getAuthService(req).verifyToken(token);
       
       // Attach user and token info to request
       req.user = user;
@@ -48,7 +55,7 @@ class AuthMiddleware {
       };
 
       // Log successful authentication
-      await this.authService.logAuthEvent(
+      await getAuthService(req).logAuthEvent(
         user.id, 
         user.username, 
         'jwt_auth', 
@@ -62,7 +69,7 @@ class AuthMiddleware {
       console.error('JWT authentication error:', error.message);
       
       // Log failed authentication
-      await this.authService.logAuthEvent(
+      await getAuthService(req).logAuthEvent(
         null, 
         null, 
         'jwt_auth', 
@@ -92,7 +99,7 @@ class AuthMiddleware {
         });
       }
 
-      const keyData = await this.authService.verifyApiKey(apiKey);
+      const keyData = await getAuthService(req).verifyApiKey(apiKey);
       
       // Attach API key info to request
       req.auth = {
@@ -104,7 +111,7 @@ class AuthMiddleware {
       };
 
       // Log successful authentication
-      await this.authService.logAuthEvent(
+      await getAuthService(req).logAuthEvent(
         null, 
         keyData.name, 
         'api_key_auth', 
@@ -118,7 +125,7 @@ class AuthMiddleware {
       console.error('API key authentication error:', error.message);
       
       // Log failed authentication
-      await this.authService.logAuthEvent(
+      await getAuthService(req).logAuthEvent(
         null, 
         null, 
         'api_key_auth', 
@@ -194,11 +201,11 @@ class AuthMiddleware {
           });
         }
 
-        const hasPermission = this.authService.checkPermission(req.auth, resource, action);
+        const hasPermission = getAuthService(req).checkPermission(req.auth, resource, action);
         
         if (!hasPermission) {
           // Log authorization failure
-          await this.authService.logAuthEvent(
+          await getAuthService(req).logAuthEvent(
             req.auth.userId || null,
             req.auth.username || req.auth.keyName || null,
             'authorization_denied',
@@ -220,7 +227,7 @@ class AuthMiddleware {
         }
 
         // Log successful authorization
-        await this.authService.logAuthEvent(
+        await getAuthService(req).logAuthEvent(
           req.auth.userId || null,
           req.auth.username || req.auth.keyName || null,
           'authorization_granted',

@@ -12,7 +12,8 @@ const phase2Router = require('../../phase2-endpoints');
 // without app.locals — crashes before any benchmark runs. Needs the
 // Option-A app factory.
 // Tracking: Vikunja #624.
-// Design: docs/plans/2026-04-20-api-test-restoration-b-auth.md.
+// Design: docs/plans/2026-04-20-api-test-restoration-b-auth.md
+//         docs/plans/2026-04-20-option-a-createapp-di.md (un-skip plan — PR 4 of #624)
 describe.skip('Performance and Load Testing', () => {
   let app;
   let adminToken;

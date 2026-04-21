@@ -34,7 +34,7 @@ describe('PipelineService', () => {
       })
     };
 
-    pipelineService = new PipelineService(mockGitHubMCP, mockConfig);
+    pipelineService = new PipelineService({ config: mockConfig, githubMCP: mockGitHubMCP });
   });
 
   describe('getPipelineStatus', () => {

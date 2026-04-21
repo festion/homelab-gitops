@@ -1,5 +1,12 @@
-const AuthService = require('../services/auth/authService');
 const { Permission } = require('../models/user');
+
+function getAuthService(req) {
+  const svc = req && req.app && req.app.locals && req.app.locals.authService;
+  if (!svc) {
+    throw new Error('authService not wired to app.locals — construct via createApp({ authService })');
+  }
+  return svc;
+}
 
 /**
  * Enhanced Authentication middleware for Express.js
@@ -7,7 +14,7 @@ const { Permission } = require('../models/user');
  */
 class EnhancedAuthMiddleware {
   constructor() {
-    this.authService = new AuthService();
+    // authService is resolved per-request from req.app.locals (wired by createApp).
     this.failedAttempts = new Map(); // Track failed authentication attempts
     this.securityConfig = {
       maxFailedAttempts: 5,
@@ -63,7 +70,7 @@ class EnhancedAuthMiddleware {
         });
       }
 
-      const { user, decoded } = await this.authService.verifyToken(token);
+      const { user, decoded } = await getAuthService(req).verifyToken(token);
       
       // Check for token refresh needs
       const timeToExpiry = decoded.exp * 1000 - Date.now();
@@ -87,7 +94,7 @@ class EnhancedAuthMiddleware {
       this.clearFailedAttempts(req.ip);
 
       // Log successful authentication with enhanced details
-      await this.authService.logAuthEvent(
+      await getAuthService(req).logAuthEvent(
         user.id, 
         user.username, 
         'jwt_auth_success', 
@@ -113,7 +120,7 @@ class EnhancedAuthMiddleware {
       await this.recordFailedAttempt(req.ip, 'invalid_token', error.message);
       
       // Log failed authentication with detailed error info
-      await this.authService.logAuthEvent(
+      await getAuthService(req).logAuthEvent(
         null, 
         null, 
         'jwt_auth_failure', 
@@ -169,7 +176,7 @@ class EnhancedAuthMiddleware {
         });
       }
 
-      const keyData = await this.authService.verifyApiKey(apiKey);
+      const keyData = await getAuthService(req).verifyApiKey(apiKey);
       
       // Attach enhanced API key info to request
       req.auth = {
@@ -187,7 +194,7 @@ class EnhancedAuthMiddleware {
       this.clearFailedAttempts(req.ip);
 
       // Log successful authentication
-      await this.authService.logAuthEvent(
+      await getAuthService(req).logAuthEvent(
         null, 
         keyData.name, 
         'api_key_auth_success', 
@@ -206,7 +213,7 @@ class EnhancedAuthMiddleware {
       await this.recordFailedAttempt(req.ip, 'invalid_api_key', error.message);
       
       // Log failed authentication
-      await this.authService.logAuthEvent(
+      await getAuthService(req).logAuthEvent(
         null, 
         null, 
         'api_key_auth_failure', 
@@ -341,7 +348,7 @@ class EnhancedAuthMiddleware {
         
         if (!hasPermission) {
           // Log authorization failure with detailed context
-          await this.authService.logAuthEvent(
+          await getAuthService(req).logAuthEvent(
             req.auth.userId || null,
             req.auth.username || req.auth.keyName || null,
             'authorization_denied',
@@ -367,7 +374,7 @@ class EnhancedAuthMiddleware {
         }
 
         // Log successful authorization
-        await this.authService.logAuthEvent(
+        await getAuthService(req).logAuthEvent(
           req.auth.userId || null,
           req.auth.username || req.auth.keyName || null,
           'authorization_granted',
@@ -460,10 +467,10 @@ class EnhancedAuthMiddleware {
       }
 
       // Generate new token with same payload but fresh expiration
-      const newToken = this.authService.generateToken(req.user);
+      const newToken = getAuthService(req).generateToken(req.user);
       
       // Log token refresh
-      await this.authService.logAuthEvent(
+      await getAuthService(req).logAuthEvent(
         req.user.id,
         req.user.username,
         'token_refresh',
@@ -475,7 +482,7 @@ class EnhancedAuthMiddleware {
       res.json({
         status: 'success',
         token: newToken,
-        expiresIn: this.authService.jwtExpiresIn,
+        expiresIn: getAuthService(req).jwtExpiresIn,
         refreshedAt: new Date().toISOString()
       });
     } catch (error) {
@@ -546,7 +553,7 @@ class EnhancedAuthMiddleware {
   }
 
   checkResourcePermission(auth, resource, action, req) {
-    const hasPermission = this.authService.checkPermission(auth, resource, action);
+    const hasPermission = getAuthService(req).checkPermission(auth, resource, action);
     
     // Additional context-based checks could go here
     // For example, checking if user owns the resource they're trying to access
@@ -585,7 +592,7 @@ class EnhancedAuthMiddleware {
 
   async logSecurityEvent(eventType, details, req) {
     try {
-      await this.authService.logAuthEvent(
+      await getAuthService(req).logAuthEvent(
         req.auth?.userId || null,
         req.auth?.username || null,
         `security_${eventType}`,

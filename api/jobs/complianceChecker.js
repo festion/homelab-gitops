@@ -6,13 +6,25 @@
  */
 
 const ComplianceService = require('../services/compliance/complianceService');
+const TemplateEngine = require('../services/compliance/templateEngine');
 const EventEmitter = require('events');
 
 class ComplianceChecker extends EventEmitter {
   constructor(config, options = {}) {
     super();
     this.config = config;
-    this.complianceService = new ComplianceService(config, options);
+    const templateEngine = options.templateEngine || new TemplateEngine({
+      projectRoot: options.projectRoot || process.cwd(),
+      verbose: options.verbose || false,
+    });
+    this.complianceService = new ComplianceService({
+      config,
+      templateEngine,
+      githubMCP: options.githubMCP,
+      cacheTimeout: options.cacheTimeout,
+      enabledTemplates: options.enabledTemplates,
+      monitoredRepositories: options.monitoredRepositories,
+    });
     this.interval = options.interval || 24 * 60 * 60 * 1000; // 24 hours default
     this.enabled = options.enabled !== false;
     this.isRunning = false;
