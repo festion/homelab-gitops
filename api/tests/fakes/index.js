@@ -2,4 +2,5 @@
 module.exports = {
   ...require('./config'),
   ...require('./githubMCP'),
+  ...require('./templateEngine'),
 };
