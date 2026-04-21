@@ -274,8 +274,12 @@ class Phase2WebSocketExtension {
       return;
     }
 
+    // Wire format (Vikunja #624 / #667 Decision 5): the top-level `type` is
+    // the concatenated `{channel}:{event}` so clients can listen for a single
+    // event name (e.g. `compliance:updated`). `channel` and `event` are kept
+    // as discrete fields for debuggability and backwards compatibility.
     const message = JSON.stringify({
-      type: 'phase2.event',
+      type: `${channelName}:${eventType}`,
       channel: channelName,
       event: eventType,
       data,
