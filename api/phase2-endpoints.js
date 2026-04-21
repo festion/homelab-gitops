@@ -28,6 +28,12 @@ const phase2Router = express.Router();
 
 module.exports = phase2Router;
 
+// Named export so `createApp` can wire the WS bridge onto DI-injected
+// complianceService instances at construction time (instead of lazily on first
+// request). See phase2-endpoints.js:wireComplianceWSListeners for the impl.
+module.exports.wireComplianceWSListeners = (service, app) =>
+  wireComplianceWSListeners(service, app);
+
 // Helper function to emit WebSocket events
 function emitWSEvent(req, channel, event, data) {
   const phase2WS = req.app.locals.phase2WS;
@@ -1938,31 +1944,57 @@ function initializeComplianceService(app) {
     templateEngine,
     githubMCP: app.locals?.githubMCP,
   });
-  
-  // Set up compliance event listeners for WebSocket
-  complianceService.on('compliance:checked', (data) => {
-    emitWSEvent(app.locals?.phase2WS?.req || {}, 'compliance', 'compliance.checked', data);
-  });
-  
-  complianceService.on('compliance:job-started', (data) => {
-    emitWSEvent(app.locals?.phase2WS?.req || {}, 'compliance', 'compliance.job-started', data);
-  });
-  
-  complianceService.on('compliance:job-completed', (data) => {
-    emitWSEvent(app.locals?.phase2WS?.req || {}, 'compliance', 'compliance.job-completed', data);
-  });
-  
-  complianceService.on('compliance:application-completed', (data) => {
-    emitWSEvent(app.locals?.phase2WS?.req || {}, 'compliance', 'compliance.application-completed', data);
-  });
+
+  // Wire WS bridge for the lazy-built service.
+  wireComplianceWSListeners(complianceService, app);
 
   return complianceService;
 }
 
+// Attach WS event listeners to a ComplianceService instance. Idempotent — a
+// Symbol marker on the service records that it's already been wired, so
+// repeated calls (e.g. from getComplianceService on every request) don't
+// pile duplicate listeners.
+//
+// Decision 5 (#667 / Task B4): the wire event names are the canonical form —
+// `updated`, `job-started`, `job-completed`, `application-completed` —
+// which `phase2-websocket.js` emit() then serializes as
+// `compliance:updated`, `compliance:job-started`, etc. on the wire.
+const WIRED_COMPLIANCE_WS = Symbol.for('homelab-gitops.compliance.wsWired');
+function wireComplianceWSListeners(service, app) {
+  if (!service || service[WIRED_COMPLIANCE_WS]) return;
+  service[WIRED_COMPLIANCE_WS] = true;
+
+  // We synthesize a minimal `req`-shaped object for emitWSEvent to pull
+  // `app.locals.phase2WS` off of.
+  const reqStub = { app };
+
+  service.on('compliance:checked', (data) => {
+    emitWSEvent(reqStub, 'compliance', 'updated', data);
+  });
+
+  service.on('compliance:job-started', (data) => {
+    emitWSEvent(reqStub, 'compliance', 'job-started', data);
+  });
+
+  service.on('compliance:job-completed', (data) => {
+    emitWSEvent(reqStub, 'compliance', 'job-completed', data);
+  });
+
+  service.on('compliance:application-completed', (data) => {
+    emitWSEvent(reqStub, 'compliance', 'application-completed', data);
+  });
+}
+
 // Resolve the complianceService: prefer a DI-injected instance from app.locals
 // (tests pass one via createApp), fall back to the module-level lazy init.
+// In both cases ensure WS bridge listeners are wired (idempotent).
 function getComplianceService(req) {
-  if (req.app.locals.complianceService) return req.app.locals.complianceService;
+  const injected = req.app.locals.complianceService;
+  if (injected) {
+    wireComplianceWSListeners(injected, req.app);
+    return injected;
+  }
   if (!complianceService) complianceService = initializeComplianceService(req.app);
   return complianceService;
 }
@@ -2494,5 +2526,3 @@ phase2Router.post('/webhooks/test', (req, res) => {
     res.status(500).json({ error: 'Failed to create test webhook' });
   }
 });
-
-module.exports = phase2Router;
