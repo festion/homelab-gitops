@@ -15,10 +15,14 @@ const { ComplianceIssue, ComplianceIssueType, ComplianceSeverity } = require('..
 // Assertions match what ComplianceService + the phase2 route layer currently
 // produce. Several cases from the original pre-skip suite asserted behaviors
 // that were never implemented (template-name validation, category filter,
-// minScore/pagination on status, admin-authorize on /compliance/apply, 429
-// rate-limit passthrough, sync /compliance/check response, nonexistent-repo
-// 404). Those are captured as follow-up discovery tasks and are NOT asserted
-// here — see skip-comment refs inline.
+// minScore/pagination on status, 429 rate-limit passthrough, sync
+// /compliance/check response, nonexistent-repo 404). Those are captured as
+// follow-up discovery tasks and are NOT asserted here — see skip-comment refs
+// inline.
+//
+// As of #659 fix: /compliance/apply is now gated by authenticate +
+// authorize(TEMPLATES, APPLY), matching /compliance/check. Viewer-token
+// 403 + no-auth 401 are asserted below.
 describe('Compliance API Endpoints', () => {
   let app;
   let templateEngine;
@@ -27,6 +31,7 @@ describe('Compliance API Endpoints', () => {
   let authService;
   let complianceService;
   const adminToken = 'admin-token';
+  const viewerToken = 'viewer-token';
 
   beforeEach(() => {
     const adminUser = {
@@ -36,11 +41,21 @@ describe('Compliance API Endpoints', () => {
       permissions: ['admin', 'templates:apply'],
       toJSON() { return { id: this.id, username: this.username, role: this.role }; },
     };
+    const viewerUser = {
+      id: 'test-viewer',
+      username: 'viewer',
+      role: 'viewer',
+      permissions: ['compliance:read', 'pipelines:read'],
+      toJSON() { return { id: this.id, username: this.username, role: this.role }; },
+    };
 
     authService = {
       verifyToken: jest.fn(async (token) => {
         if (token === adminToken) {
           return { user: adminUser, decoded: { userId: adminUser.id, role: 'admin' } };
+        }
+        if (token === viewerToken) {
+          return { user: viewerUser, decoded: { userId: viewerUser.id, role: 'viewer' } };
         }
         throw new Error('Invalid token');
       }),
@@ -286,9 +301,27 @@ describe('Compliance API Endpoints', () => {
   });
 
   describe('POST /api/v2/compliance/apply', () => {
+    it('rejects requests with no Authorization header (401)', async () => {
+      const res = await request(app)
+        .post('/api/v2/compliance/apply')
+        .send({ repository: 'repo-alpha', templates: ['standard-devops'] });
+
+      expect(res.status).toBe(401);
+    });
+
+    it('rejects viewer tokens (403) — templates:apply permission required', async () => {
+      const res = await request(app)
+        .post('/api/v2/compliance/apply')
+        .set('Authorization', `Bearer ${viewerToken}`)
+        .send({ repository: 'repo-alpha', templates: ['standard-devops'] });
+
+      expect(res.status).toBe(403);
+    });
+
     it('returns 400 when `repository` is missing', async () => {
       const res = await request(app)
         .post('/api/v2/compliance/apply')
+        .set('Authorization', `Bearer ${adminToken}`)
         .send({ templates: ['standard-devops'] });
 
       expect(res.status).toBe(400);
@@ -299,6 +332,7 @@ describe('Compliance API Endpoints', () => {
     it('returns 400 when `templates` is missing', async () => {
       const res = await request(app)
         .post('/api/v2/compliance/apply')
+        .set('Authorization', `Bearer ${adminToken}`)
         .send({ repository: 'repo-alpha' });
 
       expect(res.status).toBe(400);
@@ -308,6 +342,7 @@ describe('Compliance API Endpoints', () => {
     it('returns 400 when templates is an empty array', async () => {
       const res = await request(app)
         .post('/api/v2/compliance/apply')
+        .set('Authorization', `Bearer ${adminToken}`)
         .send({ repository: 'repo-alpha', templates: [] });
 
       expect(res.status).toBe(400);
@@ -317,6 +352,7 @@ describe('Compliance API Endpoints', () => {
     it('returns the service result shape on success (single template, dryRun default)', async () => {
       const res = await request(app)
         .post('/api/v2/compliance/apply')
+        .set('Authorization', `Bearer ${adminToken}`)
         .send({ repository: 'repo-alpha', templates: ['standard-devops'] });
 
       expect(res.status).toBe(200);
@@ -337,6 +373,7 @@ describe('Compliance API Endpoints', () => {
     it('forwards dryRun=false + createPR=true to the template engine', async () => {
       await request(app)
         .post('/api/v2/compliance/apply')
+        .set('Authorization', `Bearer ${adminToken}`)
         .send({
           repository: 'repo-alpha',
           templates: ['standard-devops'],
@@ -355,6 +392,7 @@ describe('Compliance API Endpoints', () => {
     it('invokes applyTemplate once per requested template', async () => {
       const res = await request(app)
         .post('/api/v2/compliance/apply')
+        .set('Authorization', `Bearer ${adminToken}`)
         .send({
           repository: 'repo-alpha',
           templates: ['standard-devops', 'security-hardening'],
@@ -374,17 +412,13 @@ describe('Compliance API Endpoints', () => {
 
       const res = await request(app)
         .post('/api/v2/compliance/apply')
+        .set('Authorization', `Bearer ${adminToken}`)
         .send({ repository: 'repo-alpha', templates: ['standard-devops'] })
         .expect(200);
 
       expect(res.body.results[0]).toHaveProperty('success', false);
       expect(res.body.results[0]).toHaveProperty('error', 'template not found');
     });
-
-    // Original suite asserted a 403 for viewer tokens. /compliance/apply has
-    // NO authorize() middleware today — only validateRequest. Any caller
-    // (including unauthenticated) can invoke it. Tracked as a security
-    // hardening task (authorize(TEMPLATES, APPLY) on this route).
   });
 
   describe('GET /api/v2/compliance/history', () => {
@@ -405,6 +439,7 @@ describe('Compliance API Endpoints', () => {
     it('includes prior applications after /compliance/apply has been called', async () => {
       await request(app)
         .post('/api/v2/compliance/apply')
+        .set('Authorization', `Bearer ${adminToken}`)
         .send({ repository: 'repo-alpha', templates: ['standard-devops'] })
         .expect(200);
 
@@ -421,10 +456,12 @@ describe('Compliance API Endpoints', () => {
     it('filters history by ?repository=', async () => {
       await request(app)
         .post('/api/v2/compliance/apply')
+        .set('Authorization', `Bearer ${adminToken}`)
         .send({ repository: 'repo-alpha', templates: ['standard-devops'] })
         .expect(200);
       await request(app)
         .post('/api/v2/compliance/apply')
+        .set('Authorization', `Bearer ${adminToken}`)
         .send({ repository: 'repo-bravo', templates: ['standard-devops'] })
         .expect(200);
 
