@@ -1842,33 +1842,71 @@ phase2Router.post('/pipelines/trigger',
   }
 });
 
-// GET /api/v2/pipelines/metrics - Get pipeline metrics and analytics
+// GET /api/v2/pipelines/metrics - Get pipeline metrics and analytics.
+// Vikunja #624 / NEW-3 / B10: response includes top-level `totalRuns`,
+// `successRate`, `averageDuration` summed across repos; emits
+// `metrics:updated` WS event on each refresh.
 phase2Router.get('/pipelines/metrics', async (req, res) => {
   try {
     const pipelineService = getPipelineService(req);
 
     const { repository, timeRange, branch } = req.query;
-    
+
     const options = {
       repository,
       timeRange: timeRange || '30d',
       branch
     };
-    
+
     const result = await pipelineService.getPipelineMetrics(options);
-    
-    // Emit WebSocket event
+
+    // Aggregate across all repos for the top-level fields workflow.test.js /
+    // dashboards need without drilling into `metrics[repo]`.
+    const perRepo = (result && result.metrics) || {};
+    let totalRuns = 0;
+    let successTotal = 0;
+    let durationWeighted = 0;
+    let runsWithDuration = 0;
+    Object.values(perRepo).forEach((m) => {
+      if (!m) return;
+      if (typeof m.total === 'number') totalRuns += m.total;
+      if (typeof m.successful === 'number') successTotal += m.successful;
+      if (typeof m.averageDuration === 'number' && typeof m.total === 'number') {
+        durationWeighted += m.averageDuration * m.total;
+        runsWithDuration += m.total;
+      }
+    });
+    const successRate = totalRuns > 0 ? Math.round((successTotal / totalRuns) * 100) : 0;
+    const averageDuration = runsWithDuration > 0 ? Math.round(durationWeighted / runsWithDuration) : 0;
+    const timestamp = new Date().toISOString();
+
+    // Emit informational request-tracking event (existing contract).
     emitWSEvent(req, 'pipelines', 'metrics.requested', {
       options,
-      repositoryCount: Object.keys(result.metrics).length
+      repositoryCount: Object.keys(perRepo).length
     });
-    
-    res.json(result);
+
+    // Emit canonical metrics:updated event (NEW-3).
+    emitWSEvent(req, 'metrics', 'updated', {
+      totalRuns,
+      successRate,
+      averageDuration,
+      timeRange: options.timeRange,
+      timestamp,
+    });
+
+    res.json({
+      ...result,
+      totalRuns,
+      successRate,
+      averageDuration,
+      timestamp,
+    });
   } catch (error) {
     console.error('Error getting pipeline metrics:', error);
-    res.status(500).json({ 
-      error: 'Failed to get pipeline metrics', 
-      details: error.message 
+    res.status(500).json({
+      error: 'Failed to get pipeline metrics',
+      details: error.message
     });
   }
 });
