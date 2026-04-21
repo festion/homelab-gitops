@@ -4,92 +4,98 @@ const { Server } = require('socket.io');
 const Client = require('socket.io-client');
 const { createServer } = require('http');
 const TestHelpers = require('../helpers/testHelpers');
-const { setupGitHubMock, resetGitHubMock } = require('../mocks/github');
+const {
+  createFakeConfig,
+  createFakeGithubMCP,
+  createFakeTemplateEngine,
+  createFakeOrchestrator,
+  createFakeWebhookHandler,
+} = require('../fakes');
+const ComplianceService = require('../../services/compliance/complianceService');
+const PipelineService = require('../../services/pipeline/pipelineService');
 
-// Import the phase2 router
-const phase2Router = require('../../phase2-endpoints');
-
-// SKIP: deferred from the sequential Option-A un-skip track.
-//
-// A 2026-04-20 contract audit (after PR1+PR2 landed the createApp/DI
-// foundation) showed this suite asserts response shapes and WebSocket
-// event names that the real service/route layer does not produce. It's
-// not an un-skip PR — it's a contract-alignment effort that needs its
-// own brainstorming pass.
-//
-// Representative gaps:
-//   - orchestration routes return {success, orchestration: {...}} (nested)
-//     but tests expect top-level {orchestrationId, status, results}
-//   - /api/v2/status returns a platform-health snapshot
-//     ({platformVersion, phase, components}) but tests expect an
-//     aggregate data shape ({pipelines, compliance, metrics})
-//   - WS events emitted as compliance:checked / pipeline:triggered but
-//     tests listen for compliance:updated / pipeline:status
-//   - /compliance/check is async (jobId) but test expects sync
-//     {compliance: {score, status}}
-//   - /compliance/apply returns {repository, templates, results, ...}
-//     but test expects {success: true, prUrl}
-//
-// Tracking: Vikunja #656 (this bead) + discovery tasks #661 (compliance
-// sync), #660 (compliance apply/history shapes), #665 (orchestration
-// shapes), #666 (/api/v2/status shape), #667 (WS event naming).
-//
-// Design: docs/plans/2026-04-20-option-a-createapp-di.md (un-skip plan —
-//         PR 3 of #624; deferred 2026-04-20)
-describe.skip('End-to-End Workflow Integration', () => {
+// Re-enabled in PR C of Vikunja #624 after PRs A (#98) + B (#99) aligned
+// response shapes and WS event names. Setup rewritten to mount phase2-endpoints
+// with DI-injected fakes instead of touching fabricated DB tables that
+// production code never reads from. Several sub-cases whose assertions depend
+// on behaviors not delivered by PRs A/B are `it.skip`ed inline with a Vikunja
+// task reference — they become their own PRs.
+describe('End-to-End Workflow Integration', () => {
   let app;
+  let currentApp;  // dispatcher holder — httpServer calls currentApp(req,res)
   let httpServer;
   let socketServer;
   let socketClient;
   let serverPort;
   let adminToken;
-  let githubMock;
+  let viewerToken;
+  // Fakes + services — re-created per-test so state doesn't leak across it()s
+  let githubMCP;
+  let templateEngine;
+  let orchestrator;
+  let webhookHandler;
+  let complianceService;
+  let pipelineService;
+  let config;
+
+  // Bridge: fake-service -> test socket.io server. When a fake emits
+  // `orchestration:progress` (or similar), broadcast to all connected sockets
+  // so the test's socketClient.on(...) listeners fire.
+  function makeWsEmit() {
+    return (event, data) => {
+      if (socketServer) socketServer.emit(event, data);
+    };
+  }
+
+  // Pipeline WS emitter — pipelineService doesn't emit WS directly in this
+  // test harness; the route triggers a synthetic pipeline:status event.
+  function emitPipelineStatus(runId, repository, status) {
+    if (socketServer) {
+      socketServer.emit('pipeline:status', {
+        runId, repository, status, timestamp: new Date().toISOString(),
+      });
+    }
+  }
 
   beforeAll(async () => {
-    // Setup test environment
     process.env.NODE_ENV = 'test';
-    process.env.GITHUB_TOKEN = 'test-github-token';
     process.env.JWT_SECRET = 'test-jwt-secret-key';
-    
-    // Generate auth token
-    adminToken = TestHelpers.generateAdminToken();
-    
-    // Setup GitHub mock
-    githubMock = setupGitHubMock();
-    
-    // Create Express app
-    app = express();
-    app.use(express.json());
-    app.use('/api/v2', phase2Router);
+    adminToken = 'admin-workflow-token';
+    viewerToken = 'viewer-workflow-token';
 
-    // Create HTTP server
-    httpServer = createServer(app);
-    
-    // Create Socket.IO server
+    // HTTP server with a dispatcher that delegates to currentApp (set in
+    // beforeEach). This lets us rebuild the Express app per-test without
+    // tearing down socket.io's own request listeners (which handle polling
+    // transport) — removeAllListeners('request') would wipe them too.
+    httpServer = createServer((req, res) => {
+      if (currentApp) return currentApp(req, res);
+      res.statusCode = 503;
+      res.end();
+    });
     socketServer = new Server(httpServer, {
-      cors: { origin: "*", methods: ["GET", "POST"] }
+      cors: { origin: '*', methods: ['GET', 'POST'] },
     });
 
-    // Setup WebSocket authentication
+    // Minimal auth on the socket: any non-empty token is accepted (the
+    // real token verification runs at the HTTP layer via our authService stub).
     socketServer.use((socket, next) => {
-      const token = socket.handshake.auth.token;
-      if (!token) return next(new Error('Authentication error'));
-      
-      try {
-        const jwt = require('jsonwebtoken');
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        socket.userId = decoded.id;
-        socket.userRole = decoded.role;
-        next();
-      } catch (err) {
-        next(new Error('Authentication error'));
-      }
+      if (!socket.handshake.auth?.token) return next(new Error('Authentication error'));
+      next();
     });
 
-    // Setup WebSocket handlers
-    setupWebSocketHandlers(socketServer);
+    // Socket-level subscription handlers — mirrors the original test's intent
+    // so socketClient.emit('subscribe', ...) doesn't error out.
+    socketServer.on('connection', (socket) => {
+      socket.on('subscribe', (data) => {
+        socket.join(`${data.type}:${data.repository || 'all'}`);
+        socket.emit('subscribed', data);
+      });
+      socket.on('unsubscribe', (data) => {
+        socket.leave(`${data.type}:${data.repository || 'all'}`);
+        socket.emit('unsubscribed', data);
+      });
+    });
 
-    // Start server
     await new Promise((resolve) => {
       httpServer.listen(() => {
         serverPort = httpServer.address().port;
@@ -99,32 +105,119 @@ describe.skip('End-to-End Workflow Integration', () => {
   });
 
   beforeEach(async () => {
-    // Reset GitHub mock
-    githubMock.reset();
-    githubMock.seedTestData();
-    
-    // Clear test data
-    await TestHelpers.clearTestData();
-    
-    // Setup test repositories
-    await setupTestRepositories();
-    
-    // Create WebSocket client
-    socketClient = new Client(`http://localhost:${serverPort}`, {
-      auth: { token: adminToken }
+    // ---- Build fakes and real services (compliance + pipeline are real;
+    // orchestrator + webhookHandler are fakes because the real orchestrator
+    // hits githubMCP in complex ways the workflow test doesn't try to simulate).
+    githubMCP = createFakeGithubMCP({
+      workflowRuns: [
+        { id: 12345, status: 'completed', conclusion: 'success', head_branch: 'main', name: 'CI' },
+      ],
     });
-    
-    await new Promise(resolve => socketClient.on('connect', resolve));
+
+    templateEngine = createFakeTemplateEngine({
+      templates: [
+        { id: 'standard-devops', name: 'Standard DevOps', type: 'devops',
+          version: '1.0.0', tags: [], requirements: {}, files: [], directories: [],
+          compliance: {}, metadata: { version: '1.0.0', createdAt: '2026-01-01', updatedAt: '2026-04-01' },
+          toJSON() { return { ...this }; } },
+        { id: 'security-hardening', name: 'Security Hardening', type: 'security',
+          version: '1.0.0', tags: [], requirements: {}, files: [], directories: [],
+          compliance: {}, metadata: { version: '1.0.0', createdAt: '2026-02-01', updatedAt: '2026-04-01' },
+          toJSON() { return { ...this }; } },
+      ],
+    });
+
+    orchestrator = createFakeOrchestrator({ wsEmit: makeWsEmit() });
+    webhookHandler = createFakeWebhookHandler();
+
+    config = createFakeConfig({
+      MONITORED_REPOSITORIES: ['test-repo-1', 'test-repo-2'],
+    });
+
+    complianceService = new ComplianceService({ config, templateEngine, githubMCP });
+    pipelineService = new PipelineService({ config, githubMCP });
+
+    // ---- authService stub: accepts admin + viewer tokens
+    const adminUser = {
+      id: 'test-admin', username: 'admin', role: 'admin',
+      permissions: ['admin', 'templates:apply', 'pipelines:execute'],
+      toJSON() { return { id: this.id, username: this.username, role: this.role }; },
+    };
+    const viewerUser = {
+      id: 'test-viewer', username: 'viewer', role: 'viewer',
+      permissions: ['compliance:read', 'pipelines:read'],
+      toJSON() { return { id: this.id, username: this.username, role: this.role }; },
+    };
+    const authService = {
+      verifyToken: jest.fn(async (token) => {
+        if (token === adminToken) return { user: adminUser, decoded: { userId: adminUser.id, role: 'admin' } };
+        if (token === viewerToken) return { user: viewerUser, decoded: { userId: viewerUser.id, role: 'viewer' } };
+        throw new Error('Invalid token');
+      }),
+      verifyApiKey: jest.fn(async () => { throw new Error('no api key'); }),
+      logAuthEvent: jest.fn(async () => {}),
+      checkPermission: jest.fn((auth, resource, action) => {
+        if (!auth || !auth.permissions) return false;
+        if (auth.permissions.includes('admin')) return true;
+        return auth.permissions.includes(`${resource}:${action}`);
+      }),
+    };
+
+    // ---- Build app inline (not via createApp — we need our bridge middleware
+    // to run BEFORE phase2Router so req.orchestrator + req.services come from
+    // our fakes).
+    app = express();
+    app.use(express.json());
+    Object.assign(app.locals, {
+      authService, complianceService, pipelineService,
+      orchestrator, webhookHandler, githubMCP, config,
+    });
+
+    // Bridge middleware — attach fakes + a websocket shim to every request so
+    // phase2-endpoints' internal helpers find them.
+    app.use((req, _res, next) => {
+      req.orchestrator = orchestrator;
+      req.webhookHandler = webhookHandler;
+      req.services = {
+        websocket: {
+          emit: (channel, event, data) => {
+            if (socketServer) socketServer.emit(`${channel}:${event}`, data);
+          },
+        },
+      };
+      next();
+    });
+
+    // Mount phase2 router + wire compliance WS bridges
+    const phase2Router = require('../../phase2-endpoints');
+    const { wireComplianceWSListeners } = require('../../phase2-endpoints');
+    app.use('/api/v2', phase2Router);
+    wireComplianceWSListeners(complianceService, app);
+
+    // Route handlers on phase2 read `req.app.locals.<svc>` — confirmed wired above.
+
+    // ---- Swap the dispatcher's current app (no listener churn)
+    currentApp = app;
+
+    // ---- Set up the socket client (fresh per test)
+    socketClient = new Client(`http://localhost:${serverPort}`, {
+      auth: { token: adminToken },
+    });
+    await new Promise((resolve, reject) => {
+      socketClient.once('connect', resolve);
+      socketClient.once('connect_error', reject);
+      setTimeout(() => reject(new Error('socket connect timeout')), 3000);
+    });
   });
 
-  afterEach(async () => {
+  afterEach(() => {
     if (socketClient) {
       socketClient.disconnect();
+      socketClient = null;
     }
   });
 
-  afterAll(async () => {
-    resetGitHubMock();
+  afterAll(() => {
     if (socketServer) socketServer.close();
     if (httpServer) httpServer.close();
   });
@@ -552,55 +645,8 @@ describe.skip('End-to-End Workflow Integration', () => {
     });
   });
 
-  // Helper functions
-  async function setupTestRepositories() {
-    const repositories = [
-      TestHelpers.createTestRepository({
-        id: 'test-repo-1',
-        name: 'test-repo-1',
-        full_name: 'test-owner/test-repo-1',
-        compliance_score: 70
-      }),
-      TestHelpers.createTestRepository({
-        id: 'test-repo-2',
-        name: 'test-repo-2',
-        full_name: 'test-owner/test-repo-2',
-        compliance_score: 85
-      })
-    ];
-
-    for (const repo of repositories) {
-      await TestHelpers.insertTestData('repositories', repo);
-    }
-  }
-
-  function setupWebSocketHandlers(socketServer) {
-    socketServer.on('connection', (socket) => {
-      socket.on('subscribe', (data) => {
-        socket.join(`${data.type}:${data.repository || 'all'}`);
-        socket.emit('subscribed', data);
-      });
-
-      socket.on('unsubscribe', (data) => {
-        socket.leave(`${data.type}:${data.repository || 'all'}`);
-        socket.emit('unsubscribed', data);
-      });
-
-      // Simulate periodic updates
-      const updateInterval = setInterval(() => {
-        socket.emit('metrics:updated', {
-          type: 'system_health',
-          timestamp: new Date().toISOString(),
-          metrics: {
-            active_pipelines: Math.floor(Math.random() * 10),
-            queue_size: Math.floor(Math.random() * 20)
-          }
-        });
-      }, 5000);
-
-      socket.on('disconnect', () => {
-        clearInterval(updateInterval);
-      });
-    });
-  }
+  // NOTE: original setupTestRepositories() + setupWebSocketHandlers() helpers
+  // were removed in PR C — the former seeded DB tables production code never
+  // reads from; the latter is inlined into beforeAll to keep the WS server
+  // handlers attached for the duration of the suite.
 });
