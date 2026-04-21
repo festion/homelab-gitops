@@ -188,10 +188,10 @@ Trigger compliance check for multiple repositories.
 
 #### Job Status Tracking
 Use WebSocket events to track job progress:
-- `compliance.job-started`: Job execution began
-- `compliance.job-progress`: Progress updates
-- `compliance.job-completed`: Job finished successfully
-- `compliance.job-failed`: Job encountered errors
+- `compliance:job-started`: Job execution began
+- `compliance:job-progress`: Progress updates
+- `compliance:job-completed`: Job finished successfully
+- `compliance:job-failed`: Job encountered errors
 
 ### GET /api/v2/compliance/templates
 List available templates and their requirements.
@@ -341,30 +341,30 @@ Apply templates to repositories with backup and PR creation options.
 
 ## WebSocket Events
 
-The API supports real-time updates via WebSocket connection on the `compliance` channel.
+The API supports real-time updates via WebSocket connection on the `compliance` channel. Wire event names use the `{channel}:{event}` format (Vikunja #624 / #667 Decision 5).
 
 ### Event Types
-- `compliance.checked` - Repository compliance status updated
-- `compliance.job-started` - Compliance check job started
-- `compliance.job-progress` - Job progress update
-- `compliance.job-completed` - Job completed successfully
-- `compliance.job-failed` - Job failed with errors
-- `compliance.application-started` - Template application started
-- `compliance.application-completed` - Template application completed
-- `compliance.application-failed` - Template application failed
-- `status.requested` - Compliance status was requested
-- `repository.checked` - Repository was checked
-- `check.triggered` - Compliance check was triggered
-- `templates.requested` - Template list was requested
-- `history.requested` - Application history was requested
-- `template.applied` - Template was applied
+- `compliance:updated` - Repository compliance status updated
+- `compliance:job-started` - Compliance check job started
+- `compliance:job-progress` - Job progress update
+- `compliance:job-completed` - Job completed successfully
+- `compliance:job-failed` - Job failed with errors
+- `compliance:application-started` - Template application started
+- `compliance:application-completed` - Template application completed
+- `compliance:application-failed` - Template application failed
+- `compliance:status.requested` - Compliance status was requested
+- `compliance:repository.checked` - Repository was checked
+- `compliance:check.triggered` - Compliance check was triggered
+- `compliance:templates.requested` - Template list was requested
+- `compliance:history.requested` - Application history was requested
+- `compliance:template.applied` - Template was applied
 
 ### WebSocket Event Format
 ```json
 {
-  "type": "phase2.event",
+  "type": "compliance:updated",
   "channel": "compliance",
-  "event": "compliance.checked",
+  "event": "updated",
   "data": {
     "repository": "homelab-gitops-auditor",
     "compliant": true,
