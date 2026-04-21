@@ -553,7 +553,109 @@ describe('Compliance API Endpoints', () => {
       });
     });
 
-    // Original suite asserted ?timeRange=24h filtering; service has no such
-    // parameter — only repository/template/limit/offset are honored.
+    it('filters by ?timeRange=24h (A7)', async () => {
+      // Seed two applications: one fresh, one old.
+      const now = new Date();
+      const old = new Date(now.getTime() - 48 * 60 * 60 * 1000); // 2 days ago
+      const { TemplateApplication, ApplicationStatus } = require('../../models/compliance');
+      complianceService.applicationHistory.set('fresh', new TemplateApplication({
+        id: 'fresh',
+        repository: 'repo-alpha',
+        templateName: 'standard-devops',
+        appliedAt: now.toISOString(),
+        appliedBy: 'test',
+        status: ApplicationStatus.SUCCESS,
+      }));
+      complianceService.applicationHistory.set('stale', new TemplateApplication({
+        id: 'stale',
+        repository: 'repo-alpha',
+        templateName: 'standard-devops',
+        appliedAt: old.toISOString(),
+        appliedBy: 'test',
+        status: ApplicationStatus.SUCCESS,
+      }));
+
+      const res = await request(app)
+        .get('/api/v2/compliance/history?timeRange=24h')
+        .expect(200);
+
+      expect(res.body.applications).toHaveLength(1);
+      expect(res.body.applications[0].id).toBe('fresh');
+    });
+
+    it('filters by ?timeRange=7d (A7)', async () => {
+      const now = new Date();
+      const within = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000); // 3 days ago
+      const outside = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000); // 10 days ago
+      const { TemplateApplication, ApplicationStatus } = require('../../models/compliance');
+      complianceService.applicationHistory.set('within', new TemplateApplication({
+        id: 'within',
+        repository: 'repo-alpha',
+        templateName: 'standard-devops',
+        appliedAt: within.toISOString(),
+        appliedBy: 'test',
+        status: ApplicationStatus.SUCCESS,
+      }));
+      complianceService.applicationHistory.set('outside', new TemplateApplication({
+        id: 'outside',
+        repository: 'repo-alpha',
+        templateName: 'standard-devops',
+        appliedAt: outside.toISOString(),
+        appliedBy: 'test',
+        status: ApplicationStatus.SUCCESS,
+      }));
+
+      const res = await request(app)
+        .get('/api/v2/compliance/history?timeRange=7d')
+        .expect(200);
+
+      expect(res.body.applications.map(a => a.id)).toEqual(['within']);
+    });
+
+    it('returns 400 on invalid ?timeRange (A8)', async () => {
+      const res = await request(app)
+        .get('/api/v2/compliance/history?timeRange=bogus');
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/invalid.*time.*range/i);
+    });
+
+    it('accepts all four documented timeRange values (A7)', async () => {
+      for (const tr of ['24h', '7d', '30d', '90d']) {
+        const res = await request(app)
+          .get(`/api/v2/compliance/history?timeRange=${tr}`);
+        expect(res.status).toBe(200);
+      }
+    });
+
+    it('returns aggregated summary when ?aggregated=true (A10)', async () => {
+      const { TemplateApplication, ApplicationStatus } = require('../../models/compliance');
+      complianceService.applicationHistory.set('a', new TemplateApplication({
+        id: 'a', repository: 'repo-alpha', templateName: 'standard-devops',
+        appliedAt: new Date().toISOString(), appliedBy: 'test',
+        status: ApplicationStatus.SUCCESS,
+      }));
+      complianceService.applicationHistory.set('b', new TemplateApplication({
+        id: 'b', repository: 'repo-bravo', templateName: 'standard-devops',
+        appliedAt: new Date().toISOString(), appliedBy: 'test',
+        status: ApplicationStatus.FAILED,
+      }));
+      complianceService.applicationHistory.set('c', new TemplateApplication({
+        id: 'c', repository: 'repo-alpha', templateName: 'security-hardening',
+        appliedAt: new Date().toISOString(), appliedBy: 'test',
+        status: ApplicationStatus.SUCCESS,
+      }));
+
+      const res = await request(app)
+        .get('/api/v2/compliance/history?aggregated=true')
+        .expect(200);
+
+      expect(res.body).toHaveProperty('totalApplications', 3);
+      expect(res.body).toHaveProperty('successCount', 2);
+      expect(res.body).toHaveProperty('failureCount', 1);
+      expect(res.body).toHaveProperty('byTemplate');
+      expect(res.body.byTemplate['standard-devops']).toBeDefined();
+      expect(res.body.byTemplate['security-hardening']).toBeDefined();
+    });
   });
 });

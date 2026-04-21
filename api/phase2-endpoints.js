@@ -2173,30 +2173,37 @@ phase2Router.get('/compliance/history', async (req, res) => {
   try {
     const complianceService = getComplianceService(req);
 
-    const { repository, template, limit, offset } = req.query;
-    
+    const { repository, template, limit, offset, timeRange, aggregated } = req.query;
+
     const options = {
       repository,
       template,
       limit: limit ? parseInt(limit) : undefined,
-      offset: offset ? parseInt(offset) : undefined
+      offset: offset ? parseInt(offset) : undefined,
+      ...(timeRange !== undefined ? { timeRange } : {}),
+      aggregated: aggregated === 'true',
     };
-    
+
     const result = await complianceService.getApplicationHistory(options);
-    
-    // Emit WebSocket event
+
+    // Emit WebSocket event — shape differs in aggregated mode so gate carefully.
+    const resultCount = result.applications ? result.applications.length : result.totalApplications;
+    const totalApplications = result.pagination ? result.pagination.total : result.totalApplications;
     emitWSEvent(req, 'compliance', 'history.requested', {
       options,
-      resultCount: result.applications.length,
-      totalApplications: result.pagination.total
+      resultCount,
+      totalApplications
     });
-    
+
     res.json(result);
   } catch (error) {
+    if (error && error.code === 'INVALID_TIME_RANGE') {
+      return res.status(400).json({ error: error.message });
+    }
     console.error('Error getting application history:', error);
-    res.status(500).json({ 
-      error: 'Failed to get application history', 
-      details: error.message 
+    res.status(500).json({
+      error: 'Failed to get application history',
+      details: error.message
     });
   }
 });

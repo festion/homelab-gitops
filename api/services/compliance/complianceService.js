@@ -439,9 +439,43 @@ class ComplianceService extends EventEmitter {
 
   /**
    * Get application history
+   *
+   * Supported options:
+   *   - repository:  filter by repo name
+   *   - template:    filter by template id
+   *   - limit/offset: pagination
+   *   - timeRange:   '24h' | '7d' | '30d' | '90d' (invalid → ComplianceTimeRangeError)
+   *   - aggregated:  when true, returns {totalApplications, successCount,
+   *                  failureCount, byTemplate} instead of the paginated list.
    */
   async getApplicationHistory(options = {}) {
-    const { repository, template, limit = 50, offset = 0 } = options;
+    const {
+      repository,
+      template,
+      limit = 50,
+      offset = 0,
+      timeRange,
+      aggregated = false,
+    } = options;
+
+    // Validate timeRange up-front (route layer maps code to 400).
+    const timeRangeHours = {
+      '24h': 24,
+      '7d': 24 * 7,
+      '30d': 24 * 30,
+      '90d': 24 * 90,
+    };
+    let cutoff = null;
+    if (timeRange !== undefined) {
+      if (!Object.prototype.hasOwnProperty.call(timeRangeHours, timeRange)) {
+        const err = new Error(
+          `invalid time range '${timeRange}'; expected one of: ${Object.keys(timeRangeHours).join(', ')}`
+        );
+        err.code = 'INVALID_TIME_RANGE';
+        throw err;
+      }
+      cutoff = Date.now() - timeRangeHours[timeRange] * 60 * 60 * 1000;
+    }
 
     let applications = Array.from(this.applicationHistory.values());
 
@@ -454,8 +488,38 @@ class ComplianceService extends EventEmitter {
       applications = applications.filter(app => app.templateName === template);
     }
 
+    if (cutoff !== null) {
+      applications = applications.filter(app => {
+        const t = new Date(app.appliedAt).getTime();
+        return Number.isFinite(t) && t >= cutoff;
+      });
+    }
+
     // Sort by applied date (newest first)
     applications.sort((a, b) => new Date(b.appliedAt) - new Date(a.appliedAt));
+
+    if (aggregated) {
+      const successCount = applications.filter(a => a.isSuccessful()).length;
+      const failureCount = applications.filter(a => a.isFailed()).length;
+      const byTemplate = {};
+      for (const app of applications) {
+        const tpl = app.templateName || 'unknown';
+        if (!byTemplate[tpl]) {
+          byTemplate[tpl] = { total: 0, success: 0, failed: 0 };
+        }
+        byTemplate[tpl].total += 1;
+        if (app.isSuccessful()) byTemplate[tpl].success += 1;
+        if (app.isFailed()) byTemplate[tpl].failed += 1;
+      }
+      return {
+        totalApplications: applications.length,
+        successCount,
+        failureCount,
+        byTemplate,
+        timeRange: timeRange || null,
+        timestamp: new Date().toISOString(),
+      };
+    }
 
     // Apply pagination
     const paginatedApps = applications.slice(offset, offset + limit);
