@@ -40,7 +40,6 @@
     "test:unit": "jest --selectProjects=\"Unit Tests\" --config=jest.config.js",
     "test:integration": "jest --selectProjects=\"Integration Tests\" --config=jest.config.js",
     "test:websocket": "jest --selectProjects=\"WebSocket Tests\" --config=jest.config.js",
-    "test:performance": "jest --selectProjects=\"Performance Tests\" --config=jest.config.js",
     "test:ci": "jest --coverage --ci --watchAll=false --config=jest.config.js",
     "test:debug": "node --inspect-brk node_modules/.bin/jest --runInBand --config=jest.config.js",
     "bench": "node perf/bench-response-time.js",

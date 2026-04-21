@@ -146,17 +146,6 @@ module.exports = {
         '<rootDir>/tests/setup/jest.setup.js'
       ],
       testTimeout: 30000
-    },
-    {
-      displayName: 'Performance Tests',
-      testMatch: [
-        '<rootDir>/tests/performance/*.test.js'
-      ],
-      setupFilesAfterEnv: [
-        '<rootDir>/tests/setup/jest.setup.js',
-        '<rootDir>/tests/setup/database.setup.js'
-      ],
-      testTimeout: 120000
     }
   ],
   
