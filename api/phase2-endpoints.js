@@ -2046,28 +2046,32 @@ phase2Router.get('/compliance/status', async (req, res) => {
   try {
     const complianceService = getComplianceService(req);
 
-    const { repository, template, includeDetails } = req.query;
+    const { repository, template, includeDetails, filter } = req.query;
     const options = {
       repository,
       template,
-      includeDetails: includeDetails === 'true'
+      includeDetails: includeDetails === 'true',
+      ...(filter !== undefined ? { filter } : {}),
     };
-    
+
     const result = await complianceService.getComplianceStatus(options);
-    
+
     // Emit WebSocket event
     emitWSEvent(req, 'compliance', 'status.requested', {
       options,
       resultCount: result.repositories.length,
       complianceRate: result.summary.complianceRate
     });
-    
+
     res.json(result);
   } catch (error) {
+    if (error && error.code === 'INVALID_FILTER') {
+      return res.status(400).json({ error: error.message });
+    }
     console.error('Error getting compliance status:', error);
-    res.status(500).json({ 
-      error: 'Failed to get compliance status', 
-      details: error.message 
+    res.status(500).json({
+      error: 'Failed to get compliance status',
+      details: error.message
     });
   }
 });

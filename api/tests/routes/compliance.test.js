@@ -174,10 +174,85 @@ describe('Compliance API Endpoints', () => {
       expect(res.body.summary).toHaveProperty('totalRepos');
     });
 
-    // Original suite asserted ?compliant=true, ?minScore=N, ?limit=N&offset=N
-    // filter/pagination on /compliance/status. The service ignores all of
-    // these params today — only `repository` / `template` / `includeDetails`
-    // are read. Tracked as a discovery task for a future feature PR.
+    it('filters to compliant repos when ?filter=compliant', async () => {
+      templateEngine.checkCompliance = jest.fn(async (repoPath, templateName) => {
+        const compliant = repoPath.endsWith('repo-alpha');
+        return {
+          compliant,
+          issues: compliant ? [] : [new ComplianceIssue({
+            type: ComplianceIssueType.MISSING,
+            template: templateName,
+            file: 'README.md',
+            severity: ComplianceSeverity.HIGH,
+            description: 'missing README',
+            recommendation: 'add README',
+          })],
+          template: { id: templateName, version: '1.0.0', getRequiredFiles: () => [] },
+        };
+      });
+
+      const res = await request(app)
+        .get('/api/v2/compliance/status?filter=compliant')
+        .expect(200);
+
+      expect(res.body.repositories).toHaveLength(1);
+      expect(res.body.repositories.every(r => r.compliant === true)).toBe(true);
+      expect(res.body.repositories[0].name).toBe('repo-alpha');
+    });
+
+    it('filters to non-compliant repos when ?filter=non-compliant', async () => {
+      templateEngine.checkCompliance = jest.fn(async (repoPath, templateName) => {
+        const compliant = repoPath.endsWith('repo-alpha');
+        return {
+          compliant,
+          issues: compliant ? [] : [new ComplianceIssue({
+            type: ComplianceIssueType.MISSING,
+            template: templateName,
+            file: 'README.md',
+            severity: ComplianceSeverity.HIGH,
+            description: 'missing README',
+            recommendation: 'add README',
+          })],
+          template: { id: templateName, version: '1.0.0', getRequiredFiles: () => [] },
+        };
+      });
+
+      const res = await request(app)
+        .get('/api/v2/compliance/status?filter=non-compliant')
+        .expect(200);
+
+      expect(res.body.repositories).toHaveLength(1);
+      expect(res.body.repositories.every(r => r.compliant === false)).toBe(true);
+      expect(res.body.repositories[0].name).toBe('repo-bravo');
+    });
+
+    it('returns all repos when ?filter=all', async () => {
+      const res = await request(app)
+        .get('/api/v2/compliance/status?filter=all')
+        .expect(200);
+
+      expect(res.body.repositories).toHaveLength(2);
+    });
+
+    it('returns 400 on invalid ?filter=bogus', async () => {
+      const res = await request(app)
+        .get('/api/v2/compliance/status?filter=bogus');
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/invalid.*filter/i);
+    });
+
+    it('includes summary.lastUpdated + totalRepos + compliantCount fields (NEW-1)', async () => {
+      const res = await request(app)
+        .get('/api/v2/compliance/status')
+        .expect(200);
+
+      expect(res.body.summary).toHaveProperty('lastUpdated');
+      expect(res.body.summary.lastUpdated).toBeTruthy();
+      expect(res.body.summary).toHaveProperty('totalRepos', 2);
+      expect(res.body.summary).toHaveProperty('compliantCount');
+      expect(typeof res.body.summary.compliantCount).toBe('number');
+    });
   });
 
   describe('GET /api/v2/compliance/repository/:repo', () => {

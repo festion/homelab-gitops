@@ -51,12 +51,29 @@ class ComplianceService extends EventEmitter {
 
   /**
    * Get compliance status for all repositories
+   *
+   * Supported options:
+   *   - repository:     single-repo filter (unchanged)
+   *   - template:       template restriction (unchanged)
+   *   - includeDetails: full vs simplified repo JSON
+   *   - filter:         'compliant' | 'non-compliant' | 'all' (default 'all')
+   *                     Invalid values throw `ComplianceFilterError` which the
+   *                     route layer converts to HTTP 400.
    */
   async getComplianceStatus(options = {}) {
-    const { repository, template, includeDetails = false } = options;
+    const { repository, template, includeDetails = false, filter = 'all' } = options;
+
+    const validFilters = ['compliant', 'non-compliant', 'all'];
+    if (!validFilters.includes(filter)) {
+      const err = new Error(
+        `invalid filter value '${filter}'; expected one of: ${validFilters.join(', ')}`
+      );
+      err.code = 'INVALID_FILTER';
+      throw err;
+    }
 
     try {
-      // Check cache first
+      // Cache key must include filter so different filters don't collide
       const cacheKey = `status_${JSON.stringify(options)}`;
       if (this.cache.has(cacheKey)) {
         const cached = this.cache.get(cacheKey);
@@ -101,14 +118,37 @@ class ComplianceService extends EventEmitter {
         }
       }
 
-      // Calculate summary
+      // Summary is computed across the UNFILTERED set so clients see a true
+      // overview regardless of which slice they requested.
       const summary = new ComplianceSummary(repositories);
+      const summaryJSON = summary.toJSON();
+      // Add fields required by dashboard (NEW-1):
+      //   - lastUpdated: most recent lastChecked across repos (or now() if none)
+      //   - compliantCount: alias for compliantRepos (dashboard-friendly name)
+      summaryJSON.compliantCount = summaryJSON.compliantRepos;
+      summaryJSON.nonCompliantCount = summaryJSON.nonCompliantRepos;
+      const lastCheckedTimes = repositories
+        .map(r => r.lastChecked)
+        .filter(Boolean)
+        .map(t => new Date(t).getTime())
+        .filter(t => Number.isFinite(t));
+      summaryJSON.lastUpdated = lastCheckedTimes.length > 0
+        ? new Date(Math.max(...lastCheckedTimes)).toISOString()
+        : new Date().toISOString();
+
+      // Apply filter AFTER summary — filter only trims the `repositories` list.
+      let filteredRepos = repositories;
+      if (filter === 'compliant') {
+        filteredRepos = repositories.filter(r => r.compliant === true);
+      } else if (filter === 'non-compliant') {
+        filteredRepos = repositories.filter(r => r.compliant === false);
+      }
 
       const result = {
-        repositories: repositories.map(repo => 
+        repositories: filteredRepos.map(repo =>
           includeDetails ? repo.toJSON() : this.simplifyRepositoryData(repo)
         ),
-        summary: summary.toJSON(),
+        summary: summaryJSON,
         timestamp: new Date().toISOString()
       };
 
@@ -121,6 +161,7 @@ class ComplianceService extends EventEmitter {
       return result;
 
     } catch (error) {
+      if (error.code === 'INVALID_FILTER') throw error;
       console.error('Error getting compliance status:', error);
       throw new Error(`Failed to get compliance status: ${error.message}`);
     }
