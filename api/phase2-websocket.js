@@ -69,10 +69,6 @@ class Phase2WebSocketExtension {
         description: 'Template compliance tracking and application updates',
         // Canonical event names (Vikunja #624 / #667 Decision 5). Wire format:
         //   `compliance:updated`, `compliance:job-started`, etc.
-        // Legacy names (`compliance.checked`, `compliance.job-started`, ...)
-        // are retained for one release to ease rolling upgrades of any ad-hoc
-        // clients not yet moved to the canonical names. New emitters MUST use
-        // the canonical names (no `compliance.` prefix).
         events: [
           // Canonical lifecycle events
           'updated',
@@ -90,15 +86,6 @@ class Phase2WebSocketExtension {
           'templates.requested',
           'history.requested',
           'template.applied',
-          // Legacy — remove in the next major release
-          'compliance.checked',
-          'compliance.job-started',
-          'compliance.job-progress',
-          'compliance.job-completed',
-          'compliance.job-failed',
-          'compliance.application-started',
-          'compliance.application-completed',
-          'compliance.application-failed'
         ]
       },
       {
