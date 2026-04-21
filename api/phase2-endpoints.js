@@ -8,13 +8,20 @@ const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 
 // Import authentication middleware
-const { 
-  authenticate, 
-  authenticateOptional, 
-  authorize, 
-  requireRole 
+const {
+  authenticate,
+  authenticateOptional,
+  authorize,
+  requireRole
 } = require('./middleware/auth');
 const { Permission } = require('./models/user');
+const SecurityMiddleware = require('./middleware/security');
+
+// Rate limiter for sensitive, state-mutating template operations.
+// Instantiated once at module load so the counter is shared across requests.
+// Auto-skips in NODE_ENV=test to keep the suite's ~12 back-to-back /apply
+// calls under the limit.
+const complianceApplyRateLimit = SecurityMiddleware.sensitiveRateLimit();
 
 // Create Phase 2 router
 const phase2Router = express.Router();
@@ -2188,7 +2195,12 @@ phase2Router.get('/compliance/history', async (req, res) => {
 });
 
 // POST /api/v2/compliance/apply - Apply templates to non-compliant repositories
-phase2Router.post('/compliance/apply', validateRequest(['repository', 'templates']), async (req, res) => {
+phase2Router.post('/compliance/apply',
+  complianceApplyRateLimit,
+  authenticate,
+  authorize(Permission.RESOURCES.TEMPLATES, Permission.ACTIONS.APPLY),
+  validateRequest(['repository', 'templates']),
+  async (req, res) => {
   try {
     const complianceService = getComplianceService(req);
 
