@@ -350,9 +350,15 @@ class ComplianceService extends EventEmitter {
       // Job created via another path; nothing to wait on.
       return { status: job.status, job };
     }
+    // Defensive clamp: timeoutMs may flow from user input. Route layer also
+    // clamps, but service-level bound prevents resource exhaustion if the
+    // service is called from a path that forgot to validate.
+    const safeTimeoutMs = Number.isFinite(timeoutMs)
+      ? Math.min(Math.max(timeoutMs, 0), 60000)
+      : 30000;
     let timer;
     const timeout = new Promise(resolve => {
-      timer = setTimeout(() => resolve('__timeout__'), timeoutMs);
+      timer = setTimeout(() => resolve('__timeout__'), safeTimeoutMs);
     });
     try {
       const outcome = await Promise.race([

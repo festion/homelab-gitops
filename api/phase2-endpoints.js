@@ -2141,8 +2141,14 @@ phase2Router.post('/compliance/check',
     });
 
     if (req.query.wait === 'true') {
-      const timeoutMs = req.query.waitTimeoutMs
+      const WAIT_TIMEOUT_MIN_MS = 1000;
+      const WAIT_TIMEOUT_MAX_MS = 60000;
+      const rawTimeoutMs = req.query.waitTimeoutMs
         ? parseInt(req.query.waitTimeoutMs, 10)
+        : 30000;
+      // Clamp to sane bounds — user-controlled timer duration is a DoS vector.
+      const timeoutMs = Number.isFinite(rawTimeoutMs)
+        ? Math.min(Math.max(rawTimeoutMs, WAIT_TIMEOUT_MIN_MS), WAIT_TIMEOUT_MAX_MS)
         : 30000;
       const outcome = await complianceService.waitForJob(result.jobId, { timeoutMs });
       if (outcome.status === 'timeout') {
