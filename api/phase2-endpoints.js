@@ -1812,7 +1812,7 @@ phase2Router.post('/pipelines/trigger',
     
     const result = await pipelineService.triggerPipeline(request);
     
-    // Emit WebSocket event
+    // Emit WebSocket event — legacy request-tracking name retained.
     emitWSEvent(req, 'pipelines', 'pipeline.triggered', {
       repository,
       workflow,
@@ -1820,7 +1820,18 @@ phase2Router.post('/pipelines/trigger',
       inputs: request.inputs,
       success: result.success
     });
-    
+
+    // Emit canonical lifecycle `pipeline:status` event (Vikunja #624 / #667
+    // Decision 5 / Task B5). This is what workflow.test.js listens for.
+    emitWSEvent(req, 'pipelines', 'pipeline:status', {
+      runId: result.runId,
+      repository,
+      workflow,
+      branch: request.branch,
+      status: result.status || 'pending',
+      timestamp: new Date().toISOString(),
+    });
+
     res.json(result);
   } catch (error) {
     console.error('Error triggering pipeline:', error);

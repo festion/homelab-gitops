@@ -29,16 +29,29 @@ class Phase2WebSocketExtension {
       {
         name: 'pipelines',
         description: 'Pipeline execution and status updates',
+        // Canonical lifecycle events (#624 / #667 Decision 5): wire format
+        //   `pipelines:pipeline:status` — catch-all lifecycle-transition event
+        //   used by dashboard + workflow.test.js. Other names below are
+        //   retained for existing emitters.
         events: [
-          'pipeline.started', 
-          'pipeline.progress', 
-          'pipeline.completed', 
-          'pipeline.failed', 
+          'pipeline:status',
+          'pipeline.started',
+          'pipeline.progress',
+          'pipeline.completed',
+          'pipeline.failed',
           'pipeline.stage.update',
           'pipeline.triggered',
           'pipeline.step-update',
           'pipeline.metrics',
-          'pipeline.status-summary'
+          'pipeline.status-summary',
+          'pipeline.validated',
+          'workflow.generated',
+          'workflow.deployment.started',
+          'workflow.deployment.completed',
+          'workflow.deployment.failed',
+          'status.requested',
+          'history.requested',
+          'metrics.requested',
         ]
       },
       {
