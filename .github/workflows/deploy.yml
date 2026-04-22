@@ -49,10 +49,11 @@ jobs:
       run: |
         # Create a clean directory for deployment files
         mkdir -p deploy-staging
-        
+
         # Copy only the files we need for deployment
         cp -r api deploy-staging/
         cp -r dashboard/dist deploy-staging/dashboard
+        cp -r config deploy-staging/
         cp package.json deploy-staging/
         cp README.md deploy-staging/ || true
         cp -r scripts deploy-staging/ || true
@@ -136,6 +137,10 @@ jobs:
           echo "==> Installing production API deps in staging"
           cd "\$STAGING_DIR/api"
           npm ci --omit=dev --no-audit --no-fund --silent
+          # sqlite3 prebuilt binaries link against GLIBC 2.38; Debian 12 has
+          # 2.36. Force a local compile so the module loads at runtime.
+          # (Captured in global env learnings 2026-04-20.)
+          npm rebuild sqlite3 --build-from-source --silent
 
           echo "==> Backing up current \$INSTALL_DIR"
           mkdir -p "\$BACKUP_DIR"
