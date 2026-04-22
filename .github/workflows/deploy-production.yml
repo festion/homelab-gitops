@@ -92,15 +92,17 @@ jobs:
         
     - name: Create deployment artifact
       run: |
-        tar -czf deployment-artifact.tar.gz \
+        # Write to /tmp so tar never reads the archive it's writing.
+        # Previous form (self-archiving in cwd) raced under --exclude='*.tar.gz'.
+        tar -czf /tmp/deployment-artifact.tar.gz \
           --exclude='.git' \
           --exclude='node_modules' \
-          --exclude='*.tar.gz' \
           --exclude='coverage' \
           --exclude='.nyc_output' \
           --exclude='api/node_modules' \
           --exclude='dashboard/node_modules' \
           .
+        mv /tmp/deployment-artifact.tar.gz ./
           
     - name: Upload deployment artifact
       uses: actions/upload-artifact@v5
