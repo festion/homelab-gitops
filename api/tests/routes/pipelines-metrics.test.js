@@ -16,10 +16,20 @@ describe('GET /api/v2/pipelines/metrics (B10 / NEW-3)', () => {
 
   beforeEach(() => {
     pipelineService = {
+      // Per-repo shape must match the canonical RepoMetrics typedef in
+      // services/pipeline/pipelineService.js (Vikunja #682).
       getPipelineMetrics: jest.fn(async () => ({
         metrics: {
-          'org/repo-a': { total: 10, successful: 9, failed: 1, successRate: 90, averageDuration: 120 },
-          'org/repo-b': { total: 5, successful: 3, failed: 2, successRate: 60, averageDuration: 200 },
+          'org/repo-a': {
+            total: 10, successful: 9, failed: 1, cancelled: 0,
+            successRate: 90, failureRate: 10,
+            averageDuration: 120, medianDuration: 115,
+          },
+          'org/repo-b': {
+            total: 5, successful: 3, failed: 2, cancelled: 0,
+            successRate: 60, failureRate: 40,
+            averageDuration: 200, medianDuration: 195,
+          },
         },
         timeRange: '7d',
         timestamp: '2026-04-21T12:00:00Z',
