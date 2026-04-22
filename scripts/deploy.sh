@@ -2,7 +2,7 @@
 
 # GitOps Auditor Production Deployment Script
 # Version: 1.1.0 (Phase 1 MCP Integration)
-# Usage: curl -fsSL https://raw.githubusercontent.com/festion/homelab-gitops-auditor/main/scripts/deploy.sh | bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/festion/homelab-gitops/main/scripts/deploy.sh | bash
 
 set -euo pipefail
 
@@ -10,7 +10,7 @@ set -euo pipefail
 INSTALL_DIR="/opt/gitops"
 BACKUP_DIR="/opt/gitops-backups"
 SERVICE_NAME="gitops-audit-api"
-GITHUB_REPO="festion/homelab-gitops-auditor"
+GITHUB_REPO="festion/homelab-gitops"
 BRANCH="main"
 
 # Colors
@@ -81,7 +81,7 @@ if [[ ! -f "gitops-update.zip" ]]; then
 fi
 
 unzip -q -o gitops-update.zip
-EXTRACT_DIR="homelab-gitops-auditor-$BRANCH"
+EXTRACT_DIR="homelab-gitops-$BRANCH"
 
 # Install/Update
 log_info "Installing to $INSTALL_DIR..."
