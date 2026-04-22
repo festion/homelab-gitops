@@ -136,18 +136,18 @@ function createApp({
       res.json(files);
     } catch (err) {
       console.error('Error listing audit history:', err);
+      res.status(500).json({ error: 'Failed to list audit history.' });
+    }
+  });
 
-  // v1.1.0 - CSV Export endpoint
+  // v1.1.0 - CSV Export endpoint.
   app.get('/audit/export/csv', auditRateLimit, (req, res) => {
     handleCSVExport(req, res, HISTORY_DIR);
   });
 
-  // v1.1.0 - Email Summary endpoint
+  // v1.1.0 - Email Summary endpoint.
   app.post('/audit/email-summary', auditRateLimit, (req, res) => {
     handleEmailSummary(req, res, HISTORY_DIR);
-  });
-      res.status(500).json({ error: 'Failed to list audit history.' });
-    }
   });
 
   // Clone missing repository.
@@ -174,10 +174,7 @@ function createApp({
     });
   });
 
-  // Commit dirty repository. NOTE: the nested app.post(...) registrations inside
-  // this exec callback are a pre-existing oddity (they re-register on every
-  // /audit/commit hit). Preserved verbatim here to keep this PR scoped to the
-  // DI refactor; see discovery task for cleanup.
+  // Commit dirty repository.
   app.post('/audit/commit', auditRateLimit, (req, res) => {
     const { repo, message } = req.body;
     const repoPath = path.join(LOCAL_DIR, repo);
@@ -187,120 +184,119 @@ function createApp({
     const cmd = `cd ${repoPath} && git add . && git commit -m "${commitMessage}"`;
     exec(cmd, (err, stdout, stderr) => {
       if (err) return res.status(500).json({ error: 'Commit failed', stderr });
-
-      // Fix remote URL mismatch
-      app.post('/audit/fix-remote', auditRateLimit, (req, res) => {
-        const { repo, expected_url } = req.body;
-        if (!repo || !expected_url)
-          return res
-            .status(400)
-            .json({ error: 'repo and expected_url required' });
-
-        const repoPath = path.join(LOCAL_DIR, repo);
-        if (!fs.existsSync(path.join(repoPath, '.git')))
-          return res.status(404).json({ error: 'Not a git repo' });
-
-        const cmd = `cd ${repoPath} && git remote set-url origin ${expected_url}`;
-        exec(cmd, (err, stdout, stderr) => {
-          if (err)
-            return res
-              .status(500)
-              .json({ error: 'Failed to fix remote URL', stderr });
-          res.json({ status: `Fixed remote URL for ${repo}`, stdout });
-        });
-      });
-
-      // Run comprehensive audit script
-      app.post('/audit/run-comprehensive', auditRateLimit, (req, res) => {
-        const scriptPath = isDev
-          ? path.join(rootDir, 'scripts/comprehensive_audit.sh')
-          : '/opt/gitops/scripts/comprehensive_audit.sh';
-
-        const devFlag = isDev ? '--dev' : '';
-        const cmd = `bash ${scriptPath} ${devFlag}`;
-
-        exec(cmd, { timeout: 60000 }, (err, stdout, stderr) => {
-          if (err)
-            return res
-              .status(500)
-              .json({ error: 'Comprehensive audit failed', stderr });
-          res.json({ status: 'Comprehensive audit completed', stdout });
-        });
-      });
-
-      // Get repository mismatch details
-      app.get('/audit/mismatch/:repo', auditRateLimit, (req, res) => {
-        const repo = req.params.repo;
-        const repoPath = path.join(LOCAL_DIR, repo);
-
-        if (!fs.existsSync(path.join(repoPath, '.git'))) {
-          return res.status(404).json({ error: 'Not a git repo' });
-        }
-
-        const cmd = `cd ${repoPath} && git remote get-url origin`;
-        exec(cmd, (err, stdout) => {
-          if (err)
-            return res.status(500).json({ error: 'Failed to get remote URL' });
-
-          const currentUrl = stdout.trim();
-          const expectedUrl = `https://github.com/${config && config.get ? config.get('GITHUB_USER') : ''}/${repo}.git`;
-
-          res.json({
-            repo,
-            currentUrl,
-            expectedUrl,
-            mismatch: currentUrl !== expectedUrl,
-          });
-        });
-      });
-
-      // Batch operation for multiple repositories
-      app.post('/audit/batch', auditRateLimit, (req, res) => {
-        const { operation, repos } = req.body;
-        if (!operation || !repos || !Array.isArray(repos)) {
-          return res
-            .status(400)
-            .json({ error: 'operation and repos array required' });
-        }
-
-        const results = [];
-        let completed = 0;
-
-        repos.forEach((repo) => {
-          let cmd;
-          const repoPath = path.join(LOCAL_DIR, repo);
-
-          switch (operation) {
-            case 'clone':
-              cmd = `git clone https://github.com/${config && config.get ? config.get('GITHUB_USER') : ''}/${repo}.git ${repoPath}`;
-              break;
-            case 'fix-remote':
-              cmd = `cd ${repoPath} && git remote set-url origin https://github.com/${config && config.get ? config.get('GITHUB_USER') : ''}/${repo}.git`;
-              break;
-            case 'delete':
-              cmd = `rm -rf ${repoPath}`;
-              break;
-            default:
-              return res.status(400).json({ error: 'Invalid operation' });
-          }
-
-          exec(cmd, (err, stdout, stderr) => {
-            results.push({
-              repo,
-              success: !err,
-              error: err ? err.message : null,
-              output: stdout,
-            });
-
-            completed++;
-            if (completed === repos.length) {
-              res.json({ operation, results });
-            }
-          });
-        });
-      });
-
       res.json({ status: 'Committed changes', stdout });
+    });
+  });
+
+  // Fix remote URL mismatch.
+  app.post('/audit/fix-remote', auditRateLimit, (req, res) => {
+    const { repo, expected_url } = req.body;
+    if (!repo || !expected_url)
+      return res
+        .status(400)
+        .json({ error: 'repo and expected_url required' });
+
+    const repoPath = path.join(LOCAL_DIR, repo);
+    if (!fs.existsSync(path.join(repoPath, '.git')))
+      return res.status(404).json({ error: 'Not a git repo' });
+
+    const cmd = `cd ${repoPath} && git remote set-url origin ${expected_url}`;
+    exec(cmd, (err, stdout, stderr) => {
+      if (err)
+        return res
+          .status(500)
+          .json({ error: 'Failed to fix remote URL', stderr });
+      res.json({ status: `Fixed remote URL for ${repo}`, stdout });
+    });
+  });
+
+  // Run comprehensive audit script.
+  app.post('/audit/run-comprehensive', auditRateLimit, (req, res) => {
+    const scriptPath = isDev
+      ? path.join(rootDir, 'scripts/comprehensive_audit.sh')
+      : '/opt/gitops/scripts/comprehensive_audit.sh';
+
+    const devFlag = isDev ? '--dev' : '';
+    const cmd = `bash ${scriptPath} ${devFlag}`;
+
+    exec(cmd, { timeout: 60000 }, (err, stdout, stderr) => {
+      if (err)
+        return res
+          .status(500)
+          .json({ error: 'Comprehensive audit failed', stderr });
+      res.json({ status: 'Comprehensive audit completed', stdout });
+    });
+  });
+
+  // Get repository mismatch details.
+  app.get('/audit/mismatch/:repo', auditRateLimit, (req, res) => {
+    const repo = req.params.repo;
+    const repoPath = path.join(LOCAL_DIR, repo);
+
+    if (!fs.existsSync(path.join(repoPath, '.git'))) {
+      return res.status(404).json({ error: 'Not a git repo' });
+    }
+
+    const cmd = `cd ${repoPath} && git remote get-url origin`;
+    exec(cmd, (err, stdout) => {
+      if (err)
+        return res.status(500).json({ error: 'Failed to get remote URL' });
+
+      const currentUrl = stdout.trim();
+      const expectedUrl = `https://github.com/${config && config.get ? config.get('GITHUB_USER') : ''}/${repo}.git`;
+
+      res.json({
+        repo,
+        currentUrl,
+        expectedUrl,
+        mismatch: currentUrl !== expectedUrl,
+      });
+    });
+  });
+
+  // Batch operation for multiple repositories.
+  app.post('/audit/batch', auditRateLimit, (req, res) => {
+    const { operation, repos } = req.body;
+    if (!operation || !repos || !Array.isArray(repos)) {
+      return res
+        .status(400)
+        .json({ error: 'operation and repos array required' });
+    }
+
+    const results = [];
+    let completed = 0;
+
+    repos.forEach((repo) => {
+      let cmd;
+      const repoPath = path.join(LOCAL_DIR, repo);
+
+      switch (operation) {
+        case 'clone':
+          cmd = `git clone https://github.com/${config && config.get ? config.get('GITHUB_USER') : ''}/${repo}.git ${repoPath}`;
+          break;
+        case 'fix-remote':
+          cmd = `cd ${repoPath} && git remote set-url origin https://github.com/${config && config.get ? config.get('GITHUB_USER') : ''}/${repo}.git`;
+          break;
+        case 'delete':
+          cmd = `rm -rf ${repoPath}`;
+          break;
+        default:
+          return res.status(400).json({ error: 'Invalid operation' });
+      }
+
+      exec(cmd, (err, stdout, stderr) => {
+        results.push({
+          repo,
+          success: !err,
+          error: err ? err.message : null,
+          output: stdout,
+        });
+
+        completed++;
+        if (completed === repos.length) {
+          res.json({ operation, results });
+        }
+      });
     });
   });
 
