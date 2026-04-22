@@ -40,6 +40,11 @@ function createApp({
   const HISTORY_DIR = historyDir || path.join(rootDir, 'audit-history');
   const LOCAL_DIR = localDir;
 
+  // Shared rate limiter for /audit/* handlers (Vikunja #669 — CodeQL
+  // js/missing-rate-limiting). One instance so the counter is shared across
+  // related sensitive ops; sensitiveRateLimit() already skips in NODE_ENV=test.
+  const auditRateLimit = SecurityMiddleware.sensitiveRateLimit();
+
   // Security middleware (must come before body parsers + routes).
   const stack = isDev
     ? SecurityMiddleware.developmentSecurity()
@@ -93,7 +98,7 @@ function createApp({
   }
 
   // Load latest audit report.
-  app.get('/audit', (req, res) => {
+  app.get('/audit', auditRateLimit, (req, res) => {
     try {
       const latestJsonPath = path.join(HISTORY_DIR, 'latest.json');
 
@@ -116,7 +121,7 @@ function createApp({
   });
 
   // List historical audit reports.
-  app.get('/audit/history', (req, res) => {
+  app.get('/audit/history', auditRateLimit, (req, res) => {
     try {
       if (!fs.existsSync(HISTORY_DIR)) {
         fs.mkdirSync(HISTORY_DIR, { recursive: true });
@@ -133,12 +138,12 @@ function createApp({
       console.error('Error listing audit history:', err);
 
   // v1.1.0 - CSV Export endpoint
-  app.get('/audit/export/csv', (req, res) => {
+  app.get('/audit/export/csv', auditRateLimit, (req, res) => {
     handleCSVExport(req, res, HISTORY_DIR);
   });
 
   // v1.1.0 - Email Summary endpoint
-  app.post('/audit/email-summary', (req, res) => {
+  app.post('/audit/email-summary', auditRateLimit, (req, res) => {
     handleEmailSummary(req, res, HISTORY_DIR);
   });
       res.status(500).json({ error: 'Failed to list audit history.' });
@@ -146,7 +151,7 @@ function createApp({
   });
 
   // Clone missing repository.
-  app.post('/audit/clone', (req, res) => {
+  app.post('/audit/clone', auditRateLimit, (req, res) => {
     const { repo, clone_url } = req.body;
     if (!repo || !clone_url)
       return res.status(400).json({ error: 'repo and clone_url required' });
@@ -158,7 +163,7 @@ function createApp({
   });
 
   // Delete extra repository.
-  app.post('/audit/delete', (req, res) => {
+  app.post('/audit/delete', auditRateLimit, (req, res) => {
     const { repo } = req.body;
     const target = path.join(LOCAL_DIR, repo);
     if (!fs.existsSync(target))
@@ -173,7 +178,7 @@ function createApp({
   // this exec callback are a pre-existing oddity (they re-register on every
   // /audit/commit hit). Preserved verbatim here to keep this PR scoped to the
   // DI refactor; see discovery task for cleanup.
-  app.post('/audit/commit', (req, res) => {
+  app.post('/audit/commit', auditRateLimit, (req, res) => {
     const { repo, message } = req.body;
     const repoPath = path.join(LOCAL_DIR, repo);
     if (!fs.existsSync(path.join(repoPath, '.git')))
@@ -184,7 +189,7 @@ function createApp({
       if (err) return res.status(500).json({ error: 'Commit failed', stderr });
 
       // Fix remote URL mismatch
-      app.post('/audit/fix-remote', (req, res) => {
+      app.post('/audit/fix-remote', auditRateLimit, (req, res) => {
         const { repo, expected_url } = req.body;
         if (!repo || !expected_url)
           return res
@@ -206,7 +211,7 @@ function createApp({
       });
 
       // Run comprehensive audit script
-      app.post('/audit/run-comprehensive', (req, res) => {
+      app.post('/audit/run-comprehensive', auditRateLimit, (req, res) => {
         const scriptPath = isDev
           ? path.join(rootDir, 'scripts/comprehensive_audit.sh')
           : '/opt/gitops/scripts/comprehensive_audit.sh';
@@ -224,7 +229,7 @@ function createApp({
       });
 
       // Get repository mismatch details
-      app.get('/audit/mismatch/:repo', (req, res) => {
+      app.get('/audit/mismatch/:repo', auditRateLimit, (req, res) => {
         const repo = req.params.repo;
         const repoPath = path.join(LOCAL_DIR, repo);
 
@@ -250,7 +255,7 @@ function createApp({
       });
 
       // Batch operation for multiple repositories
-      app.post('/audit/batch', (req, res) => {
+      app.post('/audit/batch', auditRateLimit, (req, res) => {
         const { operation, repos } = req.body;
         if (!operation || !repos || !Array.isArray(repos)) {
           return res
@@ -300,7 +305,7 @@ function createApp({
   });
 
   // Discard changes in dirty repo.
-  app.post('/audit/discard', (req, res) => {
+  app.post('/audit/discard', auditRateLimit, (req, res) => {
     const { repo } = req.body;
     const repoPath = path.join(LOCAL_DIR, repo);
     if (!fs.existsSync(path.join(repoPath, '.git')))
@@ -313,7 +318,7 @@ function createApp({
   });
 
   // Return status and diff for dirty repository.
-  app.get('/audit/diff/:repo', (req, res) => {
+  app.get('/audit/diff/:repo', auditRateLimit, (req, res) => {
     const repo = req.params.repo;
     const repoPath = path.join(LOCAL_DIR, repo);
     if (!fs.existsSync(path.join(repoPath, '.git')))
