@@ -38,7 +38,6 @@ module.exports = {
     'server.js',
     'server-v2.js',
     'websocket-server.js',
-    'phase2-websocket.js',
     '!**/node_modules/**',
     '!**/tests/**',
     '!**/test/**',
