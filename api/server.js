@@ -14,6 +14,7 @@ const AuthService = require('./services/auth/authService');
 const WikiAgentManager = require('./wiki-agent-manager');
 const wikiRoutes = require('./routes/wiki');
 
+const SecurityMiddleware = require('./middleware/security');
 const { createApp } = require('./createApp');
 
 const config = new ConfigLoader();
@@ -107,7 +108,9 @@ async function startServer() {
 
         // Attach the webhook middleware. The raw-body pre-middleware is
         // registered inside createApp; this mounts the handler itself.
-        app.use('/api/v2/webhooks/github', webhookHandler.middleware());
+        // Rate limit added for Vikunja #669 (CodeQL js/missing-rate-limiting);
+        // signature verification inside webhookHandler still gates authenticity.
+        app.use('/api/v2/webhooks/github', SecurityMiddleware.sensitiveRateLimit(), webhookHandler.middleware());
 
         webhookHandler.on('push_event', (event) => {
           if (wsManager) {

@@ -2321,6 +2321,7 @@ phase2Router.get('/compliance/repository/:repo', async (req, res) => {
 //   default     — fire-and-forget; returns {jobId, estimatedDuration, ...}
 const WAIT_TIMEOUT_MS = 30000;
 phase2Router.post('/compliance/check',
+  complianceApplyRateLimit,
   authenticate,
   authorize(Permission.RESOURCES.TEMPLATES, Permission.ACTIONS.APPLY),
   async (req, res) => {
