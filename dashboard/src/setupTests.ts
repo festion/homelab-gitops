@@ -1,4 +1,11 @@
 import '@testing-library/jest-dom';
+import { vi, beforeEach } from 'vitest';
+
+// Compat shim: existing tests were authored for Jest and use `jest.fn()`,
+// `jest.clearAllMocks()`, etc. Vitest exposes the same surface on `vi`.
+// Alias `jest -> vi` globally so Jest-style tests run under Vitest without
+// per-file rewrites. Remove once the suite is fully migrated.
+(globalThis as typeof globalThis & { jest: typeof vi }).jest = vi;
 
 // Mock WebSocket for testing
 class MockWebSocket {
