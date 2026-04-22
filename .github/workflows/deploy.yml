@@ -149,6 +149,21 @@ jobs:
           # (Captured in global env learnings 2026-04-20.)
           npm rebuild sqlite3 --build-from-source --silent
 
+          echo "==> Preserving runtime state across the swap"
+          # Carry live data forward from /opt/gitops into the staging tree so
+          # the atomic rename doesn't wipe it. Paths are tolerant of missing
+          # sources (first-ever deploy has no state to preserve).
+          for rel in audit-history api/data wiki-agent.db logs; do
+            src="\$INSTALL_DIR/\$rel"
+            dst="\$STAGING_DIR/\$rel"
+            if [ -e "\$src" ]; then
+              mkdir -p "\$(dirname "\$dst")"
+              rm -rf "\$dst"
+              cp -a "\$src" "\$dst"
+              echo "preserved: \$rel"
+            fi
+          done
+
           echo "==> Backing up current \$INSTALL_DIR"
           mkdir -p "\$BACKUP_DIR"
           BACKUP="\$BACKUP_DIR/gitops-\$(date +%Y%m%d_%H%M%S)"
