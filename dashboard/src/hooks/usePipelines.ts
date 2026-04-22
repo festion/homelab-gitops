@@ -125,59 +125,6 @@ export const usePipelines = (options: UsePipelinesOptions = {}): UsePipelinesRet
   };
 };
 
-// Hook for managing pipeline subscriptions via WebSocket
-export const usePipelineSubscription = (
-  onPipelineUpdate: (pipeline: Pipeline) => void,
-  onPipelineStatusChange: (pipelines: Pipeline[]) => void
-) => {
-  const [subscribed, setSubscribed] = useState(false);
-
-  const subscribe = useCallback((sendMessage: (message: any) => void) => {
-    if (!subscribed) {
-      sendMessage({ 
-        type: 'subscribe', 
-        channel: 'pipelines',
-        events: ['status', 'update', 'complete']
-      });
-      setSubscribed(true);
-    }
-  }, [subscribed]);
-
-  const unsubscribe = useCallback((sendMessage: (message: any) => void) => {
-    if (subscribed) {
-      sendMessage({ 
-        type: 'unsubscribe', 
-        channel: 'pipelines' 
-      });
-      setSubscribed(false);
-    }
-  }, [subscribed]);
-
-  const handleMessage = useCallback((message: any) => {
-    switch (message.type) {
-      case 'pipeline:update':
-        onPipelineUpdate(message.data);
-        break;
-      case 'pipeline:status':
-        onPipelineStatusChange(message.data || []);
-        break;
-      case 'pipeline:complete':
-        onPipelineUpdate(message.data);
-        break;
-      default:
-        // Ignore unknown message types
-        break;
-    }
-  }, [onPipelineUpdate, onPipelineStatusChange]);
-
-  return {
-    subscribed,
-    subscribe,
-    unsubscribe,
-    handleMessage
-  };
-};
-
 // Hook for pipeline analytics and statistics
 export const usePipelineAnalytics = (pipelines: Pipeline[]) => {
   const getSuccessRate = useCallback((repository?: string): number => {
