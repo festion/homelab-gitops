@@ -55,6 +55,7 @@ jobs:
         cp -r dashboard/dist deploy-staging/dashboard
         cp -r config deploy-staging/
         cp package.json deploy-staging/
+        cp package-lock.json deploy-staging/ 2>/dev/null || true
         cp README.md deploy-staging/ || true
         cp -r scripts deploy-staging/ || true
         
@@ -133,6 +134,11 @@ jobs:
           rm -rf "\$STAGING_DIR"
           mkdir -p "\$STAGING_DIR"
           tar -xzf "\$TARBALL" -C "\$STAGING_DIR"
+
+          echo "==> Installing production root deps (ajv/lodash used by config/)"
+          cd "\$STAGING_DIR"
+          npm ci --omit=dev --no-audit --no-fund --silent || \
+            npm install --omit=dev --no-audit --no-fund --silent --no-package-lock
 
           echo "==> Installing production API deps in staging"
           cd "\$STAGING_DIR/api"
