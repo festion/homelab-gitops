@@ -86,37 +86,109 @@ jobs:
   deploy-homelab:
     # Runs on the self-hosted runner inside the homelab network so it can
     # SSH to 192.168.1.136 directly. Authentication is via the runner
-    # user's ed25519 key, which is authorised in root@gitopsdashboard's
+    # user's ed25519 key, authorised in root@gitopsdashboard's
     # authorized_keys (installed 2026-04-22 as part of #704).
     #
-    # Gated on workflow_dispatch for initial safe rollout — flip to
-    # also run on push once verified.
+    # Artifact-based atomic-swap deploy (not in-place build): prod CT has
+    # only 512MB RAM and can't run Vite/tsc. The `deploy` job on
+    # ubuntu-latest does the heavy lifting; this job just ships the
+    # pre-built tarball and swaps it in.
+    #
+    # Gated on workflow_dispatch for initial safe rollout — remove the
+    # `if:` clause once verified end-to-end.
     runs-on: self-hosted
     needs: deploy
     if: github.event_name == 'workflow_dispatch'
+    env:
+      PROD_HOST: 192.168.1.136
+      PROD_USER: root
+      ARTIFACT_NAME: deployment-package-${{ github.sha }}
+      TARBALL: homelab-gitops-auditor-${{ github.sha }}.tar.gz
     steps:
-      - name: Pull current deploy.sh + run on prod
-        env:
-          # Cachebust raw.githubusercontent.com's 5-min CDN so we always get
-          # the exact commit's deploy.sh (not a stale copy).
-          DEPLOY_SHA: ${{ github.sha }}
-        run: |
-          ssh -o StrictHostKeyChecking=accept-new root@192.168.1.136 "
-            set -e
-            curl -fsSL -o /tmp/deploy.sh \
-              'https://raw.githubusercontent.com/festion/homelab-gitops/${DEPLOY_SHA}/scripts/deploy.sh'
-            bash /tmp/deploy.sh --backup-current
-            rm -f /tmp/deploy.sh
-          "
+      - name: Download deployment artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
 
-      - name: Smoke test /audit
+      - name: Ship tarball to prod
         run: |
-          for i in 1 2 3 4 5 6 7 8 9 10; do
-            if curl -fsSL --max-time 5 http://192.168.1.136:3070/audit > /dev/null; then
-              echo "OK: /audit responded on attempt $i"
+          scp -o StrictHostKeyChecking=accept-new \
+            "$TARBALL" \
+            "$PROD_USER@$PROD_HOST:/tmp/$TARBALL"
+
+      - name: Atomic-swap install on prod
+        run: |
+          ssh -o StrictHostKeyChecking=accept-new "$PROD_USER@$PROD_HOST" bash -se << EOF
+          set -euo pipefail
+
+          INSTALL_DIR=/opt/gitops
+          STAGING_DIR=/opt/gitops-new
+          OLD_DIR=/opt/gitops-old
+          BACKUP_DIR=/opt/gitops-backups
+          UNIT=/etc/systemd/system/gitops-audit-api.service
+          TARBALL=/tmp/$TARBALL
+
+          echo "==> Creating staging dir"
+          rm -rf "\$STAGING_DIR"
+          mkdir -p "\$STAGING_DIR"
+          tar -xzf "\$TARBALL" -C "\$STAGING_DIR"
+
+          echo "==> Installing production API deps in staging"
+          cd "\$STAGING_DIR/api"
+          npm ci --omit=dev --no-audit --no-fund --silent
+
+          echo "==> Backing up current \$INSTALL_DIR"
+          mkdir -p "\$BACKUP_DIR"
+          BACKUP="\$BACKUP_DIR/gitops-\$(date +%Y%m%d_%H%M%S)"
+          cp -a "\$INSTALL_DIR" "\$BACKUP"
+          echo "Backup: \$BACKUP"
+
+          echo "==> Ensuring systemd unit points at repo server.js"
+          # server.js lives at /opt/gitops/api/server.js after deploy; the
+          # existing unit targets /opt/gitops/current/api/minimal-phase2-server.js
+          # (pre-reconciliation). Idempotent rewrite: only touches if needed.
+          if /usr/bin/grep -q minimal-phase2-server.js "\$UNIT" || \
+             /usr/bin/grep -q /opt/gitops/current/api "\$UNIT"; then
+            /usr/bin/sed -i \
+              -e 's|^WorkingDirectory=.*|WorkingDirectory=/opt/gitops/api|' \
+              -e 's|^ExecStart=.*|ExecStart=/usr/bin/node server.js|' \
+              "\$UNIT"
+            systemctl daemon-reload
+            echo "systemd unit updated"
+          else
+            echo "systemd unit already correct"
+          fi
+
+          echo "==> Stopping service"
+          systemctl stop gitops-audit-api
+
+          echo "==> Atomic swap"
+          rm -rf "\$OLD_DIR"
+          mv "\$INSTALL_DIR" "\$OLD_DIR"
+          mv "\$STAGING_DIR" "\$INSTALL_DIR"
+
+          echo "==> Starting service"
+          systemctl start gitops-audit-api
+
+          echo "==> Cleanup"
+          rm -f "\$TARBALL"
+          rm -rf "\$OLD_DIR"
+          # Retain only last 5 backups
+          ls -1dt "\$BACKUP_DIR"/gitops-* 2>/dev/null | tail -n +6 | xargs -r rm -rf
+          EOF
+
+      - name: Smoke test endpoints
+        run: |
+          set -e
+          for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
+            if curl -fsSL --max-time 5 "http://$PROD_HOST:3070/api/v2/platform/health" > /dev/null; then
+              echo "OK: /api/v2/platform/health on attempt $i"
+              # Also probe /audit (real API surface, new on this deploy).
+              curl -s -o /dev/null -w "/audit: HTTP %{http_code}\n" --max-time 5 "http://$PROD_HOST:3070/audit"
               exit 0
             fi
             sleep 3
           done
-          echo "FAIL: /audit did not respond within 30s post-deploy"
+          echo "FAIL: /api/v2/platform/health did not respond within 36s"
+          systemctl status gitops-audit-api || true
           exit 1
