@@ -8,6 +8,7 @@
 const EventEmitter = require('events');
 const path = require('path');
 const fs = require('fs').promises;
+const { sanitizeForLog } = require('./templateEngine');
 const {
   RepositoryCompliance,
   ComplianceIssue,
@@ -244,7 +245,13 @@ class ComplianceService extends EventEmitter {
         }
 
       } catch (error) {
-        console.error(`Error checking template ${templateName} for ${repositoryName}:`, error);
+        // #686: defuse tainted-format-string via positional %s + sanitizer.
+        console.error(
+          'Error checking template %s for %s:',
+          sanitizeForLog(templateName),
+          sanitizeForLog(repositoryName),
+          error
+        );
         allIssues.push(new ComplianceIssue({
           type: ComplianceIssueType.INVALID,
           template: templateName,
