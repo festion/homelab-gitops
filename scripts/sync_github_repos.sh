@@ -11,8 +11,9 @@ set -euo pipefail
 GITHUB_USER="festion"
 GITHUB_API_URL="https://api.github.com/users/${GITHUB_USER}/repos?per_page=100"
 
-# Determine if running in dev mode
-if [ "$1" = "--dev" ] || [ -f ".dev_mode" ]; then
+# Determine if running in dev mode. Default $1 to empty so `set -u` doesn't
+# trip when invoked without arguments (prod/cron path).
+if [ "${1:-}" = "--dev" ] || [ -f ".dev_mode" ]; then
   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
   PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
   HISTORY_DIR="${PROJECT_ROOT}/audit-history"
