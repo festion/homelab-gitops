@@ -1,11 +1,37 @@
 /**
  * Pipeline Service
- * 
+ *
  * Provides pipeline status tracking, GitHub Actions integration,
  * and real-time pipeline monitoring capabilities.
+ *
+ * Canonical per-repo metrics shape (Vikunja #682): the object returned by
+ * `calculateMetrics` and the per-repo values of `getPipelineMetrics().metrics`
+ * MUST conform to `RepoMetrics`. Consumers (e.g. the /pipelines/metrics
+ * aggregator in phase2-endpoints.js) may rely on every field being a number.
+ *
+ * @typedef {Object} RepoMetrics
+ * @property {number} total             Total runs observed in the time range.
+ * @property {number} successful        Runs with conclusion === 'success'.
+ * @property {number} failed            Runs with conclusion === 'failure'.
+ * @property {number} cancelled         Runs with conclusion === 'cancelled'.
+ * @property {number} successRate       Rounded percentage in [0, 100].
+ * @property {number} failureRate       Rounded percentage in [0, 100].
+ * @property {number} averageDuration   Mean run duration in seconds (rounded).
+ * @property {number} medianDuration    Median run duration in seconds.
  */
 
 const EventEmitter = require('events');
+
+const REPO_METRICS_FIELDS = [
+    'total',
+    'successful',
+    'failed',
+    'cancelled',
+    'successRate',
+    'failureRate',
+    'averageDuration',
+    'medianDuration',
+];
 
 class PipelineService extends EventEmitter {
     constructor({ config, githubMCP } = {}) {
@@ -229,6 +255,12 @@ class PipelineService extends EventEmitter {
                 });
 
                 const repoMetrics = this.calculateMetrics(runs);
+                const validation = PipelineService.validateRepoMetrics(repoMetrics);
+                if (!validation.valid) {
+                    console.warn(
+                        `[pipelineService] RepoMetrics drift for ${repo}: ${validation.issues.join('; ')}`
+                    );
+                }
                 metrics[repo] = repoMetrics;
             }
 
@@ -342,6 +374,32 @@ class PipelineService extends EventEmitter {
         return Math.round((endTime - startTime) / 1000); // Duration in seconds
     }
 
+    /**
+     * Validate that an object conforms to the canonical `RepoMetrics` shape.
+     * Non-throwing; callers decide whether to warn, degrade, or reject.
+     *
+     * @param {*} metrics
+     * @returns {{ valid: boolean, issues: string[] }}
+     */
+    static validateRepoMetrics(metrics) {
+        if (metrics === null || metrics === undefined || typeof metrics !== 'object') {
+            return { valid: false, issues: [`expected object, got ${metrics === null ? 'null' : typeof metrics}`] };
+        }
+        const issues = [];
+        for (const field of REPO_METRICS_FIELDS) {
+            if (!(field in metrics)) {
+                issues.push(`missing field: ${field}`);
+            } else if (typeof metrics[field] !== 'number') {
+                issues.push(`field ${field} is not a number (got ${typeof metrics[field]})`);
+            }
+        }
+        return { valid: issues.length === 0, issues };
+    }
+
+    /**
+     * @param {Array} runs - raw GitHub workflow runs
+     * @returns {RepoMetrics}
+     */
     calculateMetrics(runs) {
         const total = runs.length;
         const successful = runs.filter(r => r.conclusion === 'success').length;
