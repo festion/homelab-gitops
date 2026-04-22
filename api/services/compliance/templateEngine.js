@@ -10,6 +10,16 @@ const fs = require('fs').promises;
 const path = require('path');
 const { Template, ComplianceIssue, ComplianceIssueType, ComplianceSeverity } = require('../../models/compliance');
 
+// Sanitize user-controlled strings for log output. Defuses the
+// js/tainted-format-string class (Vikunja #686) by stripping CR/LF/TAB and
+// other C0 control characters that could inject fake log lines, and caps
+// length so logs stay bounded.
+function sanitizeForLog(value) {
+  const s = value === null ? 'null' : value === undefined ? 'undefined' : String(value);
+  // eslint-disable-next-line no-control-regex
+  return s.replace(/[\x00-\x1F\x7F]/g, ' ').slice(0, 500);
+}
+
 class TemplateEngine {
   constructor(options = {}) {
     this.projectRoot = options.projectRoot || process.cwd();
@@ -111,8 +121,9 @@ class TemplateEngine {
       // Check required files
       for (const fileConfig of template.files) {
         if (fileConfig.required) {
-          const filePath = path.join(repositoryAbsPath, fileConfig.path);
-          
+          // Containment check (#685): refuse template paths that escape repo root.
+          const filePath = this._resolveWithinRoot(repositoryAbsPath, fileConfig.path);
+
           if (!(await this.fileExists(filePath))) {
             issues.push(new ComplianceIssue({
               type: ComplianceIssueType.MISSING,
@@ -133,8 +144,9 @@ class TemplateEngine {
       // Check required directories
       for (const dirConfig of template.directories) {
         if (dirConfig.required) {
-          const dirPath = path.join(repositoryAbsPath, dirConfig.path);
-          
+          // Containment check (#685).
+          const dirPath = this._resolveWithinRoot(repositoryAbsPath, dirConfig.path);
+
           if (!(await this.directoryExists(dirPath))) {
             issues.push(new ComplianceIssue({
               type: ComplianceIssueType.MISSING,
@@ -160,7 +172,8 @@ class TemplateEngine {
       };
 
     } catch (error) {
-      console.error(`Error checking compliance for ${repositoryPath}:`, error);
+      // #686: use positional %s with sanitized path to defuse log injection.
+      console.error('Error checking compliance for %s:', sanitizeForLog(repositoryPath), error);
       throw error;
     }
   }
@@ -215,7 +228,8 @@ class TemplateEngine {
       }
 
     } catch (error) {
-      console.error(`Error checking file content for ${filePath}:`, error);
+      // #686.
+      console.error('Error checking file content for %s:', sanitizeForLog(filePath), error);
     }
 
     return issues;
@@ -228,8 +242,9 @@ class TemplateEngine {
     try {
       // For template files, compare with source template
       if (fileConfig.source) {
-        const templateSourcePath = path.join(template.path, fileConfig.source);
-        
+        // Containment check (#685): template source must stay within template dir.
+        const templateSourcePath = this._resolveWithinRoot(template.path, fileConfig.source);
+
         if (await this.fileExists(templateSourcePath)) {
           const currentContent = await fs.readFile(filePath, 'utf8');
           const templateContent = await fs.readFile(templateSourcePath, 'utf8');
@@ -247,7 +262,8 @@ class TemplateEngine {
 
       return { isDrifted: false };
     } catch (error) {
-      console.error(`Error detecting template drift for ${filePath}:`, error);
+      // #686.
+      console.error('Error detecting template drift for %s:', sanitizeForLog(filePath), error);
       return { isDrifted: false };
     }
   }
@@ -416,6 +432,26 @@ class TemplateEngine {
   }
 
   /**
+   * Resolve `candidate` relative to `root` and assert the result stays
+   * within `root`. Defuses the js/path-injection class (Vikunja #685).
+   * Throws when candidate contains a `..` escape or is an absolute path
+   * outside root.
+   *
+   * @param {string} root
+   * @param {string} candidate
+   * @returns {string} absolute path guaranteed to be inside root
+   */
+  _resolveWithinRoot(root, candidate) {
+    const rootAbs = path.resolve(root);
+    const resolved = path.resolve(rootAbs, candidate);
+    const rel = path.relative(rootAbs, resolved);
+    if (rel === '..' || rel.startsWith('..' + path.sep) || path.isAbsolute(rel)) {
+      throw new Error(`Path '${candidate}' escapes root '${root}'`);
+    }
+    return resolved;
+  }
+
+  /**
    * Utility functions
    */
   async fileExists(filePath) {
@@ -443,3 +479,4 @@ class TemplateEngine {
 }
 
 module.exports = TemplateEngine;
+module.exports.sanitizeForLog = sanitizeForLog;
