@@ -22,7 +22,6 @@ const phase2Router = require('./phase2-endpoints');
 
 // WebSocket Support
 const WebSocketManager = require('./websocket-server');
-const Phase2WebSocketExtension = require('./phase2-websocket');
 
 const config = new ConfigLoader();
 const githubMCP = new GitHubMCPManager(config);
@@ -732,12 +731,11 @@ app.listen(PORT, '0.0.0.0', async () => {
     debounceDelay: 1000
   });
   
-  // Initialize Phase 2 WebSocket Extensions
-  const phase2WS = new Phase2WebSocketExtension(wsManager);
-  
-  // Make WebSocket manager available to Phase 2 endpoints
+  // Make WebSocket manager available to Phase 2 endpoints. phase2WS (the
+  // multiplexed channel shim) was removed in #702 — phase2-endpoints.js
+  // emit callsites are already defensive (`if (phase2WS) ...`), so they
+  // silently no-op when it's not injected.
   app.locals.wsManager = wsManager;
-  app.locals.phase2WS = phase2WS;
   
   // Initialize MCP integration with real MCP servers
   const SerenaOrchestrator = require('./serena-orchestrator');
