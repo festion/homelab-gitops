@@ -96,14 +96,18 @@ jobs:
     if: github.event_name == 'workflow_dispatch'
     steps:
       - name: Pull current deploy.sh + run on prod
+        env:
+          # Cachebust raw.githubusercontent.com's 5-min CDN so we always get
+          # the exact commit's deploy.sh (not a stale copy).
+          DEPLOY_SHA: ${{ github.sha }}
         run: |
-          ssh -o StrictHostKeyChecking=accept-new root@192.168.1.136 '
+          ssh -o StrictHostKeyChecking=accept-new root@192.168.1.136 "
             set -e
             curl -fsSL -o /tmp/deploy.sh \
-              https://raw.githubusercontent.com/festion/homelab-gitops/main/scripts/deploy.sh
+              'https://raw.githubusercontent.com/festion/homelab-gitops/${DEPLOY_SHA}/scripts/deploy.sh'
             bash /tmp/deploy.sh --backup-current
             rm -f /tmp/deploy.sh
-          '
+          "
 
       - name: Smoke test /audit
         run: |
