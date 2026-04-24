@@ -22,7 +22,7 @@ http:
     birdnet-service:
       loadBalancer:
         servers:
-        - url: http://192.168.1.197:8080
+        - url: http://192.168.10.246:8080
         healthCheck:
           path: /
           interval: 30s
