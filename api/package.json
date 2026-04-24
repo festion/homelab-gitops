@@ -16,7 +16,7 @@
     "js-yaml": "^4.1.1",
     "jsonwebtoken": "^9.0.2",
     "sqlite3": "^6.0.1",
-    "uuid": "^9.0.0",
+    "uuid": "^14.0.0",
     "validator": "^13.15.23",
     "ws": "^8.18.3"
   },
@@ -62,7 +62,9 @@
       "glob": "^7.2.3"
     },
     "rimraf": "^6.0.0",
-    "fast-xml-parser": "^5.5.7",
+    "fast-xml-parser": "^5.7.0",
+    "@smithy/middleware-retry": { "uuid": "^14.0.0" },
+    "hyperid": { "uuid": "^14.0.0" },
     "picomatch": "^4.0.4",
     "path-to-regexp": "^0.1.13",
     "lodash": "^4.18.0",
