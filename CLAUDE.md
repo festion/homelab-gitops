@@ -21,13 +21,11 @@ The Homelab GitOps Auditor is a comprehensive tool designed to monitor, audit, a
 3. **Audit Scripts** (`/scripts/`):
 
    - Repository synchronization with GitHub (`sync_github_repos.sh`)
-   - DNS synchronization with AdGuard (`gitops_dns_sync.sh`)
    - Deployment utilities (`deploy.sh`, `install-dashboard.sh`)
 
 4. **Data Storage**:
    - Audit reports stored in `/output/` as JSON and Markdown
    - Historical snapshots in `/audit-history/`
-   - NPM proxy snapshots stored for DNS sync operations
 
 ## Core Functionality
 
@@ -50,14 +48,6 @@ The dashboard provides:
 - Live auto-refreshing data
 - Ability to switch between local and GitHub data sources
 
-### 3. DNS Sync Automation
-
-The system also handles:
-
-- Automatic extraction of internal domains from Nginx Proxy Manager
-- Generation of DNS rewrites for AdGuard Home
-- Idempotent sync operations with dry-run capability
-
 ## Setup and Usage
 
 ### Installation
@@ -65,21 +55,19 @@ The system also handles:
 1. **Dashboard Setup**:
 
    ```bash
-   cd /mnt/c/GIT/homelab-gitops-auditor
+   cd /opt/gitops
    bash scripts/install-dashboard.sh
    ```
 
 2. **API Setup**:
 
    ```bash
-   cd /mnt/c/GIT/homelab-gitops-auditor
+   cd /opt/gitops
    bash scripts/deploy.sh
    ```
 
 3. **Cron Configuration**:
    - Nightly audits run at 3:00 AM
-   - NPM DB snapshots taken at 3:00 AM
-   - DNS rewrites generated immediately after snapshots
 
 ### Dashboard Usage
 
@@ -107,15 +95,6 @@ The system also handles:
    /opt/gitops/scripts/sync_github_repos.sh
    ```
 
-2. **Test DNS Sync**:
-   ```bash
-   bash /opt/gitops/scripts/gitops_dns_sync.sh
-   # Or run components separately
-   bash /opt/gitops/scripts/fetch_npm_config.sh
-   python3 /opt/gitops/scripts/generate_adguard_rewrites_from_sqlite.py
-   python3 /opt/gitops/scripts/generate_adguard_rewrites_from_sqlite.py --commit
-   ```
-
 ## Troubleshooting
 
 ### Common Issues
@@ -139,59 +118,3 @@ The system also handles:
    - Check API service is running (`systemctl status gitops-audit-api`)
    - Check logs for connection errors
 
-4. **DNS Sync Failures**:
-   - Examine logs in `/opt/gitops/logs/`
-   - Verify AdGuard API credentials and connectivity
-   - Check NPM container is accessible
-
-## Future Enhancements
-
-### Planned Features
-
-1. **Dashboard Improvements**:
-
-   - Add WebSocket real-time updates
-   - Implement dark mode toggle
-   - Add repository history visualization
-   - Create detailed diff viewer
-
-2. **API Enhancements**:
-
-   - Add authentication layer
-   - Implement webhook notifications
-   - Support GitHub API integration for remote operations
-   - Add repository restore capabilities
-
-3. **Auditing Features**:
-
-   - Add more health metrics (commit frequency, branch age)
-   - Implement security scanning
-   - Add config drift detection
-   - Support for multiple Git providers (GitLab, Bitbucket)
-
-4. **System Integration**:
-   - Email notifications on critical issues
-   - Slack/Discord webhook integration
-   - CI/CD pipeline integration
-   - Kubernetes operator for GitOps environments
-
-## Architecture Notes
-
-- The dashboard frontend is built with React, Recharts, and TailwindCSS
-- Data flows from Git repositories → audit scripts → JSON output → API → dashboard
-- Services run in separate containers/LXCs for isolation
-- Configuration stored in Git for version control
-
-## Component Versions
-
-- React: ^19.0.0
-- Express: Latest
-- Tailwind CSS: ^4.0.15
-- Node.js: v20+ recommended for optimal compatibility
-
-## Known Limitations
-
-- Limited to Git repositories only (no Mercurial or SVN)
-- Does not support multiple organization monitoring yet
-- Credentials stored in script files rather than secure vault
-- No multi-user support or role-based access control
