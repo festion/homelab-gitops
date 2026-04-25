@@ -83,16 +83,6 @@
         "TRUENAS_API_KEY": "${TRUENAS_API_KEY:-your_truenas_api_key_here}",
         "PYTHONPATH": "/home/dev/workspace/mcp-servers/truenas-mcp-server/src"
       }
-    },
-    "wikijs-mcp": {
-      "command": "/home/dev/workspace/mcp-servers/wikijs-mcp-server/venv/bin/python",
-      "args": [
-        "/home/dev/workspace/mcp-servers/wikijs-mcp-server/run_server.py",
-        "/home/dev/workspace/mcp-servers/wikijs-mcp-server/config/wikijs_mcp_config.json"
-      ],
-      "env": {
-        "PYTHONPATH": "/home/dev/workspace/mcp-servers/wikijs-mcp-server/src"
-      }
     }
   }
 }
