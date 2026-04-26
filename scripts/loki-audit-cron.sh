@@ -63,6 +63,9 @@ send_pushover() {
         --form-string "html=1" \
         https://api.pushover.net/1/messages.json > /dev/null
 
+    # Audit line for pushover_history Loki stream (homelab-iac task #803)
+    logger -t pushover-history "pushover_sent: title='${title}' priority=${priority}"
+
     echo "[$TIMESTAMP] Pushover notification sent"
 }
 
