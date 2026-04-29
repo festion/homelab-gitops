@@ -1,5 +1,4 @@
 const crypto = require('crypto');
-const { v4: uuidv4 } = require('uuid');
 const Database = require('../../models/database');
 
 /**
@@ -24,7 +23,7 @@ class SessionManager {
    */
   async createSession(userId, token, expiresIn = null) {
     try {
-      const sessionId = uuidv4();
+      const sessionId = crypto.randomUUID();
       const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
       
       // Calculate expiration

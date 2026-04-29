@@ -1,4 +1,4 @@
-const { v4: uuidv4 } = require('uuid');
+const { randomUUID } = require('node:crypto');
 
 /**
  * User Role Definitions
@@ -104,7 +104,7 @@ class RolePermissions {
  */
 class ApiKey {
   constructor(data = {}) {
-    this.id = data.id || uuidv4();
+    this.id = data.id || randomUUID();
     this.name = data.name || '';
     this.key = data.key || '';
     this.permissions = data.permissions || [];
@@ -163,7 +163,7 @@ class ApiKey {
  */
 class User {
   constructor(data = {}) {
-    this.id = data.id || uuidv4();
+    this.id = data.id || randomUUID();
     this.username = data.username || '';
     this.email = data.email || '';
     this.passwordHash = data.passwordHash || '';

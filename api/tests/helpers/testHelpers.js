@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { v4: uuidv4 } = require('uuid');
+const { randomUUID } = require('node:crypto');
 
 class TestHelpers {
   // Authentication helpers
@@ -73,7 +73,7 @@ class TestHelpers {
   // Data generators
   static createTestUser(overrides = {}) {
     return {
-      id: uuidv4(),
+      id: randomUUID(),
       username: 'testuser',
       email: 'test@example.com',
       role: 'user',
@@ -86,7 +86,7 @@ class TestHelpers {
 
   static createTestRepository(overrides = {}) {
     return {
-      id: uuidv4(),
+      id: randomUUID(),
       name: 'test-repo',
       owner: 'test-owner',
       full_name: 'test-owner/test-repo',
@@ -105,7 +105,7 @@ class TestHelpers {
     const completedAt = new Date();
     
     return {
-      id: uuidv4(),
+      id: randomUUID(),
       repository: 'test-repo',
       workflow: 'ci.yml',
       branch: 'main',
@@ -121,7 +121,7 @@ class TestHelpers {
 
   static createTestCompliance(overrides = {}) {
     return {
-      id: uuidv4(),
+      id: randomUUID(),
       repository: 'test-repo',
       template: 'standard-devops',
       status: 'compliant',
@@ -135,7 +135,7 @@ class TestHelpers {
 
   static createTestMetric(overrides = {}) {
     return {
-      id: uuidv4(),
+      id: randomUUID(),
       type: 'pipeline_success_rate',
       repository: 'test-repo',
       value: 0.85,
@@ -147,7 +147,7 @@ class TestHelpers {
 
   static createTestOrchestration(overrides = {}) {
     return {
-      id: uuidv4(),
+      id: randomUUID(),
       name: 'test-orchestration',
       status: 'pending',
       repositories: ['test-repo-1', 'test-repo-2'],
