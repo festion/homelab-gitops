@@ -1,7 +1,6 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
-const { v4: uuidv4 } = require('uuid');
 const { User, ApiKey, UserRole, Permission } = require('../../models/user');
 
 /**
@@ -345,7 +344,7 @@ class AuthService {
         `INSERT INTO auth_audit_log (id, user_id, username, action, success, details, ip_address, user_agent, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          uuidv4(),
+          crypto.randomUUID(),
           userId,
           username,
           action,
