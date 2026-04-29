@@ -94,7 +94,7 @@ module.exports = {
   testTimeout: 30000,
   
   // Module name mapping
-  moduleNameMapping: {
+  moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
     '^@config/(.*)$': '<rootDir>/config/$1',
     '^@services/(.*)$': '<rootDir>/services/$1',
@@ -136,8 +136,7 @@ module.exports = {
       setupFilesAfterEnv: [
         '<rootDir>/tests/setup/jest.setup.js',
         '<rootDir>/tests/setup/database.setup.js'
-      ],
-      testTimeout: 60000
+      ]
     },
     {
       displayName: 'WebSocket Tests',
@@ -146,8 +145,7 @@ module.exports = {
       ],
       setupFilesAfterEnv: [
         '<rootDir>/tests/setup/jest.setup.js'
-      ],
-      testTimeout: 30000
+      ]
     }
   ],
   
