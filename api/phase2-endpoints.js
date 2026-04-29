@@ -5,7 +5,7 @@ const express = require('express');
 const { exec } = require('child_process');
 const fs = require('fs').promises;
 const path = require('path');
-const { v4: uuidv4 } = require('uuid');
+const { randomUUID } = require('node:crypto');
 
 // Import authentication middleware
 const {
@@ -212,7 +212,7 @@ phase2Router.post('/templates/apply',
       return res.status(404).json({ error: 'Template not found' });
     }
 
-    const operationId = `apply_${uuidv4()}`;
+    const operationId = `apply_${randomUUID()}`;
     const operation = {
       id: operationId,
       type: 'template_apply',
@@ -677,7 +677,7 @@ phase2Router.post('/pipelines/:id/execute', async (req, res) => {
       return res.status(404).json({ error: 'Pipeline not found' });
     }
 
-    const runId = `run_${uuidv4()}`;
+    const runId = `run_${randomUUID()}`;
     const execution = {
       runId,
       pipelineId: id,
@@ -746,7 +746,7 @@ phase2Router.post('/pipelines/:id/generate-workflow', async (req, res) => {
       templateOverrides
     });
 
-    const operationId = `workflow_${uuidv4()}`;
+    const operationId = `workflow_${randomUUID()}`;
     const operation = {
       id: operationId,
       type: 'workflow_generation',
@@ -1114,7 +1114,7 @@ phase2Router.post('/pipelines/:id/deploy-workflow', async (req, res) => {
     // Get the GitHub MCP manager (would be injected in real implementation)
     const GitHubMCPManager = req.app.locals.githubMCP;
     
-    const operationId = `deploy_${uuidv4()}`;
+    const operationId = `deploy_${randomUUID()}`;
     const operation = {
       id: operationId,
       type: 'workflow_deployment',
@@ -1199,7 +1199,7 @@ phase2Router.post('/pipelines', validateRequest(['name', 'repository', 'stages']
   try {
     const { name, repository, description, stages, triggers = ['manual'] } = req.body;
     
-    const pipelineId = `pipeline_${uuidv4()}`;
+    const pipelineId = `pipeline_${randomUUID()}`;
     const pipeline = {
       id: pipelineId,
       name,
@@ -1346,7 +1346,7 @@ phase2Router.post('/dependencies/analyze-impact', validateRequest(['repository']
     };
     
     // Store analysis
-    const analysisId = `analysis_${uuidv4()}`;
+    const analysisId = `analysis_${randomUUID()}`;
     storage.operations.set(analysisId, {
       id: analysisId,
       type: 'dependency_analysis',
@@ -1541,7 +1541,7 @@ phase2Router.post('/quality/validate', validateRequest(['repository']), async (r
   try {
     const { repository, gateType = 'pre_commit', files = [] } = req.body;
     
-    const validationId = `val_${uuidv4()}`;
+    const validationId = `val_${randomUUID()}`;
     const validation = {
       validationId,
       repository,
