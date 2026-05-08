@@ -160,3 +160,11 @@ local-*
 dev-*
 test-*
 venv/
+
+# Claude Code / agent tool artifacts (machine-generated, per-host)
+.claude/projects/
+.claude/scheduled_tasks.lock
+.claude/settings.local.json
+# .serena/memories/ are tracked deliberately; only project.yml is per-machine
+.serena/project.yml
+.beads/
