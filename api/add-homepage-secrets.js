@@ -16,6 +16,16 @@ const ENVIRONMENT = process.env.INFISICAL_ENVIRONMENT || 'prod';
 // Disable TLS verification for self-signed certs
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
+// Pull a value from env at runtime; abort if missing. Used for secrets that
+// must not be hard-coded in the script (rotated credentials).
+function envOrThrow(name) {
+  const v = process.env[name];
+  if (!v) {
+    throw new Error(`${name} env var required (set via 'infisical run' or export)`);
+  }
+  return v;
+}
+
 const secrets = {
   // Application Configuration
   'NODE_ENV': 'production',
@@ -38,7 +48,7 @@ const secrets = {
 
   // Grafana Integration
   'HOMEPAGE_VAR_GRAFANA_USER': 'admin',
-  'HOMEPAGE_VAR_GRAFANA_PASS': '<see Infisical: GRAFANA_ADMIN_PASSWORD/INFLUXDB_ADMIN_PASSWORD - pre-rotation T5/T6>',
+  'HOMEPAGE_VAR_GRAFANA_PASS': envOrThrow('HOMEPAGE_VAR_GRAFANA_PASS'),
 
   // Omada Integration
   'HOMEPAGE_VAR_OMADA_USER': 'admin',
@@ -46,7 +56,7 @@ const secrets = {
 
   // InfluxDB Integration
   'HOMEPAGE_VAR_INFLUX_USER': 'admin',
-  'HOMEPAGE_VAR_INFLUX_PASS': '<see Infisical: GRAFANA_ADMIN_PASSWORD/INFLUXDB_ADMIN_PASSWORD - pre-rotation T5/T6>'
+  'HOMEPAGE_VAR_INFLUX_PASS': envOrThrow('HOMEPAGE_VAR_INFLUX_PASS')
 };
 
 async function addSecret(secretName, secretValue) {

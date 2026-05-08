@@ -112,7 +112,7 @@ Comment: Grafana username
 #### HOMEPAGE_VAR_GRAFANA_PASS
 ```
 Key: HOMEPAGE_VAR_GRAFANA_PASS
-Value: <see Infisical: GRAFANA_ADMIN_PASSWORD/INFLUXDB_ADMIN_PASSWORD - pre-rotation T5/T6>
+Value: <see Infisical: homelab-gitops/prod/{HOMEPAGE_VAR_GRAFANA_PASS or _INFLUX_PASS}>
 Comment: Grafana password
 ```
 
@@ -148,7 +148,7 @@ Comment: InfluxDB username
 #### HOMEPAGE_VAR_INFLUX_PASS
 ```
 Key: HOMEPAGE_VAR_INFLUX_PASS
-Value: <see Infisical: GRAFANA_ADMIN_PASSWORD/INFLUXDB_ADMIN_PASSWORD - pre-rotation T5/T6>
+Value: <see Infisical: homelab-gitops/prod/{HOMEPAGE_VAR_GRAFANA_PASS or _INFLUX_PASS}>
 Comment: InfluxDB password
 ```
 
@@ -170,11 +170,11 @@ If Infisical supports JSON import, use this:
   "HOMEPAGE_VAR_ADGUARD_PASS": "your-password",
   "HOMEPAGE_VAR_TRUENAS_KEY": "<TRUENAS_API_KEY_id2_ROTATED_T10_see_Vikunja_1061>",
   "HOMEPAGE_VAR_GRAFANA_USER": "admin",
-  "HOMEPAGE_VAR_GRAFANA_PASS": "<see Infisical: GRAFANA_ADMIN_PASSWORD/INFLUXDB_ADMIN_PASSWORD - pre-rotation T5/T6>",
+  "HOMEPAGE_VAR_GRAFANA_PASS": "<see Infisical: homelab-gitops/prod/HOMEPAGE_VAR_GRAFANA_PASS>",
   "HOMEPAGE_VAR_OMADA_USER": "admin",
   "HOMEPAGE_VAR_OMADA_PASS": "admin",
   "HOMEPAGE_VAR_INFLUX_USER": "admin",
-  "HOMEPAGE_VAR_INFLUX_PASS": "<see Infisical: GRAFANA_ADMIN_PASSWORD/INFLUXDB_ADMIN_PASSWORD - pre-rotation T5/T6>"
+  "HOMEPAGE_VAR_INFLUX_PASS": "<see Infisical: homelab-gitops/prod/HOMEPAGE_VAR_INFLUX_PASS>"
 }
 ```
 
@@ -193,11 +193,11 @@ HOMEPAGE_VAR_ADGUARD_USER=admin
 HOMEPAGE_VAR_ADGUARD_PASS=your-password
 HOMEPAGE_VAR_TRUENAS_KEY=<TRUENAS_API_KEY_id2_ROTATED_T10_see_Vikunja_1061>
 HOMEPAGE_VAR_GRAFANA_USER=admin
-HOMEPAGE_VAR_GRAFANA_PASS=<see Infisical: GRAFANA_ADMIN_PASSWORD/INFLUXDB_ADMIN_PASSWORD - pre-rotation T5/T6>
+HOMEPAGE_VAR_GRAFANA_PASS=<see Infisical: homelab-gitops/prod/HOMEPAGE_VAR_GRAFANA_PASS>
 HOMEPAGE_VAR_OMADA_USER=admin
 HOMEPAGE_VAR_OMADA_PASS=admin
 HOMEPAGE_VAR_INFLUX_USER=admin
-HOMEPAGE_VAR_INFLUX_PASS=<see Infisical: GRAFANA_ADMIN_PASSWORD/INFLUXDB_ADMIN_PASSWORD - pre-rotation T5/T6>
+HOMEPAGE_VAR_INFLUX_PASS=<see Infisical: homelab-gitops/prod/HOMEPAGE_VAR_INFLUX_PASS>
 ```
 
 ---
