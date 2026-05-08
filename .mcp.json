@@ -60,7 +60,7 @@
         "-e",
         "HA_URL=http://192.168.1.155:8123",
         "-e",
-        "HA_TOKEN=<HA_LONG_LIVED_JWT_ROTATED_T8_see_Vikunja_1059>",
+        "HA_TOKEN=${HA_LONG_LIVED_TOKEN}",
         "voska/hass-mcp"
       ]
     },

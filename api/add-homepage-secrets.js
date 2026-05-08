@@ -37,7 +37,7 @@ const secrets = {
   'HOMEPAGE_VAR_PROXMOX_TOKEN': '<PROXMOX_API_TOKEN_ROTATED_T11_see_Vikunja_1062>',
 
   // Home Assistant Integration
-  'HOMEPAGE_VAR_HASS_TOKEN': '<HA_LONG_LIVED_JWT_ROTATED_T8_see_Vikunja_1059>',
+  'HOMEPAGE_VAR_HASS_TOKEN': envOrThrow('HOMEPAGE_VAR_HASS_TOKEN'),
 
   // AdGuard Integration
   'HOMEPAGE_VAR_ADGUARD_USER': 'admin',
