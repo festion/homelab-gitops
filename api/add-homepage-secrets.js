@@ -44,7 +44,7 @@ const secrets = {
   'HOMEPAGE_VAR_ADGUARD_PASS': 'your-password',
 
   // TrueNAS Integration
-  'HOMEPAGE_VAR_TRUENAS_KEY': '***SCRUBBED-T17-TRUENAS-API-KEY***',
+  'HOMEPAGE_VAR_TRUENAS_KEY': envOrThrow('HOMEPAGE_VAR_TRUENAS_KEY'),
 
   // Grafana Integration
   'HOMEPAGE_VAR_GRAFANA_USER': 'admin',
