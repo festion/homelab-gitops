@@ -23,7 +23,7 @@ infisical secrets --env=prod --token="st.58fae899-b38e-48cf-a14d-d3ce082bc66e.76
 ```
 
 ## Available Secrets (prod environment)
-- `UPTIME_KUMA_PASSWORD` - root password for Uptime Kuma (redflower805)
+- `UPTIME_KUMA_ADMIN_PASSWORD` - root password for Uptime Kuma (rotated 2026-05-08; value in Infisical only)
 
 ## Notes
 - First token provided (st.359aa358...) only had dev scope access
