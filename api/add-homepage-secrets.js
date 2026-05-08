@@ -37,7 +37,7 @@ const secrets = {
   'HOMEPAGE_VAR_PROXMOX_TOKEN': '***SCRUBBED-T17-PROXMOX-TOKEN-1***',
 
   // Home Assistant Integration
-  'HOMEPAGE_VAR_HASS_TOKEN': '***SCRUBBED-T17-HA-JWT-B***',
+  'HOMEPAGE_VAR_HASS_TOKEN': envOrThrow('HOMEPAGE_VAR_HASS_TOKEN'),
 
   // AdGuard Integration
   'HOMEPAGE_VAR_ADGUARD_USER': 'admin',

@@ -65,7 +65,7 @@ Comment: Proxmox API token for Homepage
 #### HOMEPAGE_VAR_HASS_TOKEN
 ```
 Key: HOMEPAGE_VAR_HASS_TOKEN
-Value: ***SCRUBBED-T17-HA-JWT-B***
+Value: <see Infisical: homelab-gitops/prod/HOMEPAGE_VAR_HASS_TOKEN>
 Comment: Home Assistant Long-Lived Access Token
 ```
 
@@ -165,7 +165,7 @@ If Infisical supports JSON import, use this:
   "HOMEPAGE_ALLOWED_HOSTS": "homepage.internal.lakehouse.wtf,192.168.1.45,localhost",
   "HOMEPAGE_VAR_PROXMOX_USER": "api@pve!homepage",
   "HOMEPAGE_VAR_PROXMOX_TOKEN": "***SCRUBBED-T17-PROXMOX-TOKEN-1***",
-  "HOMEPAGE_VAR_HASS_TOKEN": "***SCRUBBED-T17-HA-JWT-B***",
+  "HOMEPAGE_VAR_HASS_TOKEN": "<see Infisical: homelab-gitops/prod/HOMEPAGE_VAR_HASS_TOKEN>",
   "HOMEPAGE_VAR_ADGUARD_USER": "admin",
   "HOMEPAGE_VAR_ADGUARD_PASS": "your-password",
   "HOMEPAGE_VAR_TRUENAS_KEY": "***SCRUBBED-T17-TRUENAS-API-KEY***",
@@ -188,7 +188,7 @@ PORT=3000
 HOMEPAGE_ALLOWED_HOSTS=homepage.internal.lakehouse.wtf,192.168.1.45,localhost
 HOMEPAGE_VAR_PROXMOX_USER=api@pve!homepage
 HOMEPAGE_VAR_PROXMOX_TOKEN=***SCRUBBED-T17-PROXMOX-TOKEN-1***
-HOMEPAGE_VAR_HASS_TOKEN=***SCRUBBED-T17-HA-JWT-B***
+HOMEPAGE_VAR_HASS_TOKEN=<see Infisical: homelab-gitops/prod/HOMEPAGE_VAR_HASS_TOKEN>
 HOMEPAGE_VAR_ADGUARD_USER=admin
 HOMEPAGE_VAR_ADGUARD_PASS=your-password
 HOMEPAGE_VAR_TRUENAS_KEY=***SCRUBBED-T17-TRUENAS-API-KEY***

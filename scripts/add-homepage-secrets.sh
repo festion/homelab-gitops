@@ -85,7 +85,7 @@ add_secret "HOMEPAGE_VAR_PROXMOX_USER" "api@pve!homepage"
 add_secret "HOMEPAGE_VAR_PROXMOX_TOKEN" "***SCRUBBED-T17-PROXMOX-TOKEN-1***"
 
 # Home Assistant
-add_secret "HOMEPAGE_VAR_HASS_TOKEN" "***SCRUBBED-T17-HA-JWT-B***"
+add_secret "HOMEPAGE_VAR_HASS_TOKEN" "${HOMEPAGE_VAR_HASS_TOKEN:?HOMEPAGE_VAR_HASS_TOKEN env var required}"
 
 # AdGuard
 add_secret "HOMEPAGE_VAR_ADGUARD_USER" "admin"
