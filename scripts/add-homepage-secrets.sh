@@ -82,7 +82,7 @@ echo -e "${YELLOW}Homepage Integration Credentials:${NC}"
 
 # Proxmox
 add_secret "HOMEPAGE_VAR_PROXMOX_USER" "api@pve!homepage"
-add_secret "HOMEPAGE_VAR_PROXMOX_TOKEN" "***SCRUBBED-T17-PROXMOX-TOKEN-1***"
+add_secret "HOMEPAGE_VAR_PROXMOX_TOKEN" "${HOMEPAGE_VAR_PROXMOX_TOKEN:?HOMEPAGE_VAR_PROXMOX_TOKEN env var required}"
 
 # Home Assistant
 add_secret "HOMEPAGE_VAR_HASS_TOKEN" "${HOMEPAGE_VAR_HASS_TOKEN:?HOMEPAGE_VAR_HASS_TOKEN env var required}"
