@@ -2,6 +2,8 @@ import argparse
 import base64
 import json
 import os
+import subprocess
+import sys
 
 import requests
 
@@ -10,7 +12,17 @@ NPM_PROXY_PATH = "/opt/npm/data/nginx/proxy_host/"
 ADGUARD_HOST = "192.168.1.253"
 ADGUARD_PORT = "80"
 ADGUARD_USER = "root"
-ADGUARD_PASS = "<see Infisical: GRAFANA_ADMIN_PASSWORD/INFLUXDB_ADMIN_PASSWORD - pre-rotation T5/T6>"  # 🔒 replace with your actual password
+
+# This script is retired (see scripts/retired/). Kept for reference only.
+# Password is pulled from Infisical at runtime to avoid embedding the literal.
+ADGUARD_PASS = os.environ.get("ADGUARD_PASSWORD") or subprocess.run(
+    ["infisical-get", "ADGUARD_ROOT_PASSWORD"],
+    capture_output=True, text=True, check=False,
+).stdout.strip()
+if not ADGUARD_PASS:
+    sys.stderr.write("ERROR: ADGUARD_PASSWORD not set and infisical-get failed.\n")
+    sys.exit(1)
+
 ADGUARD_TARGET_IP = "192.168.1.95"  # NPM IP for internal rewrites
 
 API_BASE = f"http://{ADGUARD_HOST}:{ADGUARD_PORT}/control"
