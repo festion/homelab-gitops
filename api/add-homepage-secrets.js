@@ -34,7 +34,7 @@ const secrets = {
 
   // Proxmox Integration
   'HOMEPAGE_VAR_PROXMOX_USER': 'api@pve!homepage',
-  'HOMEPAGE_VAR_PROXMOX_TOKEN': 'b82507b4-bd40-4dca-964d-bed948507af5',
+  'HOMEPAGE_VAR_PROXMOX_TOKEN': envOrThrow('HOMEPAGE_VAR_PROXMOX_TOKEN'),
 
   // Home Assistant Integration
   'HOMEPAGE_VAR_HASS_TOKEN': envOrThrow('HOMEPAGE_VAR_HASS_TOKEN'),
