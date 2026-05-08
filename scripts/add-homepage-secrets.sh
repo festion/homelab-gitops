@@ -92,7 +92,7 @@ add_secret "HOMEPAGE_VAR_ADGUARD_USER" "admin"
 add_secret "HOMEPAGE_VAR_ADGUARD_PASS" "your-password"
 
 # TrueNAS
-add_secret "HOMEPAGE_VAR_TRUENAS_KEY" "<TRUENAS_API_KEY_id2_ROTATED_T10_see_Vikunja_1061>"
+add_secret "HOMEPAGE_VAR_TRUENAS_KEY" "${HOMEPAGE_VAR_TRUENAS_KEY:?HOMEPAGE_VAR_TRUENAS_KEY env var required}"
 
 # Grafana
 add_secret "HOMEPAGE_VAR_GRAFANA_USER" "admin"

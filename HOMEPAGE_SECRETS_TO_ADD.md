@@ -94,7 +94,7 @@ Comment: AdGuard Home password (UPDATE THIS!)
 #### HOMEPAGE_VAR_TRUENAS_KEY
 ```
 Key: HOMEPAGE_VAR_TRUENAS_KEY
-Value: <TRUENAS_API_KEY_id2_ROTATED_T10_see_Vikunja_1061>
+Value: <see Infisical: homelab-gitops/prod/HOMEPAGE_VAR_TRUENAS_KEY>
 Comment: TrueNAS API key
 ```
 
@@ -168,7 +168,7 @@ If Infisical supports JSON import, use this:
   "HOMEPAGE_VAR_HASS_TOKEN": "<see Infisical: homelab-gitops/prod/HOMEPAGE_VAR_HASS_TOKEN>",
   "HOMEPAGE_VAR_ADGUARD_USER": "admin",
   "HOMEPAGE_VAR_ADGUARD_PASS": "your-password",
-  "HOMEPAGE_VAR_TRUENAS_KEY": "<TRUENAS_API_KEY_id2_ROTATED_T10_see_Vikunja_1061>",
+  "HOMEPAGE_VAR_TRUENAS_KEY": "<see Infisical: homelab-gitops/prod/HOMEPAGE_VAR_TRUENAS_KEY>",
   "HOMEPAGE_VAR_GRAFANA_USER": "admin",
   "HOMEPAGE_VAR_GRAFANA_PASS": "<see Infisical: homelab-gitops/prod/HOMEPAGE_VAR_GRAFANA_PASS>",
   "HOMEPAGE_VAR_OMADA_USER": "admin",
@@ -191,7 +191,7 @@ HOMEPAGE_VAR_PROXMOX_TOKEN=<PROXMOX_API_TOKEN_ROTATED_T11_see_Vikunja_1062>
 HOMEPAGE_VAR_HASS_TOKEN=<see Infisical: homelab-gitops/prod/HOMEPAGE_VAR_HASS_TOKEN>
 HOMEPAGE_VAR_ADGUARD_USER=admin
 HOMEPAGE_VAR_ADGUARD_PASS=your-password
-HOMEPAGE_VAR_TRUENAS_KEY=<TRUENAS_API_KEY_id2_ROTATED_T10_see_Vikunja_1061>
+HOMEPAGE_VAR_TRUENAS_KEY=<see Infisical: homelab-gitops/prod/HOMEPAGE_VAR_TRUENAS_KEY>
 HOMEPAGE_VAR_GRAFANA_USER=admin
 HOMEPAGE_VAR_GRAFANA_PASS=<see Infisical: homelab-gitops/prod/HOMEPAGE_VAR_GRAFANA_PASS>
 HOMEPAGE_VAR_OMADA_USER=admin
