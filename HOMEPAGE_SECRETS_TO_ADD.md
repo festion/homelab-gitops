@@ -54,7 +54,7 @@ Comment: Proxmox API user for Homepage
 #### HOMEPAGE_VAR_PROXMOX_TOKEN
 ```
 Key: HOMEPAGE_VAR_PROXMOX_TOKEN
-Value: <PROXMOX_API_TOKEN_ROTATED_T11_see_Vikunja_1062>
+Value: <see Infisical: homelab-gitops/prod/HOMEPAGE_VAR_PROXMOX_TOKEN>
 Comment: Proxmox API token for Homepage
 ```
 
@@ -164,7 +164,7 @@ If Infisical supports JSON import, use this:
   "PORT": "3000",
   "HOMEPAGE_ALLOWED_HOSTS": "homepage.internal.lakehouse.wtf,192.168.1.45,localhost",
   "HOMEPAGE_VAR_PROXMOX_USER": "api@pve!homepage",
-  "HOMEPAGE_VAR_PROXMOX_TOKEN": "<PROXMOX_API_TOKEN_ROTATED_T11_see_Vikunja_1062>",
+  "HOMEPAGE_VAR_PROXMOX_TOKEN": "<see Infisical: homelab-gitops/prod/HOMEPAGE_VAR_PROXMOX_TOKEN>",
   "HOMEPAGE_VAR_HASS_TOKEN": "<see Infisical: homelab-gitops/prod/HOMEPAGE_VAR_HASS_TOKEN>",
   "HOMEPAGE_VAR_ADGUARD_USER": "admin",
   "HOMEPAGE_VAR_ADGUARD_PASS": "your-password",
@@ -187,7 +187,7 @@ NODE_ENV=production
 PORT=3000
 HOMEPAGE_ALLOWED_HOSTS=homepage.internal.lakehouse.wtf,192.168.1.45,localhost
 HOMEPAGE_VAR_PROXMOX_USER=api@pve!homepage
-HOMEPAGE_VAR_PROXMOX_TOKEN=<PROXMOX_API_TOKEN_ROTATED_T11_see_Vikunja_1062>
+HOMEPAGE_VAR_PROXMOX_TOKEN=<see Infisical: homelab-gitops/prod/HOMEPAGE_VAR_PROXMOX_TOKEN>
 HOMEPAGE_VAR_HASS_TOKEN=<see Infisical: homelab-gitops/prod/HOMEPAGE_VAR_HASS_TOKEN>
 HOMEPAGE_VAR_ADGUARD_USER=admin
 HOMEPAGE_VAR_ADGUARD_PASS=your-password
