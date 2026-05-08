@@ -23,7 +23,7 @@ infisical secrets --env=prod --token="<INFISICAL_SVC_TOKEN_ClaudeCode_REVOKED_20
 ```
 
 ## Available Secrets (prod environment)
-- `UPTIME_KUMA_PASSWORD` - root password for Uptime Kuma (<see Infisical: GRAFANA_ADMIN_PASSWORD/INFLUXDB_ADMIN_PASSWORD - pre-rotation T5/T6>)
+- `UPTIME_KUMA_ADMIN_PASSWORD` - root password for Uptime Kuma (rotated 2026-05-08; value in Infisical only)
 
 ## Notes
 - First token provided (st.359aa358...) only had dev scope access
