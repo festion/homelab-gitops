@@ -96,7 +96,7 @@ add_secret "HOMEPAGE_VAR_TRUENAS_KEY" "***SCRUBBED-T17-TRUENAS-API-KEY***"
 
 # Grafana
 add_secret "HOMEPAGE_VAR_GRAFANA_USER" "admin"
-add_secret "HOMEPAGE_VAR_GRAFANA_PASS" "***SCRUBBED-T17-SHARED-ADMIN-OR-WIFI-PSK***"
+add_secret "HOMEPAGE_VAR_GRAFANA_PASS" "${HOMEPAGE_VAR_GRAFANA_PASS:?HOMEPAGE_VAR_GRAFANA_PASS env var required}"
 
 # Omada
 add_secret "HOMEPAGE_VAR_OMADA_USER" "admin"
@@ -104,7 +104,7 @@ add_secret "HOMEPAGE_VAR_OMADA_PASS" "admin"
 
 # InfluxDB
 add_secret "HOMEPAGE_VAR_INFLUX_USER" "admin"
-add_secret "HOMEPAGE_VAR_INFLUX_PASS" "***SCRUBBED-T17-SHARED-ADMIN-OR-WIFI-PSK***"
+add_secret "HOMEPAGE_VAR_INFLUX_PASS" "${HOMEPAGE_VAR_INFLUX_PASS:?HOMEPAGE_VAR_INFLUX_PASS env var required}"
 
 echo ""
 echo -e "${GREEN}✅ Homepage secrets added to homelab-gitops project!${NC}"
