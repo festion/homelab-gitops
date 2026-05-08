@@ -37,7 +37,29 @@ KEA_SECONDARY = "192.168.1.134"
 ADGUARD_HOST = "192.168.1.253"
 ADGUARD_PORT = "80"
 ADGUARD_USER = "root"
-ADGUARD_PASS = "***SCRUBBED-T17-SHARED-ADMIN-OR-WIFI-PSK***"
+
+
+def _adguard_password() -> str:
+    """Pull AdGuard root password from Infisical at runtime."""
+    pw = os.environ.get("ADGUARD_PASSWORD")
+    if pw:
+        return pw
+    try:
+        result = subprocess.run(
+            ["infisical-get", "ADGUARD_ROOT_PASSWORD"],
+            capture_output=True, text=True, check=True, timeout=10,
+        )
+        return result.stdout.strip()
+    except (subprocess.SubprocessError, FileNotFoundError) as e:
+        sys.stderr.write(
+            "ERROR: could not retrieve ADGUARD_ROOT_PASSWORD. "
+            "Set ADGUARD_PASSWORD env var or ensure infisical-get is on PATH "
+            f"and the session is valid ({e}).\n"
+        )
+        sys.exit(1)
+
+
+ADGUARD_PASS = _adguard_password()
 
 # Traefik IP (all internal DNS should point here)
 TRAEFIK_IP = "192.168.1.110"
