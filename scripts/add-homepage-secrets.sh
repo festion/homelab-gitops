@@ -96,7 +96,7 @@ add_secret "HOMEPAGE_VAR_TRUENAS_KEY" "2-pAgetpXlM3uqD0zg0EVuCZUIsxZisLcQ4kjB8a4
 
 # Grafana
 add_secret "HOMEPAGE_VAR_GRAFANA_USER" "admin"
-add_secret "HOMEPAGE_VAR_GRAFANA_PASS" "redflower805"
+add_secret "HOMEPAGE_VAR_GRAFANA_PASS" "${HOMEPAGE_VAR_GRAFANA_PASS:?HOMEPAGE_VAR_GRAFANA_PASS env var required}"
 
 # Omada
 add_secret "HOMEPAGE_VAR_OMADA_USER" "admin"
@@ -104,7 +104,7 @@ add_secret "HOMEPAGE_VAR_OMADA_PASS" "admin"
 
 # InfluxDB
 add_secret "HOMEPAGE_VAR_INFLUX_USER" "admin"
-add_secret "HOMEPAGE_VAR_INFLUX_PASS" "redflower805"
+add_secret "HOMEPAGE_VAR_INFLUX_PASS" "${HOMEPAGE_VAR_INFLUX_PASS:?HOMEPAGE_VAR_INFLUX_PASS env var required}"
 
 echo ""
 echo -e "${GREEN}✅ Homepage secrets added to homelab-gitops project!${NC}"
