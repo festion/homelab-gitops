@@ -5,7 +5,7 @@
       "args": ["/home/dev/workspace/truenas-mcp-wrapper.sh"],
       "env": {
         "TRUENAS_URL": "http://truenas.internal.lakehouse.wtf",
-        "TRUENAS_API_KEY": "<TRUENAS_API_KEY_id1_REVOKED_2026-05-09_see_Vikunja_1101>",
+        "TRUENAS_API_KEY": "<see Infisical: TRUENAS_API_KEY>",
         "TRUENAS_VERIFY_SSL": "false",
         "TRUENAS_TIMEOUT": "30"
       }

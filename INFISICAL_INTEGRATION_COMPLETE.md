@@ -88,7 +88,7 @@ This approach:
 2. Use the REST API to fetch secrets (axios is already installed):
    ```javascript
    const axios = require('axios');
-   const INFISICAL_TOKEN = 'st.650cfc13-6ecd-4a3b-91cc-8d7a123b67c4...';
+   const INFISICAL_TOKEN = '<dead Infisical service token, already 404>';
 
    // Get a secret
    const secret = await axios.get(
@@ -112,7 +112,7 @@ If you prefer to use the SDK approach, the `api/config/infisical.js` module is r
 
 ## Service Token
 
-**Token**: `<INFISICAL_SVC_TOKEN_DEAD_pre-2026-05-08_no_action_needed>`
+**Token**: `<dead Infisical service token, already 404 — replace with current creds>`
 
 **Security Notes**:
 - ⚠️ Keep this token secure - never commit to Git

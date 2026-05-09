@@ -12,11 +12,11 @@ The homelab-admin Infisical project has been successfully created and integrated
 
 **Projects**:
 1. **homelab-gitops** - Application secrets
-   - Service Token: `st.650cfc13-6ecd-4a3b-91cc-8d7a123b67c4...`
+   - Service Token: `<dead Infisical service token, already 404>`
    - Purpose: Application-level secrets (GitHub, WikiJS, SMTP, etc.)
 
 2. **homelab-admin** - Infrastructure/DevOps secrets ✨ NEW
-   - Service Token: `<INFISICAL_SVC_TOKEN_homelab-admin_REVOKED_2026-05-09_see_Vikunja_1103>`
+   - Service Token: `<see Vikunja #1103 — REVOKED 2026-05-09>`
    - Purpose: Infrastructure credentials (Proxmox, AdGuard, KEA, Traefik, etc.)
 
 ## Integration Files Created
@@ -29,7 +29,7 @@ Bash utility functions for managing infrastructure secrets:
 
 ```bash
 # Usage
-export INFISICAL_ADMIN_TOKEN="st.5289cbfa-4d3c-4e19-ac4f-551a18e1aeab..."
+export INFISICAL_ADMIN_TOKEN="<see Vikunja #1103>"
 source scripts/infisical-admin-helper.sh
 
 # Test connection
@@ -97,7 +97,7 @@ Test script to validate the integration:
 
 ```bash
 cd api
-INFISICAL_ADMIN_TOKEN=st.5289cbfa-4d3c-4e19-ac4f-551a18e1aeab... node test-infisical-admin.js
+INFISICAL_ADMIN_TOKEN=<see Vikunja #1103> node test-infisical-admin.js
 ```
 
 This will:
@@ -114,12 +114,12 @@ This will:
 
 ```bash
 # Application Secrets (homelab-gitops project)
-INFISICAL_TOKEN=st.650cfc13-6ecd-4a3b-91cc-8d7a123b67c4...
+INFISICAL_TOKEN=<dead Infisical service token, already 404>
 INFISICAL_SITE_URL=https://infisical.internal.lakehouse.wtf
 INFISICAL_ENVIRONMENT=dev
 
 # Infrastructure Secrets (homelab-admin project)
-INFISICAL_ADMIN_TOKEN=st.5289cbfa-4d3c-4e19-ac4f-551a18e1aeab...
+INFISICAL_ADMIN_TOKEN=<see Vikunja #1103>
 INFISICAL_ADMIN_ENV=prod
 ```
 
@@ -317,7 +317,7 @@ homelab-admin/prod/
 
 ```bash
 # Set the admin token
-export INFISICAL_ADMIN_TOKEN="<INFISICAL_SVC_TOKEN_homelab-admin_REVOKED_2026-05-09_see_Vikunja_1103>"
+export INFISICAL_ADMIN_TOKEN="<see Vikunja #1103 — REVOKED 2026-05-09>"
 
 # Source the helper
 source scripts/infisical-admin-helper.sh
@@ -335,7 +335,7 @@ list_admin_secrets
 cd api
 
 # Set the admin token
-export INFISICAL_ADMIN_TOKEN="<INFISICAL_SVC_TOKEN_homelab-admin_REVOKED_2026-05-09_see_Vikunja_1103>"
+export INFISICAL_ADMIN_TOKEN="<see Vikunja #1103 — REVOKED 2026-05-09>"
 
 # Run test script
 node test-infisical-admin.js
@@ -358,7 +358,7 @@ node test-infisical-admin.js
 2. **Test Integration**: Run the test scripts
    ```bash
    # Bash test
-   export INFISICAL_ADMIN_TOKEN="st.5289cbfa-4d3c-4e19-ac4f-551a18e1aeab..."
+   export INFISICAL_ADMIN_TOKEN="<see Vikunja #1103>"
    source scripts/infisical-admin-helper.sh
    test_admin_connection
 
@@ -452,6 +452,6 @@ curl -H "Authorization: Bearer st.5289cbfa..." \
 
 **Created**: 2025-11-14
 **Token Generated**: 2025-11-14
-**Service Token**: `<INFISICAL_SVC_TOKEN_homelab-admin_REVOKED_2026-05-09_see_Vikunja_1103>`
+**Service Token**: `<see Vikunja #1103 — REVOKED 2026-05-09>`
 **Status**: ✅ Ready for use
 **Next Action**: Add infrastructure secrets via Infisical web UI

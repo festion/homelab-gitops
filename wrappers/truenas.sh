@@ -20,7 +20,7 @@ mkdir -p "$(dirname "$LOG_FILE")"
 
 # Default configuration
 DEFAULT_TRUENAS_URL="http://truenas.internal.lakehouse.wtf"
-DEFAULT_API_KEY="<TRUENAS_API_KEY_id1_REVOKED_2026-05-09_see_Vikunja_1101>"
+DEFAULT_API_KEY="<see Infisical: TRUENAS_API_KEY>"
 DEFAULT_VERIFY_SSL="false"
 DEFAULT_TIMEOUT="30"
 

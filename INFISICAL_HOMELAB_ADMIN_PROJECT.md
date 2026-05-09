@@ -169,7 +169,7 @@ After creating the project:
 
 4. **Save the Token**:
    ```
-   INFISICAL_ADMIN_TOKEN=<INFISICAL_SVC_TOKEN_homelab-admin_REVOKED_2026-05-09_see_Vikunja_1103>
+   INFISICAL_ADMIN_TOKEN=<see Vikunja #1103 — REVOKED 2026-05-09>
    ```
 
    ✅ **Token Generated**: 2025-11-14
