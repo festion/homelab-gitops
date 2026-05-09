@@ -17,12 +17,12 @@ Your homelab now has two Infisical projects for managing secrets:
 
 ### Application Secrets (homelab-gitops)
 ```bash
-export INFISICAL_TOKEN="st.650cfc13-6ecd-4a3b-91cc-8d7a123b67c4.6e4f82a64138dda74e5176e7bccaef5b.54c8b6d1931e1049be586370fe32b3ef"
+export INFISICAL_TOKEN="<dead Infisical service token, already 404 — replace with current creds>"
 ```
 
 ### Infrastructure Secrets (homelab-admin)
 ```bash
-export INFISICAL_ADMIN_TOKEN="st.5289cbfa-4d3c-4e19-ac4f-551a18e1aeab.a48aac557989f1cbd84c483db1af65b7.ad2d8162797542dbb25a7ab8fc64f6ae"
+export INFISICAL_ADMIN_TOKEN="<see Vikunja #1103 — REVOKED 2026-05-09>"
 ```
 
 ## Quick Commands

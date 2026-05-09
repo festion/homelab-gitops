@@ -3,7 +3,7 @@
 # Add Homepage environment variables to Infisical homelab-gitops project
 #
 # Usage:
-#   INFISICAL_TOKEN=st.650cfc13... bash scripts/add-homepage-secrets.sh
+#   INFISICAL_TOKEN=<dead-infisical-token> bash scripts/add-homepage-secrets.sh
 #
 
 set -e
@@ -22,7 +22,7 @@ if [ -z "$INFISICAL_TOKEN" ]; then
   echo -e "${RED}❌ INFISICAL_TOKEN not set${NC}"
   echo ""
   echo "Please set the homelab-gitops token:"
-  echo "  export INFISICAL_TOKEN=\"st.650cfc13-6ecd-4a3b-91cc-8d7a123b67c4...\""
+  echo "  export INFISICAL_TOKEN=\"<dead Infisical service token, already 404>\""
   echo ""
   echo "Then run:"
   echo "  bash scripts/add-homepage-secrets.sh"

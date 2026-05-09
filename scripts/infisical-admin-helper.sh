@@ -4,7 +4,7 @@
 # Utility script for managing infrastructure secrets via Infisical homelab-admin project
 #
 # Usage:
-#   export INFISICAL_ADMIN_TOKEN="st.5289cbfa-4d3c-4e19-ac4f-551a18e1aeab..."
+#   export INFISICAL_ADMIN_TOKEN="<see Vikunja #1103>"
 #   source scripts/infisical-admin-helper.sh
 #   get_admin_secret "PROXMOX_PASSWORD"
 #
@@ -24,7 +24,7 @@ check_token() {
     echo -e "${RED}❌ INFISICAL_ADMIN_TOKEN not set${NC}"
     echo ""
     echo "Please set the token:"
-    echo "  export INFISICAL_ADMIN_TOKEN=\"st.5289cbfa-4d3c-4e19-ac4f-551a18e1aeab...\""
+    echo "  export INFISICAL_ADMIN_TOKEN=\"<see Vikunja #1103>\""
     return 1
   fi
   return 0
@@ -218,7 +218,7 @@ ${GREEN}Infisical Admin Helper${NC}
 Utility functions for managing infrastructure secrets via Infisical homelab-admin project.
 
 ${YELLOW}Setup:${NC}
-  export INFISICAL_ADMIN_TOKEN="st.5289cbfa-4d3c-4e19-ac4f-551a18e1aeab..."
+  export INFISICAL_ADMIN_TOKEN="<see Vikunja #1103>"
   source scripts/infisical-admin-helper.sh
 
 ${YELLOW}Available Functions:${NC}
