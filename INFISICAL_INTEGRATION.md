@@ -19,7 +19,7 @@ Create a `.env` file in the `api/` directory (or set environment variables):
 
 ```bash
 # Required for Infisical integration
-INFISICAL_TOKEN=st.650cfc13-6ecd-4a3b-91cc-8d7a123b67c4.6e4f82a64138dda74e5176e7bccaef5b.54c8b6d1931e1049be586370fe32b3ef
+INFISICAL_TOKEN=<dead Infisical service token, already 404 — replace with current creds>
 INFISICAL_SITE_URL=https://infisical.internal.lakehouse.wtf
 INFISICAL_ENVIRONMENT=dev
 ```
@@ -216,7 +216,7 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 ### Current Token
 
-- **Token**: `st.650cfc13-6ecd-4a3b-91cc-8d7a123b67c4...`
+- **Token**: `<dead Infisical service token, already 404>`
 - **Created**: 2025-11-14
 - **Environment**: Development
 - **Permissions**: Read/Write

@@ -90,7 +90,7 @@ cd /home/dev/workspace/operations
 **Option 2: Direct API**
 ```bash
 curl -s -X POST http://192.168.1.224/control/rewrite/add \
-  -u "root:PASSWORD" \
+  -u "root:<ROOT_PASSWORD>" \
   -H "Content-Type: application/json" \
   -d '{"domain":"omada.internal.lakehouse.wtf","answer":"192.168.1.110"}'
 ```

@@ -169,7 +169,7 @@ After creating the project:
 
 4. **Save the Token**:
    ```
-   INFISICAL_ADMIN_TOKEN=st.5289cbfa-4d3c-4e19-ac4f-551a18e1aeab.a48aac557989f1cbd84c483db1af65b7.ad2d8162797542dbb25a7ab8fc64f6ae
+   INFISICAL_ADMIN_TOKEN=<see Vikunja #1103 — REVOKED 2026-05-09>
    ```
 
    ✅ **Token Generated**: 2025-11-14

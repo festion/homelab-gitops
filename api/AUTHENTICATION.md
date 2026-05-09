@@ -67,7 +67,7 @@ curl -X POST http://localhost:3070/api/v2/pipelines/trigger \
 
 ```bash
 curl -X POST http://localhost:3070/api/v2/auth/api-keys \
-  -H "Authorization: Bearer your-jwt-token" \
+  -H "Authorization: Bearer <YOUR_JWT_TOKEN>" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "CI/CD Pipeline",

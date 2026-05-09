@@ -1,0 +1,9 @@
+# gitleaks fingerprints to ignore in this repo.
+#
+# Format: `<file>:<rule-id>:<line>` for `--no-git --source .` scans.
+#
+# Each entry MUST have an adjacent comment naming the bead/PR that resolves it.
+# Once the bead is closed, REMOVE the entry — gitleaks should fail loudly the
+# moment the leak comes back rather than silently ignoring it forever.
+
+# (no fingerprints suppressed)

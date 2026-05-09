@@ -168,3 +168,6 @@ venv/
 # .serena/memories/ are tracked deliberately; only project.yml is per-machine
 .serena/project.yml
 .beads/
+
+# Jest transform / haste-map caches (machine-generated, per-host)
+.jest-cache-*/

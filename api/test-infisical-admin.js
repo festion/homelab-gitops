@@ -4,7 +4,7 @@
  * Test script for Infisical homelab-admin integration
  *
  * Usage:
- *   INFISICAL_ADMIN_TOKEN=st.5289cbfa-4d3c-4e19-ac4f-551a18e1aeab... node test-infisical-admin.js
+ *   INFISICAL_ADMIN_TOKEN=<see Vikunja #1103> node test-infisical-admin.js
  */
 
 const infisicalAdmin = require('./config/infisical-admin');
@@ -22,7 +22,7 @@ async function testInfisicalAdmin() {
   if (!process.env.INFISICAL_ADMIN_TOKEN) {
     console.error('\n❌ INFISICAL_ADMIN_TOKEN not set!');
     console.log('\nTo test, run:');
-    console.log('   INFISICAL_ADMIN_TOKEN=st.5289cbfa-4d3c-4e19-ac4f-551a18e1aeab... node test-infisical-admin.js\n');
+    console.log('   INFISICAL_ADMIN_TOKEN=<see Vikunja #1103> node test-infisical-admin.js\n');
     process.exit(1);
   }
 
