@@ -33,10 +33,10 @@ jobs:
           
     steps:
     - name: Checkout code
-      uses: actions/checkout@v5
+      uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
       
     - name: Setup Node.js
-      uses: actions/setup-node@v5
+      uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
       with:
         node-version: '20'
         cache: 'npm'
@@ -276,7 +276,7 @@ jobs:
         fi
         
     - name: Upload performance artifacts
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
       with:
         name: performance-results-${{ github.sha }}
         path: |
@@ -309,10 +309,10 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v5
+      uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
       
     - name: Setup Node.js
-      uses: actions/setup-node@v5
+      uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
       with:
         node-version: '20'
         cache: 'npm'
@@ -368,7 +368,7 @@ jobs:
         fi
         
     - name: Upload Lighthouse results
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
       with:
         name: lighthouse-results-${{ github.sha }}
         path: |
@@ -385,7 +385,7 @@ jobs:
     
     steps:
     - name: Download performance artifacts
-      uses: actions/download-artifact@v5
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
       with:
         pattern: '*-results-${{ github.sha }}'
         merge-multiple: true
@@ -436,7 +436,7 @@ jobs:
         echo "- Review error rates during peak load testing" >> PERFORMANCE_SUMMARY.md
         
     - name: Upload performance summary
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
       with:
         name: performance-summary-${{ github.sha }}
         path: PERFORMANCE_SUMMARY.md

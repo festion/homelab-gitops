@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
         with:
           path: homelab-gitops-auditor
 
@@ -69,7 +69,7 @@ jobs:
           "HTML_BODY<<EOF`n$body`nEOF" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Send audit summary email
-        uses: dawidd6/action-send-mail@v3
+        uses: dawidd6/action-send-mail@4226df7daafa6fc901a43789c49bf7ab309066e7 # v3
         with:
           server_address: smtp.gmail.com
           server_port: 587

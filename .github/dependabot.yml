@@ -1,0 +1,34 @@
+# Dependabot configuration.
+#
+# Tracks third-party GitHub Action SHA pins added in
+# Vikunja #1077 (T26 of the 2026-05-08 monorepo security remediation).
+# When a new release of a pinned action drops, Dependabot opens a PR that
+# updates both the SHA and the trailing `# v<n>` comment.
+
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(actions)"
+      include: "scope"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "github-actions"
+
+  - package-ecosystem: "npm"
+    directory: "/api"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(api)"
+      include: "scope"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "npm"
