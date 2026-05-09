@@ -1,30 +1,33 @@
 # Infisical Service Token
 
-## Token Details
-- **Token**: `st.58fae899-b38e-48cf-a14d-d3ce082bc66e.76ced52b539c577e924816576d306899.5f41afc577e1809c2808467714cdb74f`
-- **Expiration**: Never expires
-- **Scope**: Production environment (full access)
+> **REVOKED 2026-05-09** — Vikunja #1102. The token below was committed to
+> this repo (read-only access via git log, but write-capable in dev+prod via
+> Infisical) and was rotated as part of the 2026-05-08 monorepo security
+> remediation. Old value returns HTTP 404 on the Infisical API. Literal
+> redacted.
+>
+> For new interactive tokens, prefer `infisical login -i` (per-machine
+> session) or a Machine Identity (universal-auth) — do NOT mint a new
+> long-lived service token and commit it here.
+
+## Old token (revoked)
+
+- **Token**: `<see Vikunja #1102 — REVOKED 2026-05-09>`
+- **Token ID**: `58fae899-b38e-48cf-a14d-d3ce082bc66e`
+- **Name**: ClaudeCode
+- **Scope**: dev + prod (read+write on `/`)
 - **Created**: 2025-12-02
+- **Revoked**: 2026-05-09 (via Infisical web UI)
 
-## Infisical Instance
-- **URL**: https://infisical.internal.lakehouse.wtf
-- **Project**: homelab secrets
+## Replacement procedure
 
-## Usage
-```bash
-# Set environment variable
-export INFISICAL_TOKEN="st.58fae899-b38e-48cf-a14d-d3ce082bc66e.76ced52b539c577e924816576d306899.5f41afc577e1809c2808467714cdb74f"
-
-# Retrieve a secret
-infisical secrets get UPTIME_KUMA_PASSWORD --env=prod --token="$INFISICAL_TOKEN"
-
-# Or via CLI with token flag
-infisical secrets --env=prod --token="st.58fae899-b38e-48cf-a14d-d3ce082bc66e.76ced52b539c577e924816576d306899.5f41afc577e1809c2808467714cdb74f"
-```
+1. Use `infisical login --domain="https://infisical.internal.lakehouse.wtf" -i`
+   for interactive sessions. The wrapper at `~/.local/bin/infisical-get` handles
+   session expiry by falling back to the `claude-code-dev` Machine Identity
+   (universal-auth, creds at `~/.infisical/machine-identity.env`).
+2. For headless/CI use, prefer Machine Identities over service tokens. Service
+   tokens are deprecated upstream as of Infisical 0.40+.
 
 ## Available Secrets (prod environment)
-- `UPTIME_KUMA_ADMIN_PASSWORD` - root password for Uptime Kuma (rotated 2026-05-08; value in Infisical only)
 
-## Notes
-- First token provided (st.359aa358...) only had dev scope access
-- This token has production scope for accessing homelab secrets
+See the live Infisical project — no point listing here, the inventory drifts.

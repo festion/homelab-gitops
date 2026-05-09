@@ -1,0 +1,18 @@
+# gitleaks fingerprints to ignore in this repo.
+#
+# Format: `<file>:<rule-id>:<line>` for `--no-git --source .` scans.
+#
+# Each entry MUST have an adjacent comment naming the bead/PR that resolves it.
+# Once the bead is closed, REMOVE the entry — gitleaks should fail loudly the
+# moment the leak comes back rather than silently ignoring it forever.
+
+# Pushover token + user key embedded in Node-RED auto-remediation flow.
+# The literal is the live PUSHOVER_API_TOKEN / PUSHOVER_USER_KEY in Infisical.
+# Sequel bead: Vikunja #1098 — migrate Pushover credentials out of
+# `flows.json` (operations) and `auto-remediation-flow.json` (homelab-gitops)
+# into Node-RED's `flows_cred.json` on CT 142, sourced from Infisical via
+# the systemd unit's EnvironmentFile. Until #1098 lands, scrubbing the
+# literal here would break auto-remediation alerts the next time the flow
+# is redeployed. Remove these two lines when #1098 closes.
+infrastructure/node-red/auto-remediation-flow.json:generic-api-key:335
+infrastructure/node-red/auto-remediation-flow.json:generic-api-key:352

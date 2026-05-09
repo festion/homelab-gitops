@@ -68,7 +68,7 @@ Environment=HOMEPAGE_VAR_HASS_TOKEN=eyJhbGc...
 ```ini
 [Service]
 ExecStart=/usr/bin/node /home/homepage/infisical-loader.js
-Environment=INFISICAL_TOKEN=st.650cfc13-6ecd-4a3b-91cc-8d7a123b67c4...
+Environment=INFISICAL_TOKEN=<dead Infisical service token, already 404>
 Environment=INFISICAL_SITE_URL=https://infisical.internal.lakehouse.wtf
 Environment=INFISICAL_ENVIRONMENT=prod
 ```

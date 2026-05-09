@@ -116,7 +116,7 @@ async function main() {
   if (!INFISICAL_TOKEN) {
     console.error('❌ INFISICAL_TOKEN not set\n');
     console.log('Please set the homelab-gitops token:');
-    console.log('  export INFISICAL_TOKEN="st.650cfc13-6ecd-4a3b-91cc-8d7a123b67c4..."\n');
+    console.log('  export INFISICAL_TOKEN="<dead Infisical service token, already 404>"\n');
     console.log('Then run:');
     console.log('  node add-homepage-secrets.js\n');
     process.exit(1);

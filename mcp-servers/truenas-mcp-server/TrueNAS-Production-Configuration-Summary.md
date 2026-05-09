@@ -6,7 +6,7 @@ The TrueNAS MCP Server has been successfully configured for your production envi
 
 ### Connection Details
 - **TrueNAS URL**: `http://truenas.internal.lakehouse.wtf`
-- **API Key**: `1-FROvjtWKEp98m4xP8moCp265r5YeGSnnRaGIaFAyppq9AjlbNsPbLIzIGBCb7PG2`
+- **API Key**: `<see Infisical: TRUENAS_API_KEY>`
 - **SSL Verification**: `false` (appropriate for internal hostname)
 - **Timeout**: `30 seconds`
 
@@ -69,7 +69,7 @@ Add the following to your Claude Desktop MCP configuration:
       "args": ["/home/dev/workspace/truenas-mcp-wrapper.sh"],
       "env": {
         "TRUENAS_URL": "http://truenas.internal.lakehouse.wtf",
-        "TRUENAS_API_KEY": "1-FROvjtWKEp98m4xP8moCp265r5YeGSnnRaGIaFAyppq9AjlbNsPbLIzIGBCb7PG2",
+        "TRUENAS_API_KEY": "<see Infisical: TRUENAS_API_KEY>",
         "TRUENAS_VERIFY_SSL": "false",
         "TRUENAS_TIMEOUT": "30"
       }
