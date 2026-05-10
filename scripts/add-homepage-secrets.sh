@@ -103,7 +103,7 @@ add_secret "HOMEPAGE_VAR_OMADA_USER" "admin"
 add_secret "HOMEPAGE_VAR_OMADA_PASS" "admin"
 
 # InfluxDB
-add_secret "HOMEPAGE_VAR_INFLUX_USER" "admin"
+add_secret "HOMEPAGE_VAR_INFLUX_USER" "administrator"
 add_secret "HOMEPAGE_VAR_INFLUX_PASS" "${HOMEPAGE_VAR_INFLUX_PASS:?HOMEPAGE_VAR_INFLUX_PASS env var required}"
 
 echo ""

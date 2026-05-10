@@ -55,7 +55,7 @@ const secrets = {
   'HOMEPAGE_VAR_OMADA_PASS': 'admin',
 
   // InfluxDB Integration
-  'HOMEPAGE_VAR_INFLUX_USER': 'admin',
+  'HOMEPAGE_VAR_INFLUX_USER': 'administrator',
   'HOMEPAGE_VAR_INFLUX_PASS': envOrThrow('HOMEPAGE_VAR_INFLUX_PASS')
 };
 
