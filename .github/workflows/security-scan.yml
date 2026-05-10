@@ -46,7 +46,7 @@ jobs:
       continue-on-error: true
     
     - name: Security scan with Snyk
-      uses: snyk/actions/node@master
+      uses: snyk/actions/node@9adf32b1121593767fc3c057af55b55db032dc04 # v1.0.0
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       with:
@@ -71,7 +71,7 @@ jobs:
       continue-on-error: true
     
     - name: Check for secrets in code
-      uses: trufflesecurity/trufflehog@main
+      uses: trufflesecurity/trufflehog@17456f8c7d042d8c82c9a8ca9e937231f9f42e26 # v3.95.2
       with:
         path: ./
         base: main

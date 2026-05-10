@@ -113,7 +113,7 @@ jobs:
         fi
         
     - name: Run Trivy vulnerability scanner
-      uses: aquasecurity/trivy-action@master
+      uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
       with:
         image-ref: 'homelab-gitops-auditor:scan'
         format: 'sarif'
@@ -171,15 +171,15 @@ jobs:
       continue-on-error: true
         
     - name: Security scan with Snyk (API)
-      uses: snyk/actions/node@master
+      uses: snyk/actions/node@9adf32b1121593767fc3c057af55b55db032dc04 # v1.0.0
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       with:
         args: --file=api/package.json --severity-threshold=high
       continue-on-error: true
-        
+
     - name: Security scan with Snyk (Dashboard)
-      uses: snyk/actions/node@master
+      uses: snyk/actions/node@9adf32b1121593767fc3c057af55b55db032dc04 # v1.0.0
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       with:
