@@ -250,3 +250,8 @@
         icon: mdi-pulse
         href: https://pulse.internal.lakehouse.wtf
         description: Status Page
+
+    - Web Terminal:
+        icon: mdi-console
+        href: https://ttyd.internal.lakehouse.wtf
+        description: Browser-based terminal (ttyd)
