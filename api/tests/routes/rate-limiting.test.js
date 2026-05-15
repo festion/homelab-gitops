@@ -78,4 +78,16 @@ describe('Rate limiting on auth-gated routes (#669)', () => {
     });
   });
 
+  // Vikunja #1309: /health must NOT carry rate-limit middleware. Traefik
+  // probes this endpoint every 30s from multiple upstreams; if it were
+  // rate-limited, the resulting 429s would cascade Traefik into marking the
+  // backend unhealthy and returning 503 to real users.
+  describe('/health (liveness probe for upstream proxies)', () => {
+    it('GET /health exists and is NOT rate-limited', () => {
+      const handlers = getRouteHandlers(app, 'get', '/health');
+      expect(handlers.length).toBeGreaterThan(0);
+      expect(handlers.some(isRateLimitMiddleware)).toBe(false);
+    });
+  });
+
 });

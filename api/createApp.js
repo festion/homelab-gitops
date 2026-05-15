@@ -97,6 +97,15 @@ function createApp({
     }, wikiRoutes);
   }
 
+  // Liveness probe for upstream proxies (Traefik). Bypasses rate-limit and
+  // any data-loading — must stay cheap, always-200, and never tied to a
+  // rate-limited path. Vikunja #1309: previously Traefik probed /audit
+  // every 30s, which tripped auditRateLimit and cascaded into 503 for real
+  // user traffic. Keep this route ordered BEFORE /audit so it's not shadowed.
+  app.get('/health', (req, res) => {
+    res.status(200).json({ status: 'ok' });
+  });
+
   // Load latest audit report.
   app.get('/audit', auditRateLimit, (req, res) => {
     try {
