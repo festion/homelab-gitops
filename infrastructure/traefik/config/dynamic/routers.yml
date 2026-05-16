@@ -276,28 +276,6 @@ http:
         certResolver: cloudflare
         domains:
         - main: '*.internal.lakehouse.wtf'
-    zwave-js-ui-router:
-      rule: Host(`zwave-js-ui.internal.lakehouse.wtf`)
-      service: zwave-js-ui-service
-      entryPoints:
-      - websecure
-      middlewares:
-      - secure-headers
-      tls:
-        certResolver: cloudflare
-        domains:
-        - main: '*.internal.lakehouse.wtf'
-    zwave-router:
-      rule: Host(`zwave.internal.lakehouse.wtf`)
-      service: zwave-js-ui-service
-      entryPoints:
-      - websecure
-      middlewares:
-      - secure-headers
-      tls:
-        certResolver: cloudflare
-        domains:
-        - main: '*.internal.lakehouse.wtf'
     truenas-router:
       rule: Host(`truenas.internal.lakehouse.wtf`)
       service: truenas-service

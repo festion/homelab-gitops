@@ -182,11 +182,6 @@
           type: zigbee2mqtt
           url: http://192.168.1.228:8099
 
-    - Z-Wave JS UI:
-        icon: mdi-z-wave
-        href: https://zwave-js-ui.internal.lakehouse.wtf
-        description: Z-Wave Device Management
-
     - MQTT Broker:
         icon: mqtt.png
         href: http://192.168.1.85

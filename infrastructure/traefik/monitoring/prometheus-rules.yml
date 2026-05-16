@@ -245,12 +245,12 @@ groups:
     rules:
       - alert: SmartHomeServiceDegraded
         expr: |
-          traefik_service_server_up{service=~"homeassistant|z2m|zwave-js-ui"} == 0
+          traefik_service_server_up{service=~"homeassistant|z2m"} == 0
           or
           (
-            sum(rate(traefik_service_requests_total{service=~"homeassistant|z2m|zwave-js-ui",code=~"5.."}[5m])) by (service)
+            sum(rate(traefik_service_requests_total{service=~"homeassistant|z2m",code=~"5.."}[5m])) by (service)
             /
-            sum(rate(traefik_service_requests_total{service=~"homeassistant|z2m|zwave-js-ui"}[5m])) by (service)
+            sum(rate(traefik_service_requests_total{service=~"homeassistant|z2m"}[5m])) by (service)
           ) * 100 > 5
         for: 2m
         labels:

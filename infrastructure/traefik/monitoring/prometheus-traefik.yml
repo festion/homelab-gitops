@@ -49,7 +49,7 @@ scrape_configs:
 
       # Add service_type label based on service name
       - source_labels: [service]
-        regex: '(homeassistant|z2m|zwave-js-ui)'
+        regex: '(homeassistant|z2m)'
         target_label: service_type
         replacement: 'smart-home'
 
