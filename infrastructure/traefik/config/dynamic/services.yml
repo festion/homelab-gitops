@@ -143,15 +143,6 @@ http:
           path: /
           interval: 30s
           timeout: 5s
-    zwave-js-ui-service:
-      loadBalancer:
-        serversTransport: insecure-transport
-        servers:
-        - url: https://192.168.1.141:8091
-        healthCheck:
-          path: /
-          interval: 30s
-          timeout: 5s
     truenas-service:
       loadBalancer:
         serversTransport: insecure-transport
