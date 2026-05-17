@@ -387,7 +387,7 @@ jobs:
     
     steps:
     - name: Trigger staging deployment
-      uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+      uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
       with:
         script: |
           await github.rest.actions.createWorkflowDispatch({
@@ -404,7 +404,7 @@ jobs:
         sleep 180 # Wait 3 minutes for staging
         
     - name: Trigger production deployment
-      uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+      uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
       with:
         script: |
           // Only deploy stable releases to production automatically
@@ -453,7 +453,7 @@ jobs:
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
         
     - name: Update documentation
-      uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+      uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
       with:
         script: |
           // Create documentation update issue
