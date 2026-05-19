@@ -69,7 +69,7 @@ jobs:
           "HTML_BODY<<EOF`n$body`nEOF" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Send audit summary email
-        uses: dawidd6/action-send-mail@4226df7daafa6fc901a43789c49bf7ab309066e7 # v3
+        uses: dawidd6/action-send-mail@2cea9617b09d79a095af21254fbcb7ae95903dde # v3.12.0
         with:
           server_address: smtp.gmail.com
           server_port: 587
