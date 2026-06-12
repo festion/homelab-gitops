@@ -28,3 +28,11 @@
 
 ### comprehensive_audit.sh config-loader path — 2026-02-16
 - `config-loader.sh` lives in `scripts/config/config-loader.sh`, not `scripts/config-loader.sh`. The CI workflow previously copied the script to `/tmp` via sed, breaking `$SCRIPT_DIR` resolution. Fixed by running in-place with env var override for `LOCAL_GIT_ROOT`.
+
+<!-- migrated from global learnings tier 2026-06-12 (Vikunja #1744) -->
+
+### Atomic-swap deploy with idempotent systemd reconciliation — 2026-04-22
+- **Pattern:** When deploying to a server whose systemd unit references legacy paths (e.g. old entry-file name, wrong WorkingDirectory), make the deploy step rewrite the unit only if it still matches the legacy shape. Idempotent `grep + sed + systemctl daemon-reload`.
+- **Why:** Lets you ship config changes alongside code without a separate manual ops step. After the first successful deploy, the check is a no-op forever.
+- **Example:** homelab-gitops deploy-homelab job at `.github/workflows/deploy.yml` — rewrites `ExecStart=/usr/bin/node server.js` and `WorkingDirectory=/opt/gitops/api` if unit still points at `minimal-phase2-server.js`.
+- **Applies to:** Any long-lived prod host where systemd unit drift can't be assumed fixed.

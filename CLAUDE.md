@@ -118,3 +118,7 @@ The dashboard provides:
    - Check API service is running (`systemctl status gitops-audit-api`)
    - Check logs for connection errors
 
+
+## Learnings KB
+
+@.claude/learnings.md
