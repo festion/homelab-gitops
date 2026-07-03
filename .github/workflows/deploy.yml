@@ -87,9 +87,14 @@ jobs:
 
   deploy-homelab:
     # Runs on the self-hosted runner inside the homelab network so it can
-    # SSH to gitopsdashboard.mgmt.lakehouse.wtf directly. Authentication is via the runner
-    # user's ed25519 key, authorised in root@gitopsdashboard's
-    # authorized_keys (installed 2026-04-22 as part of #704).
+    # SSH to gitopsdashboard.mgmt.lakehouse.wtf directly. Authentication is
+    # self-contained (mirrors the home-assistant-config deploy): the
+    # "Configure SSH" step writes the DEPLOY_SSH_KEY secret to
+    # ~/.ssh/deploy_key and every scp/ssh uses it via `-i`. The job therefore
+    # does NOT depend on a pre-placed key on the runner and works on either
+    # org runner (github-runner / github-runner-2) — fixing the runner-roulette
+    # failure in #2003. The matching pubkey (homelab-gitops-deploy@ci-cd) is
+    # authorised in root@gitopsdashboard's authorized_keys.
     #
     # Artifact-based atomic-swap deploy (not in-place build): prod CT has
     # only 512MB RAM and can't run Vite/tsc. The `deploy` job on
@@ -113,15 +118,26 @@ jobs:
         with:
           name: ${{ env.ARTIFACT_NAME }}
 
+      - name: Configure SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          # Prepopulate known_hosts so the host key is trusted deterministically.
+          ssh-keyscan -H "$PROD_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
       - name: Ship tarball to prod
         run: |
-          scp -o StrictHostKeyChecking=accept-new \
+          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new \
             "$TARBALL" \
             "$PROD_USER@$PROD_HOST:/tmp/$TARBALL"
 
       - name: Atomic-swap install on prod
         run: |
-          ssh -o StrictHostKeyChecking=accept-new "$PROD_USER@$PROD_HOST" bash -se << EOF
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new "$PROD_USER@$PROD_HOST" bash -se << EOF
           set -euo pipefail
 
           INSTALL_DIR=/opt/gitops
@@ -219,3 +235,7 @@ jobs:
           echo "FAIL: /api/v2/platform/health did not respond within 36s"
           systemctl status gitops-audit-api || true
           exit 1
+
+      - name: Remove deploy key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
