@@ -87,7 +87,7 @@ jobs:
 
   deploy-homelab:
     # Runs on the self-hosted runner inside the homelab network so it can
-    # SSH to 192.168.1.136 directly. Authentication is via the runner
+    # SSH to gitopsdashboard.mgmt.lakehouse.wtf directly. Authentication is via the runner
     # user's ed25519 key, authorised in root@gitopsdashboard's
     # authorized_keys (installed 2026-04-22 as part of #704).
     #
@@ -103,7 +103,7 @@ jobs:
     needs: deploy
     if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
     env:
-      PROD_HOST: 192.168.1.136
+      PROD_HOST: gitopsdashboard.mgmt.lakehouse.wtf
       PROD_USER: root
       ARTIFACT_NAME: deployment-package-${{ github.sha }}
       TARBALL: homelab-gitops-auditor-${{ github.sha }}.tar.gz
