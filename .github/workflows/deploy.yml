@@ -4,6 +4,16 @@ on:
   push:
     branches: [ main ]
     tags: [ 'v*' ]
+    # Skip the full build + prod redeploy for documentation-only pushes. The
+    # deploy package (see the `deploy` job) copies api/dashboard/config/scripts
+    # only — never .claude/ or docs — so a docs change ships an identical
+    # artifact. workflow_dispatch is unaffected (it ignores paths filters), so a
+    # manual deploy is always available.
+    paths-ignore:
+      - '**/*.md'
+      - '.claude/**'
+      - 'docs/**'
+      - '.gitignore'
   workflow_dispatch:
     inputs:
       environment:
