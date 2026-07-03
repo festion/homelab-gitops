@@ -15,6 +15,16 @@ on:
         - production
         - staging
 
+# Serialize deploys: the deploy-homelab job ships to a shared staging dir
+# (/opt/gitops-new) on the prod host, so two overlapping runs corrupt each
+# other's tree mid-swap (caused a live outage 2026-07-02 when a push deploy
+# and a workflow_dispatch raced). Never cancel an in-flight deploy — let it
+# finish and swap atomically before the next one starts. Mirrors the
+# home-assistant-config deploy's concurrency group.
+concurrency:
+  group: deploy-to-production
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
