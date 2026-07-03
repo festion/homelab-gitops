@@ -36,3 +36,11 @@
 - **Why:** Lets you ship config changes alongside code without a separate manual ops step. After the first successful deploy, the check is a no-op forever.
 - **Example:** homelab-gitops deploy-homelab job at `.github/workflows/deploy.yml` — rewrites `ExecStart=/usr/bin/node server.js` and `WorkingDirectory=/opt/gitops/api` if unit still points at `minimal-phase2-server.js`.
 - **Applies to:** Any long-lived prod host where systemd unit drift can't be assumed fixed.
+
+### Deploys MUST serialize — deploy-homelab ships to a shared /opt/gitops-new staging dir — 2026-07-02
+- **Bug:** `deploy-homelab` extracts the tarball to a fixed `/opt/gitops-new` on CT 123, `npm ci` + `npm rebuild sqlite3 --build-from-source` there, then atomic-swaps into `/opt/gitops`. Two overlapping runs clobber that shared staging tree mid-build → the swapped-in tree has a half-rebuilt native sqlite3 and the service crash-loops (`ERR_DLOPEN_FAILED`, sqlite3 vs GLIBC).
+- **Cause seen 2026-07-02:** a push deploy (merge to main) raced a `workflow_dispatch` verify deploy → live outage. Recovery: `cd /opt/gitops/api && npm rebuild sqlite3 --build-from-source && systemctl restart gitops-audit-api`.
+- **Fix in repo:** `deploy.yml` now has `concurrency: {group: deploy-to-production, cancel-in-progress: false}` (PR #167). NEVER manually `gh workflow run deploy.yml` while a push deploy may be in flight.
+
+### deploy-homelab SSH auth is self-contained (HA pattern), not runner-key-dependent — 2026-07-02
+- `deploy.yml` injects the `DEPLOY_SSH_KEY` repo secret to `~/.ssh/deploy_key` and uses `scp/ssh -i` explicitly (PR #166). Dedicated keypair `homelab-gitops-deploy@ci-cd` is authorised on `root@192.168.1.136` (gitopsdashboard). Works on either org runner. Previously used a bare `scp` relying on a runner-placed `id_ed25519` → failed on github-runner-2 (runner roulette, #2003).
