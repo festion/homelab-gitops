@@ -312,7 +312,7 @@ jobs:
         sha256sum homelab-gitops-auditor-${{ needs.prepare-release.outputs.version }}-source.tar.gz >> checksums.txt
         
     - name: Upload release artifacts
-      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       with:
         name: release-assets-${{ needs.prepare-release.outputs.version }}
         path: |
@@ -333,7 +333,7 @@ jobs:
         ref: ${{ needs.prepare-release.outputs.tag }}
         
     - name: Download release artifacts
-      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+      uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
       with:
         name: release-assets-${{ needs.prepare-release.outputs.version }}
         
@@ -512,7 +512,7 @@ jobs:
         EOF
         
     - name: Upload release report
-      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       with:
         name: release-report-${{ needs.prepare-release.outputs.version }}
         path: RELEASE_REPORT.md
