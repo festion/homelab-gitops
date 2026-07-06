@@ -33,6 +33,7 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "lint": "echo 'No linting configured for API'",
+    "postinstall": "node scripts/ensure-sqlite3.js",
     "test": "jest --config=jest.config.js",
     "test:watch": "jest --watch --config=jest.config.js",
     "test:coverage": "jest --coverage --config=jest.config.js",

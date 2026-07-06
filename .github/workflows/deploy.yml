@@ -179,11 +179,11 @@ jobs:
 
           echo "==> Installing production API deps in staging"
           cd "\$STAGING_DIR/api"
-          npm ci --omit=dev --no-audit --no-fund --silent
           # sqlite3 prebuilt binaries link against GLIBC 2.38; Debian 12 has
-          # 2.36. Force a local compile so the module loads at runtime.
-          # (Captured in global env learnings 2026-04-20.)
-          npm rebuild sqlite3 --build-from-source --silent
+          # 2.36. The api "postinstall" guard (scripts/ensure-sqlite3.js) runs
+          # during this npm ci and compiles sqlite3 from source when the
+          # prebuilt won't load, so no explicit rebuild step is needed here.
+          npm ci --omit=dev --no-audit --no-fund --silent
 
           echo "==> Preserving runtime state across the swap"
           # Carry live data forward from /opt/gitops into the staging tree so
