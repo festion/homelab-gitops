@@ -7,7 +7,7 @@ set -euo pipefail
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-PRODUCTION_SERVER="${PRODUCTION_SERVER:-192.168.1.58}"
+PRODUCTION_SERVER="${PRODUCTION_SERVER:-192.168.1.136}"
 DEPLOYMENT_USER="${DEPLOYMENT_USER:-root}"
 DEPLOYMENT_DIR="${DEPLOYMENT_DIR:-/opt/gitops}"
 LOG_FILE="${SCRIPT_DIR}/phase2-deployment-$(date +%Y%m%d_%H%M%S).log"
