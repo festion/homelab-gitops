@@ -7,7 +7,10 @@
 # Function to load configuration from file
 load_config() {
     local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    local project_root="$(dirname "$script_dir")"
+    # config-loader.sh lives in scripts/config/, so the repo root is two levels
+    # up — the canonical config/ dir is at the repo root (matches api/config-loader.js
+    # and config-manager.sh's documented config/settings.conf), NOT scripts/config/.
+    local project_root="$(dirname "$(dirname "$script_dir")")"
     local config_file="${project_root}/config/settings.conf"
     local user_config_file="${project_root}/config/settings.local.conf"
     
@@ -90,7 +93,10 @@ show_config() {
 # Function to create user config template
 create_user_config() {
     local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    local project_root="$(dirname "$script_dir")"
+    # config-loader.sh lives in scripts/config/, so the repo root is two levels
+    # up — the canonical config/ dir is at the repo root (matches api/config-loader.js
+    # and config-manager.sh's documented config/settings.conf), NOT scripts/config/.
+    local project_root="$(dirname "$(dirname "$script_dir")")"
     local user_config_file="${project_root}/config/settings.local.conf"
     
     if [ -f "$user_config_file" ]; then
@@ -223,7 +229,10 @@ configure_interactive() {
     
     # Create user config file with new settings
     local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    local project_root="$(dirname "$script_dir")"
+    # config-loader.sh lives in scripts/config/, so the repo root is two levels
+    # up — the canonical config/ dir is at the repo root (matches api/config-loader.js
+    # and config-manager.sh's documented config/settings.conf), NOT scripts/config/.
+    local project_root="$(dirname "$(dirname "$script_dir")")"
     local user_config_file="${project_root}/config/settings.local.conf"
     
     cat > "$user_config_file" << EOF
