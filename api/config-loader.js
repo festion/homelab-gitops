@@ -15,7 +15,7 @@ class ConfigLoader {
     
     // Set defaults
     this.config = {
-      PRODUCTION_SERVER_IP: '192.168.1.58',
+      PRODUCTION_SERVER_IP: '192.168.1.136',
       PRODUCTION_SERVER_USER: 'root',
       PRODUCTION_SERVER_PORT: '22',
       PRODUCTION_BASE_PATH: '/opt/gitops',

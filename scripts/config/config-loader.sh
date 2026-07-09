@@ -15,7 +15,7 @@ load_config() {
     local user_config_file="${project_root}/config/settings.local.conf"
     
     # Set defaults first
-    PRODUCTION_SERVER_IP="${PRODUCTION_SERVER_IP:-192.168.1.58}"
+    PRODUCTION_SERVER_IP="${PRODUCTION_SERVER_IP:-192.168.1.136}"
     PRODUCTION_SERVER_USER="${PRODUCTION_SERVER_USER:-root}"
     PRODUCTION_SERVER_PORT="${PRODUCTION_SERVER_PORT:-22}"
     PRODUCTION_BASE_PATH="${PRODUCTION_BASE_PATH:-/opt/gitops}"
