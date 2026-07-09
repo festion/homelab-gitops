@@ -56,7 +56,8 @@ set_config_value() {
         exit 1
     fi
     
-    local project_root="$(dirname "$SCRIPT_DIR")"
+    # SCRIPT_DIR is scripts/config/; repo root (with the canonical config/ dir) is two up.
+    local project_root="$(dirname "$(dirname "$SCRIPT_DIR")")"
     local user_config_file="${project_root}/config/settings.local.conf"
     
     # Create user config file if it doesn't exist
@@ -162,7 +163,8 @@ test_production_connection() {
 }
 
 reset_configuration() {
-    local project_root="$(dirname "$SCRIPT_DIR")"
+    # SCRIPT_DIR is scripts/config/; repo root (with the canonical config/ dir) is two up.
+    local project_root="$(dirname "$(dirname "$SCRIPT_DIR")")"
     local user_config_file="${project_root}/config/settings.local.conf"
     
     echo "⚠️  This will reset your user configuration to defaults."
