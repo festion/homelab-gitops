@@ -160,6 +160,24 @@ else
   echo "⚠️  Local Git root directory not found: $LOCAL_GIT_ROOT"
 fi
 
+# Determine whether there is a real local clone mirror to audit against.
+# Hosts that don't maintain a local clone tree (e.g. the production dashboard
+# CT, which only runs a presence-only nightly sync) may have LOCAL_GIT_ROOT
+# absent, empty, or holding stray non-git dirs. In that case treat every GitHub
+# repo as "present" rather than "missing locally" — otherwise the audit
+# false-reports health=red for every repo. The local-scan checks (dirty /
+# mismatch / missing) only make sense when a mirror actually exists.
+local_git_count=0
+for _r in "${!local_repo_status[@]}"; do
+  [ "${local_repo_status[$_r]}" != "not_git" ] && local_git_count=$((local_git_count + 1))
+done
+
+LOCAL_SCAN_ACTIVE=1
+if [ ! -d "$LOCAL_GIT_ROOT" ] || [ "$local_git_count" -eq 0 ]; then
+  LOCAL_SCAN_ACTIVE=0
+  echo "ℹ️  No local git mirror found under '${LOCAL_GIT_ROOT}' — running in presence-only mode (local dirty/mismatch/missing checks skipped)."
+fi
+
 ### ANALYZE MISMATCHES ###
 declare -A github_repos
 for repo in "${remote_repos[@]}"; do
@@ -178,6 +196,12 @@ echo "🔍 Analyzing repository mismatches..."
 
 # Check each GitHub repo
 for repo in "${remote_repos[@]}"; do
+  if [ "$LOCAL_SCAN_ACTIVE" -eq 0 ]; then
+    # Presence-only mode: no local mirror to compare against, so the repo is
+    # simply present on GitHub (not "missing locally").
+    clean_repos+=("$repo")
+    continue
+  fi
   if [[ -v local_repos["$repo"] ]]; then
     # Repo exists locally, check status
     status="${local_repo_status[$repo]}"
@@ -246,6 +270,7 @@ echo "  Health Status: $health_status"
   echo "  \"timestamp\": \"${TIMESTAMP}\","
   echo "  \"health_status\": \"${health_status}\","
   echo "  \"local_git_root\": \"${LOCAL_GIT_ROOT}\","
+  echo "  \"local_scan_active\": $([ "$LOCAL_SCAN_ACTIVE" -eq 1 ] && echo true || echo false),"
   echo "  \"github_user\": \"${GITHUB_USER}\","
   echo "  \"summary\": {"
   echo "    \"total\": ${total_repos},"
@@ -323,8 +348,8 @@ echo "  Health Status: $health_status"
   # Clean repositories
   for repo in "${clean_repos[@]}"; do
     [[ $first -eq 0 ]] && echo ","
-    repo_path="${local_repos[$repo]}"
-    file_status="${local_repo_files[$repo]}"
+    repo_path="${local_repos[$repo]:-}"
+    file_status="${local_repo_files[$repo]:-unknown}"
     echo "    {"
     echo "      \"name\": \"$repo\","
     echo "      \"status\": \"clean\","

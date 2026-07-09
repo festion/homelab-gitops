@@ -17,7 +17,11 @@ load_config() {
     PRODUCTION_SERVER_PORT="${PRODUCTION_SERVER_PORT:-22}"
     PRODUCTION_BASE_PATH="${PRODUCTION_BASE_PATH:-/opt/gitops}"
     
-    LOCAL_GIT_ROOT="${LOCAL_GIT_ROOT:-/mnt/c/GIT}"
+    # Opt-in local clone mirror for the comprehensive audit. Default empty:
+    # hosts without a local clone tree (e.g. the prod dashboard CT) run the
+    # comprehensive audit in presence-only mode. Override in the user/settings
+    # config where a real mirror exists.
+    LOCAL_GIT_ROOT="${LOCAL_GIT_ROOT:-}"
     DEVELOPMENT_API_PORT="${DEVELOPMENT_API_PORT:-3070}"
     DEVELOPMENT_DASHBOARD_PORT="${DEVELOPMENT_DASHBOARD_PORT:-5173}"
     
