@@ -19,7 +19,10 @@ class ConfigLoader {
       PRODUCTION_SERVER_USER: 'root',
       PRODUCTION_SERVER_PORT: '22',
       PRODUCTION_BASE_PATH: '/opt/gitops',
-      LOCAL_GIT_ROOT: '/mnt/c/GIT',
+      // Opt-in local clone mirror for the comprehensive audit; empty by default
+      // (presence-only where no mirror is maintained, e.g. the prod dashboard CT).
+      // Matches scripts/config/config-loader.sh. Override in config/settings.conf.
+      LOCAL_GIT_ROOT: '',
       DEVELOPMENT_API_PORT: '3070',
       DEVELOPMENT_DASHBOARD_PORT: '5173',
       GITHUB_USER: 'festion',
@@ -127,8 +130,8 @@ class ConfigLoader {
   validate() {
     const errors = [];
     
-    // Check required fields
-    const required = ['GITHUB_USER', 'LOCAL_GIT_ROOT', 'PRODUCTION_SERVER_IP'];
+    // Check required fields (LOCAL_GIT_ROOT is opt-in, validated below only if set)
+    const required = ['GITHUB_USER', 'PRODUCTION_SERVER_IP'];
     for (const field of required) {
       if (!this.get(field)) {
         errors.push(`Missing required configuration: ${field}`);
@@ -147,9 +150,11 @@ class ConfigLoader {
       errors.push(`Invalid dashboard port: ${dashboardPort}`);
     }
     
-    // Check if LOCAL_GIT_ROOT exists
-    if (!fs.existsSync(this.get('LOCAL_GIT_ROOT'))) {
-      errors.push(`Local Git root directory does not exist: ${this.get('LOCAL_GIT_ROOT')}`);
+    // LOCAL_GIT_ROOT is opt-in (empty => presence-only audit, no local mirror).
+    // Only validate the path when one is configured.
+    const localGitRoot = this.get('LOCAL_GIT_ROOT');
+    if (localGitRoot && !fs.existsSync(localGitRoot)) {
+      errors.push(`Local Git root directory does not exist: ${localGitRoot}`);
     }
     
     return errors;
