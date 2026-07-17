@@ -3,7 +3,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { exec } = require('child_process');
+const { spawn } = require('child_process');
 
 /**
  * Configuration for email notifications
@@ -147,24 +147,53 @@ function sendEmail(subject, htmlContent, toEmail) {
       return;
     }
 
+    // The recipient is passed as a positional argv element to `mail`. Reject
+    // anything that isn't a plain address — in particular a value starting with
+    // '-', which mail/mailx would parse as an OPTION (argument injection).
+    if (typeof toEmail !== 'string' || !/^[^\s@-][^\s@]*@[^\s@]+\.[^\s@]+$/.test(toEmail)) {
+      reject(new Error('Invalid recipient email address'));
+      return;
+    }
+
     const fullSubject = `${EMAIL_CONFIG.SUBJECT_PREFIX} ${subject}`;
     
     // Create temporary HTML file
     const tempFile = path.join('/tmp', `gitops-email-${Date.now()}.html`);
     fs.writeFileSync(tempFile, htmlContent);
     
-    // Send email using mail command (works with most Unix systems)
-    const mailCommand = `mail -s "${fullSubject}" -a "Content-Type: text/html" "${toEmail}" < "${tempFile}"`;
-    
-    exec(mailCommand, (error, stdout, stderr) => {
-      // Clean up temp file
+    // Send email using the `mail` command (works with most Unix systems).
+    // Use spawn with an argument array + feed the body on stdin (no shell), so
+    // a crafted subject / recipient can never inject shell commands. The old
+    // `mail -s "${subject}" "${to}" < "${file}"` string went through /bin/sh.
+    const cleanup = () => {
       try {
         fs.unlinkSync(tempFile);
       } catch (e) {
         console.warn('⚠️ Failed to clean up temp email file:', e.message);
       }
-      
-      if (error) {
+    };
+
+    const mail = spawn('mail', [
+      '-s', fullSubject,
+      '-a', 'Content-Type: text/html',
+      toEmail,
+    ]);
+    let mailStderr = '';
+    mail.stderr.on('data', (chunk) => { mailStderr += chunk.toString(); });
+    // Ignore EPIPE if `mail` exits before consuming all of stdin; the exit code
+    // is handled by the 'close' listener below.
+    mail.stdin.on('error', () => {});
+
+    mail.on('error', (error) => {
+      cleanup();
+      console.error('❌ Failed to send email:', error.message);
+      reject(error);
+    });
+
+    mail.on('close', (code) => {
+      cleanup();
+      if (code !== 0) {
+        const error = new Error(`mail exited with code ${code}: ${mailStderr.trim()}`);
         console.error('❌ Failed to send email:', error.message);
         reject(error);
       } else {
@@ -172,6 +201,16 @@ function sendEmail(subject, htmlContent, toEmail) {
         resolve(true);
       }
     });
+
+    // Feed the HTML body to `mail` on stdin (replaces the old `< tempFile` shell
+    // redirect). A stream error is surfaced through the child's error handler.
+    const bodyStream = fs.createReadStream(tempFile);
+    bodyStream.on('error', (error) => {
+      cleanup();
+      console.error('❌ Failed to read email body:', error.message);
+      reject(error);
+    });
+    bodyStream.pipe(mail.stdin);
   });
 }
 

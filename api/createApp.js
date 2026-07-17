@@ -7,7 +7,8 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const { exec } = require('child_process');
+const { execFile } = require('child_process');
+const { execGit, execGitSeq, removeDir, isHttpGitUrl } = require('./lib/safe-exec');
 
 const SecurityMiddleware = require('./middleware/security');
 const authRoutes = require('./routes/auth');
@@ -164,8 +165,12 @@ function createApp({
     const { repo, clone_url } = req.body;
     if (!repo || !clone_url)
       return res.status(400).json({ error: 'repo and clone_url required' });
+    if (!isHttpGitUrl(clone_url))
+      return res
+        .status(400)
+        .json({ error: 'clone_url must be an http(s)/ssh git URL' });
     const dest = path.join(LOCAL_DIR, repo);
-    exec(`git clone ${clone_url} ${dest}`, (err) => {
+    execGit(['clone', '--', clone_url, dest], (err) => {
       if (err) return res.status(500).json({ error: `Failed to clone ${repo}` });
       res.json({ status: `Cloned ${repo} to ${dest}` });
     });
@@ -177,7 +182,7 @@ function createApp({
     const target = path.join(LOCAL_DIR, repo);
     if (!fs.existsSync(target))
       return res.status(404).json({ error: 'Repo not found locally' });
-    exec(`rm -rf ${target}`, (err) => {
+    removeDir(target, (err) => {
       if (err) return res.status(500).json({ error: `Failed to delete ${repo}` });
       res.json({ status: `Deleted ${repo}` });
     });
@@ -190,11 +195,14 @@ function createApp({
     if (!fs.existsSync(path.join(repoPath, '.git')))
       return res.status(404).json({ error: 'Not a git repo' });
     const commitMessage = message || 'Auto commit from GitOps audit';
-    const cmd = `cd ${repoPath} && git add . && git commit -m "${commitMessage}"`;
-    exec(cmd, (err, stdout, stderr) => {
-      if (err) return res.status(500).json({ error: 'Commit failed', stderr });
-      res.json({ status: 'Committed changes', stdout });
-    });
+    execGitSeq(
+      [['add', '.'], ['commit', '-m', commitMessage]],
+      { cwd: repoPath },
+      (err, stdouts, stderr) => {
+        if (err) return res.status(500).json({ error: 'Commit failed', stderr });
+        res.json({ status: 'Committed changes', stdout: stdouts[stdouts.length - 1] });
+      }
+    );
   });
 
   // Fix remote URL mismatch.
@@ -204,19 +212,26 @@ function createApp({
       return res
         .status(400)
         .json({ error: 'repo and expected_url required' });
+    if (!isHttpGitUrl(expected_url))
+      return res
+        .status(400)
+        .json({ error: 'expected_url must be an http(s)/ssh git URL' });
 
     const repoPath = path.join(LOCAL_DIR, repo);
     if (!fs.existsSync(path.join(repoPath, '.git')))
       return res.status(404).json({ error: 'Not a git repo' });
 
-    const cmd = `cd ${repoPath} && git remote set-url origin ${expected_url}`;
-    exec(cmd, (err, stdout, stderr) => {
-      if (err)
-        return res
-          .status(500)
-          .json({ error: 'Failed to fix remote URL', stderr });
-      res.json({ status: `Fixed remote URL for ${repo}`, stdout });
-    });
+    execGit(
+      ['remote', 'set-url', 'origin', expected_url],
+      { cwd: repoPath },
+      (err, stdout, stderr) => {
+        if (err)
+          return res
+            .status(500)
+            .json({ error: 'Failed to fix remote URL', stderr });
+        res.json({ status: `Fixed remote URL for ${repo}`, stdout });
+      }
+    );
   });
 
   // Run comprehensive audit script.
@@ -225,10 +240,9 @@ function createApp({
       ? path.join(rootDir, 'scripts/comprehensive_audit.sh')
       : '/opt/gitops/scripts/comprehensive_audit.sh';
 
-    const devFlag = isDev ? '--dev' : '';
-    const cmd = `bash ${scriptPath} ${devFlag}`;
+    const bashArgs = isDev ? [scriptPath, '--dev'] : [scriptPath];
 
-    exec(cmd, { timeout: 60000 }, (err, stdout, stderr) => {
+    execFile('bash', bashArgs, { timeout: 60000 }, (err, stdout, stderr) => {
       if (err)
         return res
           .status(500)
@@ -246,8 +260,7 @@ function createApp({
       return res.status(404).json({ error: 'Not a git repo' });
     }
 
-    const cmd = `cd ${repoPath} && git remote get-url origin`;
-    exec(cmd, (err, stdout) => {
+    execGit(['remote', 'get-url', 'origin'], { cwd: repoPath }, (err, stdout) => {
       if (err)
         return res.status(500).json({ error: 'Failed to get remote URL' });
 
@@ -276,24 +289,40 @@ function createApp({
     let completed = 0;
 
     repos.forEach((repo) => {
-      let cmd;
+      let runner;
       const repoPath = path.join(LOCAL_DIR, repo);
+      const githubUser =
+        config && config.get ? config.get('GITHUB_USER') : '';
 
       switch (operation) {
         case 'clone':
-          cmd = `git clone https://github.com/${config && config.get ? config.get('GITHUB_USER') : ''}/${repo}.git ${repoPath}`;
+          runner = (cb) =>
+            execGit(
+              ['clone', '--', `https://github.com/${githubUser}/${repo}.git`, repoPath],
+              cb
+            );
           break;
         case 'fix-remote':
-          cmd = `cd ${repoPath} && git remote set-url origin https://github.com/${config && config.get ? config.get('GITHUB_USER') : ''}/${repo}.git`;
+          runner = (cb) =>
+            execGit(
+              [
+                'remote',
+                'set-url',
+                'origin',
+                `https://github.com/${githubUser}/${repo}.git`,
+              ],
+              { cwd: repoPath },
+              cb
+            );
           break;
         case 'delete':
-          cmd = `rm -rf ${repoPath}`;
+          runner = (cb) => removeDir(repoPath, cb);
           break;
         default:
           return res.status(400).json({ error: 'Invalid operation' });
       }
 
-      exec(cmd, (err, stdout, stderr) => {
+      runner((err, stdout) => {
         results.push({
           repo,
           success: !err,
@@ -315,11 +344,14 @@ function createApp({
     const repoPath = path.join(LOCAL_DIR, repo);
     if (!fs.existsSync(path.join(repoPath, '.git')))
       return res.status(404).json({ error: 'Not a git repo' });
-    const cmd = `cd ${repoPath} && git reset --hard && git clean -fd`;
-    exec(cmd, (err) => {
-      if (err) return res.status(500).json({ error: 'Discard failed' });
-      res.json({ status: 'Discarded changes' });
-    });
+    execGitSeq(
+      [['reset', '--hard'], ['clean', '-fd']],
+      { cwd: repoPath },
+      (err) => {
+        if (err) return res.status(500).json({ error: 'Discard failed' });
+        res.json({ status: 'Discarded changes' });
+      }
+    );
   });
 
   // Return status and diff for dirty repository.
@@ -329,11 +361,14 @@ function createApp({
     if (!fs.existsSync(path.join(repoPath, '.git')))
       return res.status(404).json({ error: 'Not a git repo' });
 
-    const cmd = `cd ${repoPath} && git status --short && echo '---' && git diff`;
-    exec(cmd, (err, stdout) => {
-      if (err) return res.status(500).json({ error: 'Diff failed' });
-      res.json({ repo, diff: stdout });
-    });
+    execGitSeq(
+      [['status', '--short'], ['diff']],
+      { cwd: repoPath },
+      (err, stdouts) => {
+        if (err) return res.status(500).json({ error: 'Diff failed' });
+        res.json({ repo, diff: `${stdouts[0]}---\n${stdouts[1]}` });
+      }
+    );
   });
 
   // GitHub Webhook endpoint raw-body pre-middleware.

@@ -10,7 +10,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const { exec } = require('child_process');
+const { removeDir } = require('./lib/safe-exec');
 
 // Load configuration and GitHub MCP manager
 const ConfigLoader = require('./config-loader');
@@ -461,7 +461,7 @@ app.post('/audit/delete', (req, res) => {
   }
   
   console.log(`🗑️  Deleting extra repository: ${repo}`);
-  exec(`rm -rf ${target}`, async (err) => {
+  removeDir(target, async (err) => {
     if (err) {
       console.error(`❌ Delete failed for ${repo}:`, err);
       return res.status(500).json({ error: `Failed to delete ${repo}` });
@@ -617,7 +617,7 @@ if (isDev) {
           case 'delete':
             // Delete operation doesn't use MCP (file system operation)
             await new Promise((resolve, reject) => {
-              exec(`rm -rf ${repoPath}`, (err) => {
+              removeDir(repoPath, (err) => {
                 if (err) reject(err);
                 else resolve();
               });

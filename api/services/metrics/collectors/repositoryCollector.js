@@ -7,6 +7,7 @@
 
 const EventEmitter = require('events');
 const { exec } = require('child_process');
+const { execGitP } = require('../../../lib/safe-exec');
 const fs = require('fs');
 const path = require('path');
 const { RepositoryMetrics } = require('../../../models/metrics');
@@ -133,7 +134,12 @@ class RepositoryCollector extends EventEmitter {
             let staleCount = 0;
             for (const tag of tagList.slice(0, 10)) { // Check last 10 tags
                 try {
-                    const tagDate = await this.execCommand(`git log -1 --format=%ct ${tag}`, repoPath);
+                    // Tag name comes from the (untrusted) cloned repo — run with
+                    // no shell and via refs/tags/ so it can't be a git option.
+                    const tagDate = await execGitP(
+                        ['log', '-1', '--format=%ct', `refs/tags/${tag}`],
+                        { cwd: repoPath, timeout: 30000 }
+                    );
                     const tagTimestamp = parseInt(tagDate.trim()) * 1000;
                     const sixMonthsAgo = Date.now() - (6 * 30 * 24 * 60 * 60 * 1000);
                     

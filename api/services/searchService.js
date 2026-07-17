@@ -233,6 +233,7 @@ class SearchService {
       }
 
       const { execSync } = require('child_process');
+      const { execGitSync } = require('../lib/safe-exec');
       const tags = execSync(
         'git tag --sort=-creatordate',
         { cwd: repo.local_path, encoding: 'utf8' }
@@ -240,10 +241,12 @@ class SearchService {
 
       if (tags.length === 0) return false;
 
-      // Check if latest tag is older than 6 months
-      const latestTagDate = execSync(
-        `git log -1 --format=%ci ${tags[0]}`,
-        { cwd: repo.local_path, encoding: 'utf8' }
+      // Check if latest tag is older than 6 months. The tag name comes from the
+      // cloned (untrusted) repo, so pass it as a literal argv element with no
+      // shell and via refs/tags/ so it can never be parsed as a git option.
+      const latestTagDate = execGitSync(
+        ['log', '-1', '--format=%ci', `refs/tags/${tags[0]}`],
+        { cwd: repo.local_path }
       ).trim();
 
       const tagAge = Date.now() - new Date(latestTagDate).getTime();
