@@ -11,11 +11,13 @@
  */
 
 const express = require('express');
+const { apiLimiter } = require('../middleware/rateLimit');
 const rateLimit = require('express-rate-limit');
 const { body, param, query, validationResult } = require('express-validator');
 const { authenticateJWT } = require('../middleware/auth');
 const { AuditLogger } = require('../utils/audit-logger');
 const router = express.Router();
+router.use(apiLimiter);
 
 // Rate limiting configuration
 const defaultLimiter = rateLimit({
