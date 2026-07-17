@@ -66,9 +66,12 @@ const UploadQueue = () => {
 
   const handleQueueAction = async (action, itemId = null) => {
     try {
-      const endpoint = itemId 
-        ? `/api/wiki-agent/queue/${itemId}/${action}`
-        : `/api/wiki-agent/queue/${action}`;
+      // encodeURIComponent so a server-derived id/action can only ever be a
+      // single path segment — it cannot restructure the URL or make it absolute
+      // (request-forgery, CodeQL js/request-forgery).
+      const endpoint = itemId
+        ? `/api/wiki-agent/queue/${encodeURIComponent(itemId)}/${encodeURIComponent(action)}`
+        : `/api/wiki-agent/queue/${encodeURIComponent(action)}`;
       
       const response = await fetch(endpoint, { method: 'POST' });
       
