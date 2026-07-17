@@ -10,7 +10,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const { removeDir } = require('./lib/safe-exec');
+const { removeDir, resolveWithin } = require('./lib/safe-exec');
 
 // Load configuration and GitHub MCP manager
 const ConfigLoader = require('./config-loader');
@@ -132,7 +132,7 @@ app.post('/audit/clone', async (req, res) => {
   
   try {
     console.log(`🔄 Cloning repository: ${repo}`);
-    const dest = path.join(LOCAL_DIR, repo);
+    const dest = resolveWithin(LOCAL_DIR, repo);
     
     // Use GitHub MCP manager for cloning
     const result = await githubMCP.cloneRepository(repo, clone_url, dest);
@@ -156,7 +156,7 @@ app.post('/audit/clone', async (req, res) => {
 // Delete extra repository
 app.post('/audit/delete', (req, res) => {
   const { repo } = req.body;
-  const target = path.join(LOCAL_DIR, repo);
+  const target = resolveWithin(LOCAL_DIR, repo);
   
   if (!fs.existsSync(target)) {
     return res.status(404).json({ error: 'Repo not found locally' });
@@ -177,7 +177,7 @@ app.post('/audit/delete', (req, res) => {
 // Commit dirty repository using GitHub MCP
 app.post('/audit/commit', async (req, res) => {
   const { repo, message } = req.body;
-  const repoPath = path.join(LOCAL_DIR, repo);
+  const repoPath = resolveWithin(LOCAL_DIR, repo);
   
   if (!githubMCP.isGitRepository(repoPath)) {
     return res.status(404).json({ error: 'Not a git repo' });
@@ -199,7 +199,7 @@ app.post('/audit/commit', async (req, res) => {
 // Discard changes in dirty repo using GitHub MCP
 app.post('/audit/discard', async (req, res) => {
   const { repo } = req.body;
-  const repoPath = path.join(LOCAL_DIR, repo);
+  const repoPath = resolveWithin(LOCAL_DIR, repo);
   
   if (!githubMCP.isGitRepository(repoPath)) {
     return res.status(404).json({ error: 'Not a git repo' });
@@ -220,7 +220,7 @@ app.post('/audit/discard', async (req, res) => {
 // Return status and diff for dirty repository using GitHub MCP
 app.get('/audit/diff/:repo', async (req, res) => {
   const repo = req.params.repo;
-  const repoPath = path.join(LOCAL_DIR, repo);
+  const repoPath = resolveWithin(LOCAL_DIR, repo);
   
   if (!githubMCP.isGitRepository(repoPath)) {
     return res.status(404).json({ error: 'Not a git repo' });

@@ -7,7 +7,7 @@
  * All operations are orchestrated through Serena for optimal workflow coordination.
  */
 
-const { execGit, execGitSeq, isHttpGitUrl } = require('./lib/safe-exec');
+const { execGit, execGitSeq, isHttpGitUrl, sanitizeForLog } = require('./lib/safe-exec');
 const fs = require('fs');
 const path = require('path');
 const SerenaOrchestrator = require('./serena-orchestrator');
@@ -314,7 +314,7 @@ class GitHubMCPManager {
                 { cwd: repoPath },
                 (err, stdouts, stderr) => {
                     if (err) {
-                        console.error(`❌ Git commit failed for ${repoName}:`, stderr);
+                        console.error('❌ Git commit failed for %s:', sanitizeForLog(repoName), stderr);
                         reject(new Error(`Commit failed: ${stderr}`));
                     } else {
                         console.log(`✅ Successfully committed changes in ${repoName}`);
@@ -463,7 +463,7 @@ class GitHubMCPManager {
                 { cwd: repoPath },
                 (err, stdouts, stderr) => {
                     if (err) {
-                        console.error(`❌ Git discard failed for ${repoName}:`, stderr);
+                        console.error('❌ Git discard failed for %s:', sanitizeForLog(repoName), stderr);
                         reject(new Error('Discard failed'));
                     } else {
                         console.log(`✅ Successfully discarded changes in ${repoName}`);
@@ -514,7 +514,7 @@ class GitHubMCPManager {
                 { cwd: repoPath },
                 (err, stdouts, stderr) => {
                     if (err) {
-                        console.error(`❌ Git diff failed for ${repoName}:`, stderr);
+                        console.error('❌ Git diff failed for %s:', sanitizeForLog(repoName), stderr);
                         reject(new Error('Diff failed'));
                     } else {
                         console.log(`✅ Successfully retrieved diff for ${repoName}`);

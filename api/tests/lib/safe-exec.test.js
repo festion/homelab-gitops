@@ -11,6 +11,7 @@ const fs = require('fs');
 
 const {
   execGit, execGitSeq, execGitSync, execGitP, removeDir, isHttpGitUrl,
+  resolveWithin, sanitizeForLog,
 } = require('../../lib/safe-exec');
 
 function mkTmp() {
@@ -153,6 +154,42 @@ describe('isHttpGitUrl (remote-URL argument guard)', () => {
     ]) {
       expect(isHttpGitUrl(u)).toBe(false);
     }
+  });
+});
+
+describe('resolveWithin (path-traversal containment)', () => {
+  const base = '/srv/repos';
+
+  test('resolves a simple name inside the base', () => {
+    expect(resolveWithin(base, 'my-repo')).toBe(path.resolve(base, 'my-repo'));
+  });
+
+  test('allows a nested subpath that stays inside', () => {
+    expect(resolveWithin(base, 'org/repo')).toBe(path.resolve(base, 'org/repo'));
+  });
+
+  test('rejects traversal, absolute paths, and the base itself', () => {
+    for (const n of ['../etc', 'a/../../etc', '/etc/passwd', '.', '', '..']) {
+      expect(resolveWithin(base, n)).toBeNull();
+    }
+  });
+
+  test('rejects non-string names', () => {
+    for (const n of [null, undefined, 42, {}]) {
+      expect(resolveWithin(base, n)).toBeNull();
+    }
+  });
+});
+
+describe('sanitizeForLog', () => {
+  test('strips control characters (log / format-string injection)', () => {
+    expect(sanitizeForLog('a\nb\tc\rd')).toBe('a b c d');
+  });
+
+  test('caps length at 500 and stringifies null/undefined', () => {
+    expect(sanitizeForLog('x'.repeat(600))).toHaveLength(500);
+    expect(sanitizeForLog(null)).toBe('null');
+    expect(sanitizeForLog(undefined)).toBe('undefined');
   });
 });
 

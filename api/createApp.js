@@ -8,7 +8,9 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const { execFile } = require('child_process');
-const { execGit, execGitSeq, removeDir, isHttpGitUrl } = require('./lib/safe-exec');
+const {
+  execGit, execGitSeq, removeDir, isHttpGitUrl, resolveWithin,
+} = require('./lib/safe-exec');
 
 const SecurityMiddleware = require('./middleware/security');
 const authRoutes = require('./routes/auth');
@@ -169,7 +171,9 @@ function createApp({
       return res
         .status(400)
         .json({ error: 'clone_url must be an http(s)/ssh git URL' });
-    const dest = path.join(LOCAL_DIR, repo);
+    const dest = resolveWithin(LOCAL_DIR, repo);
+    if (!dest)
+      return res.status(400).json({ error: 'Invalid repo name' });
     execGit(['clone', '--', clone_url, dest], (err) => {
       if (err) return res.status(500).json({ error: `Failed to clone ${repo}` });
       res.json({ status: `Cloned ${repo} to ${dest}` });
@@ -179,7 +183,9 @@ function createApp({
   // Delete extra repository.
   app.post('/audit/delete', auditRateLimit, (req, res) => {
     const { repo } = req.body;
-    const target = path.join(LOCAL_DIR, repo);
+    const target = resolveWithin(LOCAL_DIR, repo);
+    if (!target)
+      return res.status(400).json({ error: 'Invalid repo name' });
     if (!fs.existsSync(target))
       return res.status(404).json({ error: 'Repo not found locally' });
     removeDir(target, (err) => {
@@ -191,7 +197,9 @@ function createApp({
   // Commit dirty repository.
   app.post('/audit/commit', auditRateLimit, (req, res) => {
     const { repo, message } = req.body;
-    const repoPath = path.join(LOCAL_DIR, repo);
+    const repoPath = resolveWithin(LOCAL_DIR, repo);
+    if (!repoPath)
+      return res.status(400).json({ error: 'Invalid repo name' });
     if (!fs.existsSync(path.join(repoPath, '.git')))
       return res.status(404).json({ error: 'Not a git repo' });
     const commitMessage = message || 'Auto commit from GitOps audit';
@@ -217,7 +225,9 @@ function createApp({
         .status(400)
         .json({ error: 'expected_url must be an http(s)/ssh git URL' });
 
-    const repoPath = path.join(LOCAL_DIR, repo);
+    const repoPath = resolveWithin(LOCAL_DIR, repo);
+    if (!repoPath)
+      return res.status(400).json({ error: 'Invalid repo name' });
     if (!fs.existsSync(path.join(repoPath, '.git')))
       return res.status(404).json({ error: 'Not a git repo' });
 
@@ -254,7 +264,10 @@ function createApp({
   // Get repository mismatch details.
   app.get('/audit/mismatch/:repo', auditRateLimit, (req, res) => {
     const repo = req.params.repo;
-    const repoPath = path.join(LOCAL_DIR, repo);
+    const repoPath = resolveWithin(LOCAL_DIR, repo);
+    if (!repoPath) {
+      return res.status(400).json({ error: 'Invalid repo name' });
+    }
 
     if (!fs.existsSync(path.join(repoPath, '.git'))) {
       return res.status(404).json({ error: 'Not a git repo' });
@@ -290,9 +303,16 @@ function createApp({
 
     repos.forEach((repo) => {
       let runner;
-      const repoPath = path.join(LOCAL_DIR, repo);
+      const repoPath = resolveWithin(LOCAL_DIR, repo);
       const githubUser =
         config && config.get ? config.get('GITHUB_USER') : '';
+
+      if (!repoPath) {
+        results.push({ repo, success: false, error: 'Invalid repo name', output: null });
+        completed++;
+        if (completed === repos.length) res.json({ operation, results });
+        return;
+      }
 
       switch (operation) {
         case 'clone':
@@ -341,7 +361,9 @@ function createApp({
   // Discard changes in dirty repo.
   app.post('/audit/discard', auditRateLimit, (req, res) => {
     const { repo } = req.body;
-    const repoPath = path.join(LOCAL_DIR, repo);
+    const repoPath = resolveWithin(LOCAL_DIR, repo);
+    if (!repoPath)
+      return res.status(400).json({ error: 'Invalid repo name' });
     if (!fs.existsSync(path.join(repoPath, '.git')))
       return res.status(404).json({ error: 'Not a git repo' });
     execGitSeq(
@@ -357,7 +379,9 @@ function createApp({
   // Return status and diff for dirty repository.
   app.get('/audit/diff/:repo', auditRateLimit, (req, res) => {
     const repo = req.params.repo;
-    const repoPath = path.join(LOCAL_DIR, repo);
+    const repoPath = resolveWithin(LOCAL_DIR, repo);
+    if (!repoPath)
+      return res.status(400).json({ error: 'Invalid repo name' });
     if (!fs.existsSync(path.join(repoPath, '.git')))
       return res.status(404).json({ error: 'Not a git repo' });
 

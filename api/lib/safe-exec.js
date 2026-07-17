@@ -9,6 +9,7 @@
 const { execFile, execFileSync } = require('child_process');
 const { promisify } = require('util');
 const fs = require('fs');
+const path = require('path');
 const execFileP = promisify(execFile);
 
 // Run `git <args>` with no shell. Signature mirrors child_process.execFile's
@@ -73,6 +74,33 @@ function isHttpGitUrl(url) {
     && /^(https?:\/\/|ssh:\/\/|git@[\w.-]+:)/.test(url);
 }
 
+// Resolve a user-supplied name (e.g. a repo name from req.body) to an absolute
+// path CONTAINED within baseDir, or null if it escapes (a `..` traversal or an
+// absolute path) or is empty. Using the returned value as a filesystem / cwd
+// argument is the barrier for path-injection (CVE-class: arbitrary file/dir
+// access — e.g. `/audit/delete` with repo="../../etc"). Mirrors the repo's
+// existing templateEngine._resolveWithinRoot pattern.
+function resolveWithin(baseDir, name) {
+  if (typeof name !== 'string' || name.length === 0) return null;
+  const rootAbs = path.resolve(baseDir);
+  const resolved = path.resolve(rootAbs, name);
+  const rel = path.relative(rootAbs, resolved);
+  if (rel === '' || rel === '..' || rel.startsWith('..' + path.sep)
+      || path.isAbsolute(rel)) {
+    return null;
+  }
+  return resolved;
+}
+
+// Neutralise a value before it is logged: strip control characters (log /
+// format-string injection) and cap length. Mirrors templateEngine.sanitizeForLog.
+function sanitizeForLog(value) {
+  const s = value === null ? 'null'
+    : value === undefined ? 'undefined' : String(value);
+  return s.replace(/[\u0000-\u001F\u007F]/g, ' ').slice(0, 500);
+}
+
 module.exports = {
   execGit, execGitSeq, execGitSync, execGitP, removeDir, isHttpGitUrl,
+  resolveWithin, sanitizeForLog,
 };
