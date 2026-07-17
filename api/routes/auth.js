@@ -1,8 +1,10 @@
 const express = require('express');
+const { authLimiter } = require('../middleware/rateLimit');
 const { authenticate, rateLimitAuth, requireAdmin } = require('../middleware/auth');
 const { User, UserRole, Permission } = require('../models/user');
 
 const router = express.Router();
+router.use(authLimiter);
 
 function getAuthService(req) {
   const svc = req && req.app && req.app.locals && req.app.locals.authService;

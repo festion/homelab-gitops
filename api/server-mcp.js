@@ -9,6 +9,7 @@
 
 const express = require('express');
 const { sanitizeForLog } = require('./lib/safe-exec');
+const { apiLimiter } = require('./middleware/rateLimit');
 const fs = require('fs');
 const path = require('path');
 const { removeDir, resolveWithin } = require('./lib/safe-exec');
@@ -45,6 +46,7 @@ const HISTORY_DIR = path.join(rootDir, 'audit-history');
 const LOCAL_DIR = path.join(rootDir, 'repos');
 
 const app = express();
+app.use(apiLimiter);
 
 // CORS configuration with GitHub MCP integration awareness
 const allowedOrigins = isDev ? ['http://localhost:5173', 'http://localhost:5174'] : [];

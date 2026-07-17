@@ -3,6 +3,7 @@
 
 const express = require('express');
 const { sanitizeForLog } = require('./lib/safe-exec');
+const { apiLimiter } = require('./middleware/rateLimit');
 const fs = require('fs').promises;
 const path = require('path');
 const { randomUUID } = require('node:crypto');
@@ -25,6 +26,7 @@ const complianceApplyRateLimit = SecurityMiddleware.sensitiveRateLimit();
 
 // Create Phase 2 router
 const phase2Router = express.Router();
+phase2Router.use(apiLimiter);
 
 module.exports = phase2Router;
 

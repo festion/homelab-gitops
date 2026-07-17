@@ -1,5 +1,7 @@
 const express = require('express');
+const { apiLimiter } = require('../middleware/rateLimit');
 const router = express.Router();
+router.use(apiLimiter);
 const PipelineOrchestrator = require('../services/orchestrator/pipelineOrchestrator');
 const { 
   orchestrationProfiles, 

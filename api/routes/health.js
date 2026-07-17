@@ -1,4 +1,5 @@
 const express = require('express');
+const { apiLimiter } = require('../middleware/rateLimit');
 const { createLogger } = require('../utils/logger');
 const { authenticate, authorize } = require('../middleware/auth');
 const { Permission } = require('../models/user');
@@ -8,6 +9,7 @@ const { validateRequest } = require('../middleware/validation');
 const { param, query, body } = require('express-validator');
 
 const router = express.Router();
+router.use(apiLimiter);
 const logger = createLogger('HealthAPI');
 
 // Initialize services
