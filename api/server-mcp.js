@@ -10,7 +10,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const { exec } = require('child_process');
+const { removeDir, resolveWithin } = require('./lib/safe-exec');
 
 // Load configuration and GitHub MCP manager
 const ConfigLoader = require('./config-loader');
@@ -430,7 +430,7 @@ app.post('/audit/clone', async (req, res) => {
   
   try {
     console.log(`🔄 Cloning repository: ${repo}`);
-    const dest = path.join(LOCAL_DIR, repo);
+    const dest = resolveWithin(LOCAL_DIR, repo);
     
     // Use GitHub MCP manager for cloning
     const result = await githubMCP.cloneRepository(repo, clone_url, dest);
@@ -454,14 +454,14 @@ app.post('/audit/clone', async (req, res) => {
 // Delete extra repository
 app.post('/audit/delete', (req, res) => {
   const { repo } = req.body;
-  const target = path.join(LOCAL_DIR, repo);
+  const target = resolveWithin(LOCAL_DIR, repo);
   
   if (!fs.existsSync(target)) {
     return res.status(404).json({ error: 'Repo not found locally' });
   }
   
   console.log(`🗑️  Deleting extra repository: ${repo}`);
-  exec(`rm -rf ${target}`, async (err) => {
+  removeDir(target, async (err) => {
     if (err) {
       console.error(`❌ Delete failed for ${repo}:`, err);
       return res.status(500).json({ error: `Failed to delete ${repo}` });
@@ -489,7 +489,7 @@ app.post('/audit/delete', (req, res) => {
 // Commit dirty repository using GitHub MCP
 app.post('/audit/commit', async (req, res) => {
   const { repo, message } = req.body;
-  const repoPath = path.join(LOCAL_DIR, repo);
+  const repoPath = resolveWithin(LOCAL_DIR, repo);
   
   if (!githubMCP.isGitRepository(repoPath)) {
     return res.status(404).json({ error: 'Not a git repo' });
@@ -527,7 +527,7 @@ if (isDev) {
       return res.status(400).json({ error: 'repo and expected_url required' });
     }
     
-    const repoPath = path.join(LOCAL_DIR, repo);
+    const repoPath = resolveWithin(LOCAL_DIR, repo);
     
     if (!githubMCP.isGitRepository(repoPath)) {
       return res.status(404).json({ error: 'Not a git repo' });
@@ -558,7 +558,7 @@ if (isDev) {
   // Get repository mismatch details using GitHub MCP
   app.get('/audit/mismatch/:repo', async (req, res) => {
     const repo = req.params.repo;
-    const repoPath = path.join(LOCAL_DIR, repo);
+    const repoPath = resolveWithin(LOCAL_DIR, repo);
 
     if (!githubMCP.isGitRepository(repoPath)) {
       return res.status(404).json({ error: 'Not a git repo' });
@@ -598,7 +598,7 @@ if (isDev) {
     let completed = 0;
 
     for (const repo of repos) {
-      const repoPath = path.join(LOCAL_DIR, repo);
+      const repoPath = resolveWithin(LOCAL_DIR, repo);
       
       try {
         let result;
@@ -617,7 +617,7 @@ if (isDev) {
           case 'delete':
             // Delete operation doesn't use MCP (file system operation)
             await new Promise((resolve, reject) => {
-              exec(`rm -rf ${repoPath}`, (err) => {
+              removeDir(repoPath, (err) => {
                 if (err) reject(err);
                 else resolve();
               });
@@ -658,7 +658,7 @@ if (isDev) {
 // Discard changes in dirty repo using GitHub MCP
 app.post('/audit/discard', async (req, res) => {
   const { repo } = req.body;
-  const repoPath = path.join(LOCAL_DIR, repo);
+  const repoPath = resolveWithin(LOCAL_DIR, repo);
   
   if (!githubMCP.isGitRepository(repoPath)) {
     return res.status(404).json({ error: 'Not a git repo' });
@@ -689,7 +689,7 @@ app.post('/audit/discard', async (req, res) => {
 // Return status and diff for dirty repository using GitHub MCP
 app.get('/audit/diff/:repo', async (req, res) => {
   const repo = req.params.repo;
-  const repoPath = path.join(LOCAL_DIR, repo);
+  const repoPath = resolveWithin(LOCAL_DIR, repo);
   
   if (!githubMCP.isGitRepository(repoPath)) {
     return res.status(404).json({ error: 'Not a git repo' });

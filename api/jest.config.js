@@ -121,7 +121,8 @@ module.exports = {
         '<rootDir>/tests/routes/*.test.js',
         '<rootDir>/tests/services/*.test.js',
         '<rootDir>/tests/middleware/*.test.js',
-        '<rootDir>/tests/models/*.test.js'
+        '<rootDir>/tests/models/*.test.js',
+        '<rootDir>/tests/lib/*.test.js'
       ],
       setupFilesAfterEnv: [
         '<rootDir>/tests/setup/jest.setup.js',

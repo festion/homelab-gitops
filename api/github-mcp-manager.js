@@ -7,7 +7,7 @@
  * All operations are orchestrated through Serena for optimal workflow coordination.
  */
 
-const { exec } = require('child_process');
+const { execGit, execGitSeq, isHttpGitUrl, sanitizeForLog } = require('./lib/safe-exec');
 const fs = require('fs');
 const path = require('path');
 const SerenaOrchestrator = require('./serena-orchestrator');
@@ -219,9 +219,11 @@ class GitHubMCPManager {
     async cloneRepositoryFallback(repoName, cloneUrl, destPath) {
         return new Promise((resolve, reject) => {
             console.log(`📥 Cloning ${repoName} via git fallback...`);
-            
-            const cmd = `git clone ${cloneUrl} ${destPath}`;
-            exec(cmd, (err, stdout, stderr) => {
+
+            if (!isHttpGitUrl(cloneUrl)) {
+                return reject(new Error(`Invalid clone URL for ${repoName}`));
+            }
+            execGit(['clone', '--', cloneUrl, destPath], (err, stdout, stderr) => {
                 if (err) {
                     console.error(`❌ Git clone failed for ${repoName}:`, stderr);
                     reject(new Error(`Failed to clone ${repoName}: ${stderr}`));
@@ -307,16 +309,19 @@ class GitHubMCPManager {
         return new Promise((resolve, reject) => {
             console.log(`💾 Committing changes in ${repoName} via git fallback...`);
             
-            const cmd = `cd ${repoPath} && git add . && git commit -m "${message}"`;
-            exec(cmd, (err, stdout, stderr) => {
-                if (err) {
-                    console.error(`❌ Git commit failed for ${repoName}:`, stderr);
-                    reject(new Error(`Commit failed: ${stderr}`));
-                } else {
-                    console.log(`✅ Successfully committed changes in ${repoName}`);
-                    resolve({ status: `Committed changes in ${repoName}`, stdout });
+            execGitSeq(
+                [['add', '.'], ['commit', '-m', message]],
+                { cwd: repoPath },
+                (err, stdouts, stderr) => {
+                    if (err) {
+                        console.error('❌ Git commit failed for %s:', sanitizeForLog(repoName), stderr);
+                        reject(new Error(`Commit failed: ${stderr}`));
+                    } else {
+                        console.log(`✅ Successfully committed changes in ${repoName}`);
+                        resolve({ status: `Committed changes in ${repoName}`, stdout: stdouts[stdouts.length - 1] });
+                    }
                 }
-            });
+            );
         });
     }
 
@@ -355,9 +360,11 @@ class GitHubMCPManager {
     async updateRemoteUrlFallback(repoName, repoPath, newUrl) {
         return new Promise((resolve, reject) => {
             console.log(`🔗 Updating remote URL for ${repoName} via git fallback...`);
-            
-            const cmd = `cd ${repoPath} && git remote set-url origin ${newUrl}`;
-            exec(cmd, (err, stdout, stderr) => {
+
+            if (!isHttpGitUrl(newUrl)) {
+                return reject(new Error(`Invalid remote URL for ${repoName}`));
+            }
+            execGit(['remote', 'set-url', 'origin', newUrl], { cwd: repoPath }, (err, stdout, stderr) => {
                 if (err) {
                     console.error(`❌ Git remote update failed for ${repoName}:`, stderr);
                     reject(new Error(`Failed to fix remote URL: ${stderr}`));
@@ -404,8 +411,7 @@ class GitHubMCPManager {
         return new Promise((resolve, reject) => {
             console.log(`🔍 Getting remote URL for ${repoName} via git fallback...`);
             
-            const cmd = `cd ${repoPath} && git remote get-url origin`;
-            exec(cmd, (err, stdout, stderr) => {
+            execGit(['remote', 'get-url', 'origin'], { cwd: repoPath }, (err, stdout, stderr) => {
                 if (err) {
                     console.error(`❌ Git get remote failed for ${repoName}:`, stderr);
                     reject(new Error('Failed to get remote URL'));
@@ -452,16 +458,19 @@ class GitHubMCPManager {
         return new Promise((resolve, reject) => {
             console.log(`🗑️  Discarding changes in ${repoName} via git fallback...`);
             
-            const cmd = `cd ${repoPath} && git reset --hard && git clean -fd`;
-            exec(cmd, (err, stdout, stderr) => {
-                if (err) {
-                    console.error(`❌ Git discard failed for ${repoName}:`, stderr);
-                    reject(new Error('Discard failed'));
-                } else {
-                    console.log(`✅ Successfully discarded changes in ${repoName}`);
-                    resolve({ status: 'Discarded changes', stdout });
+            execGitSeq(
+                [['reset', '--hard'], ['clean', '-fd']],
+                { cwd: repoPath },
+                (err, stdouts, stderr) => {
+                    if (err) {
+                        console.error('❌ Git discard failed for %s:', sanitizeForLog(repoName), stderr);
+                        reject(new Error('Discard failed'));
+                    } else {
+                        console.log(`✅ Successfully discarded changes in ${repoName}`);
+                        resolve({ status: 'Discarded changes', stdout: stdouts[stdouts.length - 1] });
+                    }
                 }
-            });
+            );
         });
     }
 
@@ -500,16 +509,20 @@ class GitHubMCPManager {
         return new Promise((resolve, reject) => {
             console.log(`📊 Getting repository diff for ${repoName} via git fallback...`);
             
-            const cmd = `cd ${repoPath} && git status --short && echo '---' && git diff`;
-            exec(cmd, (err, stdout, stderr) => {
-                if (err) {
-                    console.error(`❌ Git diff failed for ${repoName}:`, stderr);
-                    reject(new Error('Diff failed'));
-                } else {
-                    console.log(`✅ Successfully retrieved diff for ${repoName}`);
-                    resolve({ diff: stdout, stdout });
+            execGitSeq(
+                [['status', '--short'], ['diff']],
+                { cwd: repoPath },
+                (err, stdouts, stderr) => {
+                    if (err) {
+                        console.error('❌ Git diff failed for %s:', sanitizeForLog(repoName), stderr);
+                        reject(new Error('Diff failed'));
+                    } else {
+                        console.log(`✅ Successfully retrieved diff for ${repoName}`);
+                        const combined = `${stdouts[0]}---\n${stdouts[1]}`;
+                        resolve({ diff: combined, stdout: combined });
+                    }
                 }
-            });
+            );
         });
     }
 
