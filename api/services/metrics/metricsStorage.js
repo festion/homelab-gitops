@@ -13,6 +13,7 @@ const {
     AggregatedMetrics,
     MetricsQuery 
 } = require('../../models/metrics');
+const { safeOrderColumn, safeOrderDirection } = require('../../lib/sql-identifiers');
 
 class MetricsStorage {
     constructor(config = {}) {
@@ -435,16 +436,18 @@ class MetricsStorage {
             params.push(query.timeRange.to);
         }
 
-        // Add tag filters
+        // Add tag filters. The JSON path is bound as a parameter (SQLite accepts
+        // json_extract(X, ?)) so a hostile tag key cannot alter the SQL structure.
         for (const [key, value] of Object.entries(query.filters)) {
             if (key.startsWith('tags.')) {
                 const tagKey = key.replace('tags.', '');
-                sql += ` AND JSON_EXTRACT(tags, '$.${tagKey}') = ?`;
-                params.push(value);
+                sql += ' AND JSON_EXTRACT(tags, ?) = ?';
+                params.push(`$.${tagKey}`, value);
             }
         }
 
-        sql += ` ORDER BY ${query.orderBy} ${query.orderDirection}`;
+        // ORDER BY column/direction cannot be bound; resolve against an allowlist.
+        sql += ` ORDER BY ${safeOrderColumn(query.orderBy)} ${safeOrderDirection(query.orderDirection)}`;
         
         if (query.limit) {
             sql += ' LIMIT ?';

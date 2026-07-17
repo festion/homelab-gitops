@@ -6,6 +6,7 @@
 const fs = require('fs').promises;
 const path = require('path');
 const { performance } = require('perf_hooks');
+const { escapeRegExp } = require('../lib/regex-safe');
 
 class SearchService {
   constructor() {
@@ -618,7 +619,8 @@ class SearchService {
     const normalizedQuery = query.toLowerCase();
     const highlightTag = (text, term) => {
       if (!text) return text;
-      const regex = new RegExp(`(${term})`, 'gi');
+      // Escape the term so user input matches literally (prevents regex injection/ReDoS).
+      const regex = new RegExp(`(${escapeRegExp(term)})`, 'gi');
       return text.replace(regex, '<mark>$1</mark>');
     };
 
