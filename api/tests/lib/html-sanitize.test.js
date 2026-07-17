@@ -34,6 +34,11 @@ describe('stripHtml', () => {
     expect(stripHtml('<div onclick="steal()">')).not.toMatch(/onclick/i);
   });
 
+  test('a removal cannot be reconstructed from residue (fixed point)', () => {
+    // Single-pass removal would leave "javascript:"; the loop must fully clear it.
+    expect(stripHtml('javascjavascript:ript:alert(1)')).not.toMatch(/javascript:/i);
+  });
+
   test('preserves ordinary text (slashes, ampersands) — why we do not HTML-escape', () => {
     expect(stripHtml('owner/repo')).toBe('owner/repo');
     expect(stripHtml('a=1&b=2')).toBe('a=1&b=2');

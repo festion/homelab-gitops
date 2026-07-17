@@ -26,10 +26,19 @@ const EVENT_HANDLERS = /\son\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi;
  */
 function stripHtml(input) {
   if (typeof input !== 'string') return input;
-  return input
-    .replace(EVENT_HANDLERS, '')   // drop on*="..." handlers before flattening tags
-    .replace(DANGEROUS_SCHEMES, '') // drop javascript:/data:/... schemes
-    .replace(/[<>]/g, '');          // remove angle brackets -> no tag can form
+  // Apply removals to a fixed point so a match cannot be reconstructed from the
+  // residue of an earlier removal (e.g. "oonn..." -> "on..."). Each pass only
+  // deletes characters, so the loop is monotonic and terminates.
+  let out = input;
+  let prev;
+  do {
+    prev = out;
+    out = out
+      .replace(EVENT_HANDLERS, '')    // drop on*="..." handlers
+      .replace(DANGEROUS_SCHEMES, '') // drop javascript:/data:/... schemes
+      .replace(/[<>]/g, '');          // remove angle brackets -> no tag can form
+  } while (out !== prev);
+  return out;
 }
 
 /**
