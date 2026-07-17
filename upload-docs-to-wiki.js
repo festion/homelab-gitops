@@ -22,6 +22,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { EventEmitter } = require('events');
+const { stripHtml } = require('./api/lib/html-sanitize');
 
 // WikiJS MCP server tools
 const WikiAgentManager = require('./api/wiki-agent-manager');
@@ -657,14 +658,9 @@ class WikiJSUploadManager extends EventEmitter {
   sanitizeContent(content) {
     if (!this.config.validation.sanitizeContent) return content;
     
-    // Remove potentially harmful content
-    let sanitized = content
-      // Remove script tags and content
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-      // Remove iframe tags
-      .replace(/<iframe\b[^>]*>.*?<\/iframe>/gi, '')
-      // Remove on* event attributes
-      .replace(/\son\w+="[^"]*"/gi, '')
+    // Strip HTML/script/handlers/dangerous schemes (see api/lib/html-sanitize),
+    // then apply markdown-specific normalization.
+    let sanitized = stripHtml(content)
       // Clean up relative links for WikiJS context
       .replace(/\]\(\.\//g, '](')
       // Normalize line endings

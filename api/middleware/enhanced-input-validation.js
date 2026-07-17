@@ -2,6 +2,7 @@ const validator = require('validator');
 const { body, param, query, validationResult } = require('express-validator');
 const { AuditLogger } = require('../utils/audit-logger');
 const { Logger } = require('../utils/logger');
+const { containsHtml } = require('../lib/html-sanitize');
 
 /**
  * Enhanced Input Validation Middleware
@@ -323,22 +324,14 @@ class ValidationMiddleware {
    */
   sanitizeText = (value) => {
     if (typeof value !== 'string') return true;
-    
-    // Check for dangerous patterns
-    const dangerousPatterns = [
-      /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
-      /<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi,
-      /javascript:/gi,
-      /on\w+=/gi,
-      /data:text\/html/gi
-    ];
-    
-    for (const pattern of dangerousPatterns) {
-      if (pattern.test(value)) {
-        throw new Error('Potentially dangerous content detected');
-      }
+
+    // Reject any HTML tags, inline event handlers, or dangerous URL schemes.
+    // containsHtml() flattens tags by removing angle brackets, so it cannot be
+    // bypassed by nested/malformed markup the way a named-tag regex can.
+    if (containsHtml(value)) {
+      throw new Error('Potentially dangerous content detected');
     }
-    
+
     return true;
   };
 
