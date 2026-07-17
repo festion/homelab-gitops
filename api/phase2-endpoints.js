@@ -2,6 +2,7 @@
 // Extends the main API server with Phase 2 DevOps platform features
 
 const express = require('express');
+const { sanitizeForLog } = require('./lib/safe-exec');
 const fs = require('fs').promises;
 const path = require('path');
 const { randomUUID } = require('node:crypto');
@@ -1783,7 +1784,7 @@ phase2Router.get('/pipelines/history/:repo', async (req, res) => {
     
     res.json(result);
   } catch (error) {
-    console.error(`Error getting pipeline history for ${req.params.repo}:`, error);
+    console.error('Error getting pipeline history for %s:', sanitizeForLog(req.params.repo), error);
     res.status(500).json({ 
       error: 'Failed to get pipeline history', 
       details: error.message 
@@ -2303,7 +2304,7 @@ phase2Router.get('/compliance/repository/:repo', async (req, res) => {
     if (error && error.code === 'REPO_NOT_FOUND') {
       return res.status(404).json({ error: error.message });
     }
-    console.error(`Error getting repository compliance for ${req.params.repo}:`, error);
+    console.error('Error getting repository compliance for %s:', sanitizeForLog(req.params.repo), error);
     res.status(500).json({
       error: 'Failed to get repository compliance',
       details: error.message

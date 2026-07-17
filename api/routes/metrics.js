@@ -6,6 +6,7 @@
  */
 
 const express = require('express');
+const { sanitizeForLog } = require('../lib/safe-exec');
 const { MetricsQuery } = require('../models/metrics');
 
 class MetricsRoutes {
@@ -143,7 +144,7 @@ class MetricsRoutes {
                 timestamp: new Date().toISOString()
             });
         } catch (error) {
-            console.error(`Error getting repository metrics for ${req.params.repo}:`, error);
+            console.error('Error getting repository metrics for %s:', sanitizeForLog(req.params.repo), error);
             res.status(500).json({
                 success: false,
                 error: 'Failed to get repository metrics',

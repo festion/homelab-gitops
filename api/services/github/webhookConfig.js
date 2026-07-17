@@ -1,4 +1,5 @@
 const { Octokit } = require('@octokit/rest');
+const { sanitizeForLog } = require('../../lib/safe-exec');
 const crypto = require('crypto');
 
 class WebhookConfigService {
@@ -63,7 +64,7 @@ class WebhookConfigService {
       console.log(`✅ Webhook created successfully for ${owner}/${repo}`);
       return webhook.data;
     } catch (error) {
-      console.error(`Failed to setup webhook for ${owner}/${repo}:`, error.message);
+      console.error('Failed to setup webhook for %s/%s:', sanitizeForLog(owner), sanitizeForLog(repo), error.message);
       
       // Handle specific error cases
       if (error.status === 404) {
@@ -140,7 +141,7 @@ class WebhookConfigService {
       console.log(`No webhook found for ${owner}/${repo}`);
       return false;
     } catch (error) {
-      console.error(`Failed to remove webhook for ${owner}/${repo}:`, error.message);
+      console.error('Failed to remove webhook for %s/%s:', sanitizeForLog(owner), sanitizeForLog(repo), error.message);
       throw error;
     }
   }
@@ -314,7 +315,7 @@ class WebhookConfigService {
         }
       };
     } catch (error) {
-      console.error(`Failed to get webhook status for ${owner}/${repo}:`, error.message);
+      console.error('Failed to get webhook status for %s/%s:', sanitizeForLog(owner), sanitizeForLog(repo), error.message);
       return {
         configured: false,
         webhook: null,

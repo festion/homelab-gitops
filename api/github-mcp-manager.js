@@ -208,7 +208,7 @@ class GitHubMCPManager {
             throw new Error('No MCP servers available');
             
         } catch (error) {
-            console.error(`❌ GitHub MCP clone failed for ${repoName}:`, error);
+            console.error('❌ GitHub MCP clone failed for %s:', sanitizeForLog(repoName), error);
             return this.cloneRepositoryFallback(repoName, cloneUrl, destPath);
         }
     }
@@ -225,7 +225,7 @@ class GitHubMCPManager {
             }
             execGit(['clone', '--', cloneUrl, destPath], (err, stdout, stderr) => {
                 if (err) {
-                    console.error(`❌ Git clone failed for ${repoName}:`, stderr);
+                    console.error('❌ Git clone failed for %s:', sanitizeForLog(repoName), stderr);
                     reject(new Error(`Failed to clone ${repoName}: ${stderr}`));
                 } else {
                     console.log(`✅ Successfully cloned ${repoName}`);
@@ -297,7 +297,7 @@ class GitHubMCPManager {
             throw new Error('No MCP servers available');
             
         } catch (error) {
-            console.error(`❌ GitHub MCP commit failed for ${repoName}:`, error);
+            console.error('❌ GitHub MCP commit failed for %s:', sanitizeForLog(repoName), error);
             return this.commitChangesFallback(repoName, repoPath, message);
         }
     }
@@ -349,7 +349,7 @@ class GitHubMCPManager {
             // TODO: Use Serena to orchestrate GitHub MCP operations
             throw new Error('GitHub MCP not yet implemented - using fallback');
         } catch (error) {
-            console.error(`❌ GitHub MCP remote update failed for ${repoName}:`, error);
+            console.error('❌ GitHub MCP remote update failed for %s:', sanitizeForLog(repoName), error);
             return this.updateRemoteUrlFallback(repoName, repoPath, newUrl);
         }
     }
@@ -366,7 +366,7 @@ class GitHubMCPManager {
             }
             execGit(['remote', 'set-url', 'origin', newUrl], { cwd: repoPath }, (err, stdout, stderr) => {
                 if (err) {
-                    console.error(`❌ Git remote update failed for ${repoName}:`, stderr);
+                    console.error('❌ Git remote update failed for %s:', sanitizeForLog(repoName), stderr);
                     reject(new Error(`Failed to fix remote URL: ${stderr}`));
                 } else {
                     console.log(`✅ Successfully updated remote URL for ${repoName}`);
@@ -399,7 +399,7 @@ class GitHubMCPManager {
             // TODO: Use Serena to orchestrate GitHub MCP operations
             throw new Error('GitHub MCP not yet implemented - using fallback');
         } catch (error) {
-            console.error(`❌ GitHub MCP get remote failed for ${repoName}:`, error);
+            console.error('❌ GitHub MCP get remote failed for %s:', sanitizeForLog(repoName), error);
             return this.getRemoteUrlFallback(repoName, repoPath);
         }
     }
@@ -413,7 +413,7 @@ class GitHubMCPManager {
             
             execGit(['remote', 'get-url', 'origin'], { cwd: repoPath }, (err, stdout, stderr) => {
                 if (err) {
-                    console.error(`❌ Git get remote failed for ${repoName}:`, stderr);
+                    console.error('❌ Git get remote failed for %s:', sanitizeForLog(repoName), stderr);
                     reject(new Error('Failed to get remote URL'));
                 } else {
                     console.log(`✅ Successfully retrieved remote URL for ${repoName}`);
@@ -446,7 +446,7 @@ class GitHubMCPManager {
             // TODO: Use Serena to orchestrate GitHub MCP operations
             throw new Error('GitHub MCP not yet implemented - using fallback');
         } catch (error) {
-            console.error(`❌ GitHub MCP discard failed for ${repoName}:`, error);
+            console.error('❌ GitHub MCP discard failed for %s:', sanitizeForLog(repoName), error);
             return this.discardChangesFallback(repoName, repoPath);
         }
     }
@@ -497,7 +497,7 @@ class GitHubMCPManager {
             // TODO: Use Serena to orchestrate GitHub MCP operations
             throw new Error('GitHub MCP not yet implemented - using fallback');
         } catch (error) {
-            console.error(`❌ GitHub MCP diff failed for ${repoName}:`, error);
+            console.error('❌ GitHub MCP diff failed for %s:', sanitizeForLog(repoName), error);
             return this.getRepositoryDiffFallback(repoName, repoPath);
         }
     }
@@ -618,7 +618,7 @@ class GitHubMCPManager {
             return [];
             
         } catch (error) {
-            console.error(`❌ Failed to get modified files in ${repoPath}:`, error);
+            console.error('❌ Failed to get modified files in %s:', sanitizeForLog(repoPath), error);
             return [];
         }
     }

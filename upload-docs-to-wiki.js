@@ -19,6 +19,7 @@
  */
 
 const fs = require('fs');
+const { sanitizeForLog } = require('./api/lib/safe-exec');
 const path = require('path');
 const crypto = require('crypto');
 const { EventEmitter } = require('events');
@@ -154,7 +155,7 @@ class WikiJSUploadManager extends EventEmitter {
       
       return uploadJob;
     } catch (error) {
-      console.error(`❌ Failed to add ${filePath} to queue:`, error.message);
+      console.error('❌ Failed to add %s to queue:', sanitizeForLog(filePath), error.message);
       this.emit('validation_error', { filePath, error });
       throw error;
     }

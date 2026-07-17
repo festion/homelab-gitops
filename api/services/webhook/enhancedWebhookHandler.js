@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const { sanitizeForLog } = require('../../lib/safe-exec');
 const { EventEmitter } = require('events');
 const WebhookConfigService = require('../github/webhookConfig');
 const { createLogger } = require('../../utils/logger');
@@ -739,7 +740,7 @@ class EnhancedWebhookHandler extends EventEmitter {
       );
       console.log(`✅ Webhook setup complete for ${repository.full_name}`);
     } catch (error) {
-      console.error(`Failed to setup webhook for ${repository.full_name}:`, error);
+      console.error('Failed to setup webhook for %s:', sanitizeForLog(repository.full_name), error);
     }
   }
 
@@ -917,7 +918,7 @@ class EnhancedWebhookHandler extends EventEmitter {
       
       return result;
     } catch (error) {
-      console.error(`Repository dispatch handling failed for ${repository.full_name}:`, error);
+      console.error('Repository dispatch handling failed for %s:', sanitizeForLog(repository.full_name), error);
       
       // Emit deployment failed event
       this.emit('deployment_failed', {

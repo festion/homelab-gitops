@@ -21,6 +21,7 @@
  */
 
 const EventEmitter = require('events');
+const { sanitizeForLog } = require('../../lib/safe-exec');
 
 const REPO_METRICS_FIELDS = [
     'total',
@@ -89,7 +90,7 @@ class PipelineService extends EventEmitter {
                         });
                     }
                 } catch (error) {
-                    console.error(`Error fetching pipeline status for ${repository}:`, error);
+                    console.error('Error fetching pipeline status for %s:', sanitizeForLog(repository), error);
                     // Continue with other repositories
                 }
             }
@@ -175,7 +176,7 @@ class PipelineService extends EventEmitter {
                 }
             };
         } catch (error) {
-            console.error(`Error getting pipeline history for ${repository}:`, error);
+            console.error('Error getting pipeline history for %s:', sanitizeForLog(repository), error);
             throw new Error(`Failed to get pipeline history: ${error.message}`);
         }
     }
@@ -227,7 +228,7 @@ class PipelineService extends EventEmitter {
                 timestamp: new Date().toISOString()
             };
         } catch (error) {
-            console.error(`Error triggering pipeline for ${repository}:`, error);
+            console.error('Error triggering pipeline for %s:', sanitizeForLog(repository), error);
             throw new Error(`Failed to trigger pipeline: ${error.message}`);
         }
     }

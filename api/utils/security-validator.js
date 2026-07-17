@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const { sanitizeForLog } = require('../lib/safe-exec');
 const { ConfigManager } = require('../config/utils/config-manager');
 
 /**
@@ -240,7 +241,7 @@ class SecurityValidator {
       // Check if IP is in the subnet
       return (ipInt & subnetMask) === (networkInt & subnetMask);
     } catch (error) {
-      console.error(`Error checking IP range for ${ip} in ${range}:`, error);
+      console.error('Error checking IP range for %s in %s:', sanitizeForLog(ip), sanitizeForLog(range), error);
       return false;
     }
   }

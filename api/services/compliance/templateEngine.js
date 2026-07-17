@@ -339,7 +339,7 @@ class TemplateEngine {
       };
 
     } catch (error) {
-      console.error(`Error applying template ${templateName}:`, error);
+      console.error('Error applying template %s:', sanitizeForLog(templateName), error);
       throw error;
     }
   }
