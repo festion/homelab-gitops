@@ -30,8 +30,11 @@ describe('stripHtml', () => {
     expect(stripHtml('data:text/html,<x>')).not.toMatch(/data:/i);
   });
 
-  test('removes inline event-handler attributes', () => {
-    expect(stripHtml('<div onclick="steal()">')).not.toMatch(/onclick/i);
+  test('neutralizes a tag carrying an inline event handler (no bracket survives)', () => {
+    // The handler text may remain, but without angle brackets it cannot form an
+    // executing element — that is the security property we guarantee.
+    const out = stripHtml('<div onclick="steal()">x</div>');
+    expect(out).not.toMatch(/[<>]/);
   });
 
   test('a removal cannot be reconstructed from residue (fixed point)', () => {

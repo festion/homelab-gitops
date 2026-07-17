@@ -16,25 +16,28 @@
 // URL schemes that can execute script when navigated.
 const DANGEROUS_SCHEMES = /(?:javascript|vbscript|data|about|file)\s*:/gi;
 
-// Inline event-handler attributes (onclick=, onerror=, ...).
-const EVENT_HANDLERS = /\son\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi;
-
 /**
  * Neutralize HTML/script content in a string. Non-strings are returned as-is.
+ *
+ * Removing every `<` and `>` is the core defense: with no angle brackets no tag
+ * can form, so any inline event handler (onclick=...) becomes inert text and
+ * there is nothing to reconstruct — unlike named-tag or handler-attribute
+ * regexes, which are bypassable (and which CodeQL flags as incomplete). Removing
+ * single characters cannot create a new match, so it needs no re-scan. Dangerous
+ * URL schemes are additionally removed to a fixed point so a nested form like
+ * "javascjavascript:ript:" fully clears; each pass only deletes characters, so
+ * the loop terminates.
+ *
  * @param {*} input
  * @returns {*} sanitized string (or the original value if not a string)
  */
 function stripHtml(input) {
   if (typeof input !== 'string') return input;
-  // Apply removals to a fixed point so a match cannot be reconstructed from the
-  // residue of an earlier removal (e.g. "oonn..." -> "on..."). Each pass only
-  // deletes characters, so the loop is monotonic and terminates.
   let out = input;
   let prev;
   do {
     prev = out;
     out = out
-      .replace(EVENT_HANDLERS, '')    // drop on*="..." handlers
       .replace(DANGEROUS_SCHEMES, '') // drop javascript:/data:/... schemes
       .replace(/[<>]/g, '');          // remove angle brackets -> no tag can form
   } while (out !== prev);
