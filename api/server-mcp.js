@@ -8,6 +8,7 @@
  */
 
 const express = require('express');
+const { sanitizeForLog } = require('./lib/safe-exec');
 const fs = require('fs');
 const path = require('path');
 const { removeDir, resolveWithin } = require('./lib/safe-exec');
@@ -446,7 +447,7 @@ app.post('/audit/clone', async (req, res) => {
     
     res.json(result);
   } catch (error) {
-    console.error(`❌ Clone failed for ${repo}:`, error);
+    console.error('❌ Clone failed for %s:', sanitizeForLog(repo), error);
     res.status(500).json({ error: `Failed to clone ${repo}: ${error.message}` });
   }
 });
@@ -463,7 +464,7 @@ app.post('/audit/delete', (req, res) => {
   console.log(`🗑️  Deleting extra repository: ${repo}`);
   removeDir(target, async (err) => {
     if (err) {
-      console.error(`❌ Delete failed for ${repo}:`, err);
+      console.error('❌ Delete failed for %s:', sanitizeForLog(repo), err);
       return res.status(500).json({ error: `Failed to delete ${repo}` });
     }
     
@@ -513,7 +514,7 @@ app.post('/audit/commit', async (req, res) => {
     
     res.json(result);
   } catch (error) {
-    console.error(`❌ Commit failed for ${repo}:`, error);
+    console.error('❌ Commit failed for %s:', sanitizeForLog(repo), error);
     res.status(500).json({ error: 'Commit failed', details: error.message });
   }
 });
@@ -550,7 +551,7 @@ if (isDev) {
       
       res.json(result);
     } catch (error) {
-      console.error(`❌ Remote URL fix failed for ${repo}:`, error);
+      console.error('❌ Remote URL fix failed for %s:', sanitizeForLog(repo), error);
       res.status(500).json({ error: 'Failed to fix remote URL', details: error.message });
     }
   });
@@ -579,7 +580,7 @@ if (isDev) {
         mismatch: currentUrl !== expectedUrl,
       });
     } catch (error) {
-      console.error(`❌ Mismatch check failed for ${repo}:`, error);
+      console.error('❌ Mismatch check failed for %s:', sanitizeForLog(repo), error);
       res.status(500).json({ error: 'Failed to get remote URL' });
     }
   });
@@ -638,7 +639,7 @@ if (isDev) {
         
         console.log(`✅ Batch ${operation} completed for ${repo}`);
       } catch (error) {
-        console.error(`❌ Batch ${operation} failed for ${repo}:`, error);
+        console.error('❌ Batch %s failed for %s:', sanitizeForLog(operation), sanitizeForLog(repo), error);
         results.push({
           repo,
           success: false,
@@ -681,7 +682,7 @@ app.post('/audit/discard', async (req, res) => {
     
     res.json(result);
   } catch (error) {
-    console.error(`❌ Discard failed for ${repo}:`, error);
+    console.error('❌ Discard failed for %s:', sanitizeForLog(repo), error);
     res.status(500).json({ error: 'Discard failed', details: error.message });
   }
 });
@@ -703,7 +704,7 @@ app.get('/audit/diff/:repo', async (req, res) => {
     
     res.json({ repo, diff: result.diff });
   } catch (error) {
-    console.error(`❌ Diff failed for ${repo}:`, error);
+    console.error('❌ Diff failed for %s:', sanitizeForLog(repo), error);
     res.status(500).json({ error: 'Diff failed', details: error.message });
   }
 });

@@ -677,7 +677,7 @@ class ComplianceService extends EventEmitter {
         });
 
       } catch (error) {
-        console.error(`Error applying template ${templateName} to ${repository}:`, error);
+        console.error('Error applying template %s to %s:', sanitizeForLog(templateName), sanitizeForLog(repository), error);
         
         results.push({
           template: templateName,

@@ -14,6 +14,7 @@
  */
 
 const fs = require('fs');
+const { sanitizeForLog } = require('./lib/safe-exec');
 const path = require('path');
 const crypto = require('crypto');
 const sqlite3 = require('sqlite3').verbose();
@@ -709,7 +710,7 @@ class WikiAgentManager {
       }
       
     } catch (error) {
-      console.error(`❌ Failed to upload document ${documentId}:`, error);
+      console.error('❌ Failed to upload document %s:', sanitizeForLog(documentId), error);
       
       // Update document status to 'failed'
       await this.runQuery(`

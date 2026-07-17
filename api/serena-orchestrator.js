@@ -5,6 +5,8 @@
  * SerenaOrchestrator coordinates MCP operations across multiple servers
  * Following the MCP integration guidelines where Serena marshalls all other MCP servers
  */
+const { sanitizeForLog } = require('./lib/safe-exec');
+
 class SerenaOrchestrator {
     constructor(mcpServers) {
         this.githubMCP = mcpServers.github || null;
@@ -62,7 +64,7 @@ class SerenaOrchestrator {
             };
 
         } catch (error) {
-            console.error(`❌ Serena orchestration failed for clone ${repoName}:`, error);
+            console.error('❌ Serena orchestration failed for clone %s:', sanitizeForLog(repoName), error);
             
             // Log failure through Serena if available
             if (this.serenaMCP) {
@@ -136,7 +138,7 @@ class SerenaOrchestrator {
             };
 
         } catch (error) {
-            console.error(`❌ Serena orchestration failed for commit ${repoName}:`, error);
+            console.error('❌ Serena orchestration failed for commit %s:', sanitizeForLog(repoName), error);
             
             // Log failure through Serena if available
             if (this.serenaMCP) {

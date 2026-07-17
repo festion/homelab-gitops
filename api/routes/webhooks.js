@@ -1,4 +1,5 @@
 const express = require('express');
+const { sanitizeForLog } = require('../lib/safe-exec');
 const router = express.Router();
 const WebhookConfigService = require('../services/github/webhookConfig');
 const EnhancedWebhookHandler = require('../services/webhook/enhancedWebhookHandler');
@@ -124,7 +125,7 @@ router.post('/setup/:owner/:repo', async (req, res) => {
       message: `Webhook configured successfully for ${owner}/${repo}`
     });
   } catch (error) {
-    console.error(`Error setting up webhook for ${req.params.owner}/${req.params.repo}:`, error);
+    console.error('Error setting up webhook for %s/%s:', sanitizeForLog(req.params.owner), sanitizeForLog(req.params.repo), error);
     res.status(500).json({ 
       error: error.message,
       repository: `${req.params.owner}/${req.params.repo}`
@@ -160,7 +161,7 @@ router.delete('/remove/:owner/:repo', async (req, res) => {
       });
     }
   } catch (error) {
-    console.error(`Error removing webhook from ${req.params.owner}/${req.params.repo}:`, error);
+    console.error('Error removing webhook from %s/%s:', sanitizeForLog(req.params.owner), sanitizeForLog(req.params.repo), error);
     res.status(500).json({ 
       error: error.message,
       repository: `${req.params.owner}/${req.params.repo}`
@@ -299,7 +300,7 @@ router.get('/repository/:owner/:repo/status', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error(`Error getting webhook status for ${req.params.owner}/${req.params.repo}:`, error);
+    console.error('Error getting webhook status for %s/%s:', sanitizeForLog(req.params.owner), sanitizeForLog(req.params.repo), error);
     res.status(500).json({ 
       error: error.message,
       repository: `${req.params.owner}/${req.params.repo}`
@@ -338,7 +339,7 @@ router.post('/test/:owner/:repo', async (req, res) => {
       });
     }
   } catch (error) {
-    console.error(`Error testing webhook for ${req.params.owner}/${req.params.repo}:`, error);
+    console.error('Error testing webhook for %s/%s:', sanitizeForLog(req.params.owner), sanitizeForLog(req.params.repo), error);
     res.status(500).json({ 
       error: error.message,
       repository: `${req.params.owner}/${req.params.repo}`
