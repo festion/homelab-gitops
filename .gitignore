@@ -23,6 +23,9 @@ secrets.json
 .git-credentials
 github-token.txt
 
+# CLI state dirs (gh, etc.) — accidentally committed, churn on every invocation (#2165)
+.local/
+
 # User-specific configuration files
 config/settings.local.conf
 config/*.local.*
