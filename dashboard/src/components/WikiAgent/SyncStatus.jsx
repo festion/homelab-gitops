@@ -76,7 +76,7 @@ const SyncStatus = () => {
 
   const handleSyncAction = async (action) => {
     try {
-      const response = await fetch(`/api/wiki-agent/sync/${action}`, {
+      const response = await fetch(`/api/wiki-agent/sync/${encodeURIComponent(action)}`, {
         method: 'POST'
       });
 
@@ -90,7 +90,7 @@ const SyncStatus = () => {
 
   const handleConflictResolution = async (conflictId, resolution) => {
     try {
-      const response = await fetch(`/api/wiki-agent/sync/conflicts/${conflictId}/resolve`, {
+      const response = await fetch(`/api/wiki-agent/sync/conflicts/${encodeURIComponent(conflictId)}/resolve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ resolution })
