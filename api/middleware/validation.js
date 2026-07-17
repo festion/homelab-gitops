@@ -3,6 +3,8 @@
  * Provides request validation for search and bulk action endpoints
  */
 
+const { stripHtml } = require('../lib/html-sanitize');
+
 /**
  * Validate search query parameters
  */
@@ -276,14 +278,9 @@ function validatePagination(req, res, next) {
 function sanitizeInput(req, res, next) {
   const sanitizeString = (str) => {
     if (typeof str !== 'string') return str;
-    
-    // Remove script tags and other dangerous HTML
-    return str
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-      .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
-      .replace(/javascript:/gi, '')
-      .replace(/on\w+=/gi, '')
-      .trim();
+    // Neutralize HTML/script content (see lib/html-sanitize): removes angle
+    // brackets, inline event handlers and dangerous URL schemes.
+    return stripHtml(str).trim();
   };
 
   const sanitizeObject = (obj) => {

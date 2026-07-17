@@ -507,8 +507,13 @@ class CodeLinterMCPClient {
    */
   async validateLink(url) {
     try {
-      // Skip validation for certain URL types
-      if (url.startsWith('#') || url.startsWith('mailto:') || url.startsWith('javascript:')) {
+      // Reject dangerous URL schemes outright (they must never appear in docs).
+      if (/^\s*(?:javascript|vbscript|data|file):/i.test(url)) {
+        return false;
+      }
+
+      // Skip validation for safe, non-navigable link types.
+      if (url.startsWith('#') || url.startsWith('mailto:')) {
         return true;
       }
 
