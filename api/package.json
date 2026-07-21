@@ -64,7 +64,7 @@
     "rimraf": "^6.0.0",
     "fast-xml-parser": "^5.7.0",
     "fast-xml-builder": "^1.2.0",
-    "fast-uri": "^3.1.2",
+    "fast-uri": "^3.1.4",
     "@smithy/middleware-retry": { "uuid": "^14.0.0" },
     "hyperid": { "uuid": "^14.0.0" },
     "picomatch": "^4.0.4",
