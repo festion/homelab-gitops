@@ -119,6 +119,13 @@ The dashboard provides:
    - Check logs for connection errors
 
 
-## Learnings KB
+## Recall project knowledge
 
-@.claude/learnings.md
+The learnings base for this repo (4 KB) is **not** preloaded — it used to be
+`@`-imported, which expanded ~2k tokens into every session. Search it instead:
+
+```bash
+memory-search "<what you're about to change>" --project homelab-gitops
+```
+
+Query it before changing a route, a deploy path, or anything CodeQL has flagged.
