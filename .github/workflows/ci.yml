@@ -69,14 +69,10 @@ jobs:
         npx tsc --noEmit
         
     - name: Validate package.json (API)
-      run: |
-        cd api
-        npm audit --audit-level=high
-        
+      run: ./scripts/ci-audit-gate.sh api high
+
     - name: Validate package.json (Dashboard)
-      run: |
-        cd dashboard
-        npm audit --audit-level=high
+      run: ./scripts/ci-audit-gate.sh dashboard high
 
   unit-tests:
     name: Unit Tests
@@ -320,14 +316,10 @@ jobs:
         npm ci
         
     - name: Run dependency audit (API)
-      run: |
-        cd api
-        npm audit --audit-level=high
-        
+      run: ./scripts/ci-audit-gate.sh api high
+
     - name: Run dependency audit (Dashboard)
-      run: |
-        cd dashboard
-        npm audit --audit-level=high
+      run: ./scripts/ci-audit-gate.sh dashboard high
         
     - name: Check for critical vulnerabilities (API)
       run: |
