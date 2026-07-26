@@ -69,14 +69,10 @@ jobs:
         npx tsc --noEmit
         
     - name: Validate package.json (API)
-      run: |
-        cd api
-        npm audit --audit-level=high
-        
+      run: ./scripts/ci-audit-gate.sh api high
+
     - name: Validate package.json (Dashboard)
-      run: |
-        cd dashboard
-        npm audit --audit-level=high
+      run: ./scripts/ci-audit-gate.sh dashboard high
 
   unit-tests:
     name: Unit Tests
@@ -320,31 +316,19 @@ jobs:
         npm ci
         
     - name: Run dependency audit (API)
-      run: |
-        cd api
-        npm audit --audit-level=high
-        
+      run: ./scripts/ci-audit-gate.sh api high
+
     - name: Run dependency audit (Dashboard)
-      run: |
-        cd dashboard
-        npm audit --audit-level=high
+      run: ./scripts/ci-audit-gate.sh dashboard high
         
-    - name: Check for critical vulnerabilities (API)
-      run: |
-        cd api
-        VULNERABILITIES=$(npm audit --json 2>/dev/null | jq '.metadata.vulnerabilities.high + .metadata.vulnerabilities.critical' 2>/dev/null || echo "0")
-        if [ "$VULNERABILITIES" -gt "0" ]; then
-          echo "Found $VULNERABILITIES high/critical vulnerabilities in API"
-          npm audit --json | jq '.advisories' || true
-          exit 1
-        fi
-        
-    - name: Check for critical vulnerabilities (Dashboard)
-      run: |
-        cd dashboard
-        VULNERABILITIES=$(npm audit --json 2>/dev/null | jq '.metadata.vulnerabilities.high + .metadata.vulnerabilities.critical' 2>/dev/null || echo "0")
-        if [ "$VULNERABILITIES" -gt "0" ]; then
-          echo "Found $VULNERABILITIES high/critical vulnerabilities in Dashboard"
-          npm audit --json | jq '.advisories' || true
-          exit 1
-        fi
+    # The two "Check for critical vulnerabilities" steps that used to sit here
+    # were removed. They gated on `.metadata.vulnerabilities.high + .critical`
+    # for api/ and dashboard/ -- the same question the two "Run dependency
+    # audit" steps above already answer, but via a second, allowlist-unaware
+    # code path. Two gates on one question, disagreeing about exceptions, is
+    # how this job stayed red on an advisory that had already been assessed and
+    # documented. scripts/ci-audit-gate.sh is now the single gate.
+    #
+    # They were also partly dead: `npm audit --json | jq '.advisories'` reads an
+    # npm v6 field that is always null on npm v7+, so the intended debug output
+    # never printed.

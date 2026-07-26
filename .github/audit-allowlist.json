@@ -1,0 +1,25 @@
+{
+  "_comment": [
+    "Advisories the npm-audit CI gate is allowed to ignore, each with a reason and",
+    "an expiry. Consumed by scripts/ci-audit-gate.sh.",
+    "",
+    "An entry is NOT a dismissal -- the gate FAILS once review_by passes, so an",
+    "exception cannot rot silently. If it is still unfixable on that date, extend it",
+    "deliberately with fresh reasoning rather than by habit.",
+    "",
+    "Only add an entry when the vulnerable code path is genuinely unreachable in",
+    "this application, and say how that was established."
+  ],
+  "allow": [
+    {
+      "id": "GHSA-qwww-vcr4-c8h2",
+      "package": "react-router / react-router-dom",
+      "severity": "high",
+      "directory": "dashboard",
+      "reason": "React Router RSC Mode CSRF Bypass. The advisory is specific to RSC (React Server Components) mode. This dashboard is a client-only SPA: src/router.tsx uses createBrowserRouter + RouterProvider, no RSC or server-render API is imported anywhere in src/ (verified by grep for unstable_RSC, renderToPipeableStream, createStaticHandler, createStaticRouter, @react-router/node|server), and the build output is static files served by express.static from api/createApp.js. The vulnerable path is not reachable.",
+      "why_not_fixed": "Fixed only in react-router@8.3.0. react-router-dom has no 8.x (v8 merged the packages), and 8.3.0 requires react>=19.2.7 and node>=22.22.0 while the dashboard is on React 18.3.1 and CI/prod are Node 20. Closing it is a React 19 + Node 22 + router v7->v8 migration, tracked as Vikunja ops #2261 -- not a bump. Do NOT run `npm audit fix --force`: it downgrades react-router-dom 7.18.1 -> 7.11.0, which escapes this advisory only by re-entering four other react-router CVEs fixed in PR #194.",
+      "added": "2026-07-26",
+      "review_by": "2026-10-31"
+    }
+  ]
+}

@@ -94,25 +94,35 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       
+    # This repo ships NOTHING as a container: deploy.yml does `npm run build`
+    # then scp/ssh to CT 123 (gitopsdashboard.mgmt.lakehouse.wtf), and there is
+    # no Dockerfile anywhere in the tree -- only docker-compose templates that
+    # reference prebuilt third-party images.
+    #
+    # The previous version fabricated a node:20-alpine image here so it always
+    # had something to scan. That scanned an artifact which is never built or
+    # deployed, and it is why this job has been red since 2026-07-21: the single
+    # CRITICAL was CVE-2026-59873 in `tar 6.2.1` at
+    # usr/local/lib/node_modules/npm/node_modules/tar -- npm's OWN bundled tar
+    # inside the base image, not a dependency of this repo. No dependency work
+    # here could ever clear it, which is why it survived PR #194. It also
+    # uploaded SARIF, polluting code-scanning with alerts about an image that
+    # does not exist.
+    #
+    # So: scan a real image if one ever exists, and skip honestly if not.
     - name: Build Docker image
+      id: image
       run: |
         if [ -f "Dockerfile" ]; then
           docker build -t homelab-gitops-auditor:scan .
+          echo "built=true" >> "$GITHUB_OUTPUT"
         else
-          echo "Dockerfile not found, creating basic image for scanning"
-          cat > Dockerfile.scan << EOF
-        FROM node:20-alpine
-        WORKDIR /app
-        COPY package*.json ./
-        RUN npm ci --only=production
-        COPY . .
-        EXPOSE 3000
-        CMD ["npm", "start"]
-        EOF
-          docker build -f Dockerfile.scan -t homelab-gitops-auditor:scan .
+          echo "built=false" >> "$GITHUB_OUTPUT"
+          echo "::notice::No Dockerfile in this repo -- nothing here is containerized (deploy is npm build + rsync to CT 123). Skipping container scan rather than fabricating an image that is never deployed."
         fi
         
     - name: Run Trivy vulnerability scanner
+      if: steps.image.outputs.built == 'true'
       uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
       with:
         image-ref: 'homelab-gitops-auditor:scan'
@@ -120,11 +130,13 @@ jobs:
         output: 'trivy-results.sarif'
         
     - name: Upload Trivy scan results
+      if: steps.image.outputs.built == 'true'
       uses: github/codeql-action/upload-sarif@68bde559dea0fdcac2102bfdf6230c5f70eb485e # v4
       with:
         sarif_file: 'trivy-results.sarif'
         
     - name: Check for critical vulnerabilities
+      if: steps.image.outputs.built == 'true'
       run: |
         CRITICAL=$(docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
           aquasec/trivy image --format json homelab-gitops-auditor:scan | \
