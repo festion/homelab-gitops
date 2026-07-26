@@ -31,7 +31,8 @@
     "discovery:stop": "node scripts/wiki-discovery-cron.js stop",
     "discovery:status": "node scripts/wiki-discovery-cron.js status",
     "discovery:run-full": "node scripts/wiki-discovery-cron.js run-once daily-full-discovery",
-    "discovery:test": "jest tests/discovery/discovery-system.test.js"
+    "discovery:test": "jest tests/discovery/discovery-system.test.js",
+    "postinstall": "node scripts/ensure-sqlite3.js"
   },
   "keywords": [
     "gitops",
