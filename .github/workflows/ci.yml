@@ -68,6 +68,9 @@ jobs:
         cd dashboard
         npx tsc --noEmit
         
+    - name: Validate package.json (root)
+      run: ./scripts/ci-audit-gate.sh . high
+
     - name: Validate package.json (API)
       run: ./scripts/ci-audit-gate.sh api high
 
@@ -315,6 +318,9 @@ jobs:
         cd dashboard
         npm ci
         
+    - name: Run dependency audit (root)
+      run: ./scripts/ci-audit-gate.sh . high
+
     - name: Run dependency audit (API)
       run: ./scripts/ci-audit-gate.sh api high
 
