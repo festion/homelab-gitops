@@ -17,11 +17,15 @@ module.exports = {
   ],
   
   // Setup files
-  setupFiles: [
-    '<rootDir>/tests/setup/jest.setup.js'
-  ],
-  
+  // NOTE: tests/setup/jest.setup.js calls expect.extend(...) at load time, so
+  // it must run in setupFilesAfterEnv (after the test framework/`expect` is
+  // installed), not setupFiles (which runs before the framework exists and
+  // is meant for environment polyfills only). The sibling tests/jest.unit.config.js
+  // wires this same file via setupFilesAfterEnv -- copy that ordering here.
+  // Putting it in setupFiles caused every test file to fail immediately with
+  // "ReferenceError: expect is not defined". See ops #2271.
   setupFilesAfterEnv: [
+    '<rootDir>/tests/setup/jest.setup.js',
     '<rootDir>/tests/security/setup/security-setup.js'
   ],
   
