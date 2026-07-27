@@ -1,5 +1,9 @@
 const path = require('path');
-const { ConfigManager } = require('../config/utils/config-manager');
+// NOTE: config/utils/config-manager.js does `module.exports = ConfigManager`
+// (a direct export), and lives at the REPO ROOT -- so from api/services/ the
+// path is ../../config, not ../config. The previous line had both wrong, which
+// is one of three reasons this module cannot load. See ops #2270.
+const ConfigManager = require('../../config/utils/config-manager');
 
 /**
  * WebhookProcessor Class

@@ -189,20 +189,30 @@ jobs:
           sleep 10
         fi
         
+    # This step used to be `|| echo ...` AND `continue-on-error: true` -- doubly
+    # suppressed, so the job reported success no matter what happened. The
+    # underlying non-zero exit was NOT a test failure: the 8 integration tests
+    # pass. It came from jest's coverage THRESHOLDS, which are global and cannot
+    # be met by running one project in isolation. Suppressing the whole step to
+    # silence a coverage gate meant a genuine integration-test regression would
+    # also have gone unreported. Running with --coverage=false gates on the
+    # thing this job is named for; coverage is enforced by the full test run.
     - name: Run integration tests (API)
       run: |
         cd api
-        npm run test:integration || echo "Integration tests not configured for API"
-      continue-on-error: true
+        npm run test:integration -- --coverage=false
       env:
         NODE_ENV: test
         DATABASE_URL: postgresql://test_user:test_password@localhost:5432/homelab_gitops_test
-        
-    - name: Run integration tests (Dashboard)
-      run: |
-        cd dashboard
-        npm run test:integration || echo "Integration tests not configured for Dashboard"
-      continue-on-error: true
+
+    # The "Run integration tests (Dashboard)" step was removed: dashboard has no
+    # `test:integration` script, so it errored on every run and was swallowed by
+    # the same `|| echo` + continue-on-error. A step that can only ever fail
+    # silently is worse than no step. Its unit tests run in the Unit Tests job.
+    #
+    # NOT wired up here: the ROOT tests/integration suite (`npm run
+    # test:integration` at the repo root). It is currently non-functional -- see
+    # the header of tests/integration/jest.config.js. Tracked in ops #2271.
         
     - name: Test audit script validation
       run: |

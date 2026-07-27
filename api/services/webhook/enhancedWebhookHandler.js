@@ -889,7 +889,24 @@ class EnhancedWebhookHandler extends EventEmitter {
     console.log(`🚀 Repository dispatch: ${repository.full_name} - Action: ${action}`);
     
     try {
-      // Initialize WebhookProcessor if not already done
+      // Initialize WebhookProcessor if not already done.
+      //
+      // HEADS UP: this require currently THROWS, so repository_dispatch events
+      // never produce a deployment -- they fall to the catch below, log, and
+      // emit 'deployment_failed'. The chain
+      //   webhook-processor -> scripts/services/home-assistant-deployer
+      //                     -> scripts/services/database/deployment-repository
+      // is a COMPLETE Home-Assistant deployment subsystem whose dependencies
+      // were never declared: cors, helmet, express-rate-limit, socket.io and
+      // sqlite are absent from every manifest in this repo, so it has never
+      // run since it was written.
+      //
+      // Left inert deliberately (ops #2270). home-assistant-config already
+      // deploys itself via its own GitHub Actions pipeline, nothing in the
+      // homelab sends repository_dispatch here, and switching this on would
+      // make an untested HA deployment path live. Do not "fix" it by adding
+      // the missing dependencies without deciding whether this subsystem is
+      // wanted at all.
       if (!this.webhookProcessor) {
         const { WebhookProcessor } = require('../webhook-processor');
         this.webhookProcessor = new WebhookProcessor();
