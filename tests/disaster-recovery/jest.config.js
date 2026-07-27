@@ -1,4 +1,9 @@
 module.exports = {
+  // rootDir defaults to THIS file's directory, which made every
+  // '<rootDir>/tests/...' path below resolve to tests/<suite>/tests/... and
+  // match nothing -- the suite collected zero files. '../..' makes <rootDir>
+  // the repo root, matching tests/jest.unit.config.js. See ops #2271.
+  rootDir: '../..',
   displayName: 'Disaster Recovery Tests',
   testEnvironment: 'node',
   testMatch: [
@@ -46,7 +51,7 @@ module.exports = {
       usePathForSuiteName: true
     }]
   ],
-  moduleNameMapping: {
+  moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
     '^@tests/(.*)$': '<rootDir>/tests/$1'
   },

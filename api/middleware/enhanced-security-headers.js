@@ -37,8 +37,8 @@ class SecurityMiddleware {
    */
   async loadConfig() {
     try {
-      const ConfigManager = require('../config/utils/config-manager');
-      const config = await ConfigManager.getConfig();
+      const ConfigManager = require('../../config/utils/config-manager');
+      const config = await ConfigManager.loadConfig(process.env.NODE_ENV || 'production');
       return config.security || this.getDefaultConfig();
     } catch (error) {
       return this.getDefaultConfig();

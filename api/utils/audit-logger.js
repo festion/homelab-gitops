@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
-const { ConfigManager } = require('../../config/utils/config-manager');
+// (ConfigManager import removed: it was never referenced in this file, and the
+//  destructured form yielded undefined against a direct export anyway. ops #2271)
 
 /**
  * AuditLogger Class
