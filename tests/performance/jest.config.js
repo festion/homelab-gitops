@@ -1,4 +1,9 @@
 module.exports = {
+  // NOTE: this config deliberately does NOT set rootDir. Unlike its siblings it
+  // uses SUITE-relative paths ('<rootDir>/setup/...', '<rootDir>/**/*.test.js'),
+  // so jest's default (this file's directory) is already correct. Adding
+  // rootDir: '../..' here breaks it. Its zero-collection was caused solely by
+  // the missing reporter packages, now declared. See ops #2271.
   displayName: 'Performance Tests',
   testEnvironment: 'node',
   testMatch: ['<rootDir>/**/*.test.js'],

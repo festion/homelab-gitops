@@ -175,3 +175,10 @@ venv/
 
 # Jest transform / haste-map caches (machine-generated, per-host)
 .jest-cache-*/
+
+# Artifacts produced by the root test suites (ops #2271). These suites had never
+# run, so nothing had ever generated these files and they were not ignored --
+# the first real run drops them straight into the working tree.
+/security-report-*.json
+/.eslintrc.security.json
+tests/*/reports/

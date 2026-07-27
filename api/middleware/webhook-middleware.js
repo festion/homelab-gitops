@@ -1,6 +1,10 @@
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
-const { ConfigManager } = require('../config/utils/config-manager');
+// config/utils/config-manager.js lives at the REPO ROOT (so ../../config from
+// api/*/, not ../config) and does `module.exports = ConfigManager` -- a direct
+// export of the class, so this must NOT be destructured. Statics available:
+// loadConfig(env) and validateConfig(cfg). There is no getConfig(). ops #2271.
+const ConfigManager = require('../../config/utils/config-manager');
 
 /**
  * Webhook Middleware

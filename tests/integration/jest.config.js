@@ -26,6 +26,11 @@
 // api/ and dashboard/ suites only.
 
 module.exports = {
+  // rootDir defaults to THIS file's directory, which made every
+  // '<rootDir>/tests/...' path below resolve to tests/<suite>/tests/... and
+  // match nothing -- the suite collected zero files. '../..' makes <rootDir>
+  // the repo root, matching tests/jest.unit.config.js. See ops #2271.
+  rootDir: '../..',
   displayName: 'Integration Tests',
   testMatch: [
     '<rootDir>/tests/integration/**/*.test.js'
@@ -59,7 +64,7 @@ module.exports = {
   resetMocks: true,
   globalSetup: '<rootDir>/tests/integration/setup/global-setup.js',
   globalTeardown: '<rootDir>/tests/integration/setup/global-teardown.js',
-  moduleNameMapping: {
+  moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/api/$1',
     '^@tests/(.*)$': '<rootDir>/tests/$1'
   },

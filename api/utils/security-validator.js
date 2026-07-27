@@ -1,6 +1,10 @@
 const crypto = require('crypto');
 const { sanitizeForLog } = require('../lib/safe-exec');
-const { ConfigManager } = require('../config/utils/config-manager');
+// config/utils/config-manager.js lives at the REPO ROOT (so ../../config from
+// api/*/, not ../config) and does `module.exports = ConfigManager` -- a direct
+// export of the class, so this must NOT be destructured. Statics available:
+// loadConfig(env) and validateConfig(cfg). There is no getConfig(). ops #2271.
+const ConfigManager = require('../../config/utils/config-manager');
 
 /**
  * SecurityValidator Class
