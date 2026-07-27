@@ -134,6 +134,7 @@ jobs:
       uses: github/codeql-action/upload-sarif@68bde559dea0fdcac2102bfdf6230c5f70eb485e # v4
       with:
         sarif_file: 'trivy-results.sarif'
+        category: container-image
         
     - name: Check for critical vulnerabilities
       if: steps.image.outputs.built == 'true'
@@ -146,10 +147,77 @@ jobs:
           exit 1
         fi
 
+  dependency-fs-scan:
+    name: Trivy Filesystem Scan (dependency tree)
+    runs-on: ubuntu-latest
+    # Repo default_workflow_permissions is "write" (verified via
+    # repos/festion/homelab-gitops/actions/permissions/workflow), so
+    # security-events: write is already granted -- this block just makes
+    # that explicit and future-proofs against the default being tightened
+    # later. Scoped to this job only; does not affect any other job here.
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+    # Scans the tree that is actually deployed (rsync to CT 123 -- see the
+    # container-security job above for why an image-based scan was removed).
+    # Trivy's npm scanner reads package-lock.json directly, so this covers
+    # every lockfile in the repo (root, api, dashboard, scripts,
+    # mcp-servers) with no `npm ci` / node_modules involved -- node_modules
+    # is gitignored and never installed in this job, so there is nothing to
+    # exclude.
+    #
+    # Pinning, explicitly:
+    #   - trivy-action is pinned to the same SHA already used by the
+    #     (dormant) container-security job below, so both agree on the
+    #     action version.
+    #   - `version:` pins the Trivy CLI binary itself. This repo used to run
+    #     an unpinned `aquasec/trivy:latest` in one step alongside this
+    #     pinned trivy-action in another, and the two disagreed about
+    #     severity -- that "instrument disagreement" cost real debugging
+    #     time. There is now exactly one Trivy binary version in this
+    #     workflow.
+    #   - `scanners: vuln` keeps this job to dependency vulnerabilities only
+    #     -- secret scanning already happens in the secret-scan job
+    #     (TruffleHog), and running a second secret scanner here risks the
+    #     same kind of disagreement.
+    #   - `exit-code: '0'` + no `--audit-level`-style gate: this step
+    #     REPORTS findings via SARIF to code-scanning, it does not fail the
+    #     build. scripts/ci-audit-gate.sh already gates npm advisories for
+    #     api/dashboard with a reviewed, expiring allowlist -- a second gate
+    #     here that disagrees about exceptions is exactly what left main
+    #     permanently red before (PR #196).
+    - name: Run Trivy filesystem scan
+      uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        vuln-type: 'library'
+        scanners: 'vuln'
+        version: 'v0.70.0'
+        format: 'sarif'
+        output: 'trivy-fs-results.sarif'
+        exit-code: '0'
+
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@68bde559dea0fdcac2102bfdf6230c5f70eb485e # v4
+      with:
+        sarif_file: 'trivy-fs-results.sarif'
+        # Distinct category. Both this job and the dormant container job upload
+        # tool=Trivy SARIF; without distinct categories each analysis SUPERSEDES
+        # the other, so alerts would flap as the two jobs alternate. Harmless
+        # today (the container job cannot run — no Dockerfile) but it costs one
+        # line to make it safe if a Dockerfile ever lands.
+        category: dependency-fs
+
   dependency-security:
     name: Dependency Security Analysis
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
