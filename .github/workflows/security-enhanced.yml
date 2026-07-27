@@ -134,6 +134,7 @@ jobs:
       uses: github/codeql-action/upload-sarif@68bde559dea0fdcac2102bfdf6230c5f70eb485e # v4
       with:
         sarif_file: 'trivy-results.sarif'
+        category: container-image
         
     - name: Check for critical vulnerabilities
       if: steps.image.outputs.built == 'true'
@@ -206,6 +207,12 @@ jobs:
       uses: github/codeql-action/upload-sarif@68bde559dea0fdcac2102bfdf6230c5f70eb485e # v4
       with:
         sarif_file: 'trivy-fs-results.sarif'
+        # Distinct category. Both this job and the dormant container job upload
+        # tool=Trivy SARIF; without distinct categories each analysis SUPERSEDES
+        # the other, so alerts would flap as the two jobs alternate. Harmless
+        # today (the container job cannot run — no Dockerfile) but it costs one
+        # line to make it safe if a Dockerfile ever lands.
+        category: dependency-fs
 
   dependency-security:
     name: Dependency Security Analysis
