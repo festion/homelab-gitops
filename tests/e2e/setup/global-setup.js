@@ -1,6 +1,13 @@
-const { setup: setupDevServer } = require('@jest/test-sequencer');
-const E2ETestEnvironment = require('./e2e-environment');
-const GitHubSimulator = require('../utils/github-simulator');
+// NOTE: this file used to `require('@jest/test-sequencer')` for a `setup`
+// export that was destructured into `setupDevServer` and never referenced
+// anywhere below -- dead code. The package isn't a declared dependency, so
+// requiring it is fragile (it only worked here because jest itself pulls it
+// in transitively). Removed rather than installed. See ops #2279.
+// Both modules export a named `{ ClassName }` object, not a bare class --
+// destructure to get the actual constructor. Third pre-existing defect
+// found while verifying the two listed e2e blockers; see ops #2279.
+const { E2ETestEnvironment } = require('./e2e-environment');
+const { GitHubSimulator } = require('../utils/github-simulator');
 const MonitoringUtils = require('../utils/monitoring-utils');
 const fs = require('fs').promises;
 const path = require('path');
@@ -184,7 +191,9 @@ function getTestEnvironment() {
   };
 }
 
-module.exports = {
-  globalSetup,
-  getTestEnvironment
-};
+// jest's `globalSetup` config option requires the module to export a bare
+// function directly (module.exports = fn), not an object containing one.
+// getTestEnvironment is attached as a property so it remains available to
+// anything that still wants to `require(...).getTestEnvironment`. See ops #2279.
+module.exports = globalSetup;
+module.exports.getTestEnvironment = getTestEnvironment;

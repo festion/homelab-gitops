@@ -37,7 +37,11 @@ module.exports = {
       publicPath: './coverage/disaster-recovery',
       filename: 'disaster-recovery-report.html',
       pageTitle: 'Disaster Recovery Test Report',
-      logoImgPath: './logo.png',
+      // './logo.png' doesn't exist on disk -- jest-html-reporters throws
+      // before printing a summary. undefined matches the convention already
+      // used in tests/security/jest.config.js and tests/e2e/jest.config.js
+      // (the reporter renders without a logo). See ops #2279.
+      logoImgPath: undefined,
       hideIcon: true,
       expand: true,
       openReport: false
