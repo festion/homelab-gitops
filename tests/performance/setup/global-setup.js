@@ -1,41 +1,19 @@
-const { execSync } = require('child_process');
 const path = require('path');
 
+// NOTE: this used to execSync('npm run db:reset') and 'npm run test:env:start'
+// followed by a curl health check against http://localhost:3000/health.
+// Neither script exists in the root or api/ package.json (confirmed by grep),
+// so this crashed before a single test ran. Writing those scripts would mean
+// deciding these suites own a real ephemeral DB + managed server lifecycle --
+// a bigger design/infra decision than a test-blocker fix warrants. Removed
+// the calls instead (lower risk): the suite now runs its load/stress tests
+// against whatever target the test files themselves already point at, and
+// failures show up as real per-test results rather than a crashed globalSetup.
+// See ops #2279.
 module.exports = async () => {
   console.log('🚀 Setting up performance test environment...');
-  
+
   try {
-    // Set up performance test database
-    console.log('📊 Setting up performance test database...');
-    execSync('npm run db:reset', { 
-      stdio: 'inherit',
-      env: { 
-        ...process.env, 
-        DB_NAME: 'homelab_gitops_auditor_performance_test' 
-      }
-    });
-    
-    // Start test server if not already running
-    console.log('🌐 Starting test server...');
-    execSync('npm run test:env:start', { 
-      stdio: 'inherit',
-      timeout: 30000 
-    });
-    
-    // Wait for server to be ready
-    console.log('⏳ Waiting for server to be ready...');
-    await new Promise(resolve => setTimeout(resolve, 5000));
-    
-    // Verify server is responding
-    const { execSync: execSyncImport } = require('child_process');
-    try {
-      execSyncImport('curl -f http://localhost:3000/health', { timeout: 10000 });
-      console.log('✅ Test server is ready');
-    } catch (error) {
-      console.error('❌ Test server health check failed:', error.message);
-      throw error;
-    }
-    
     // Set up performance monitoring infrastructure
     console.log('📈 Setting up performance monitoring...');
     

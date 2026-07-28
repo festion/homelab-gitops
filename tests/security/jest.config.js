@@ -132,9 +132,6 @@ module.exports = {
   // Reset modules between tests
   resetModules: true,
   
-  // Test result processor
-  testResultsProcessor: '<rootDir>/tests/security/utils/test-results-processor.js',
-  
   // Error on deprecated features
   errorOnDeprecated: true,
   
