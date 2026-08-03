@@ -74,6 +74,20 @@ function createApp({
     app.use(express.static(path.join(rootDir, 'dashboard/public')));
   }
 
+  // The GitHub webhook needs the RAW request bytes to verify the HMAC that
+  // GitHub computed over them, so its raw parser must be registered BEFORE the
+  // global JSON parser below. Express matches middleware in registration order;
+  // with the global parser first it consumed the stream, the route's own
+  // express.raw() found nothing, and `JSON.parse(req.body)` then received the
+  // already-parsed OBJECT and threw:
+  //
+  //     SyntaxError: "[object Object]" is not valid JSON
+  //
+  // which surfaced as a 400 on EVERY well-formed webhook. The endpoint had
+  // never once succeeded, and validateWebhookSignature() was never reached
+  // (ops #2524).
+  app.use('/api/v2/webhooks/github', express.raw({ type: 'application/json' }));
+
   app.use(express.json());
 
   // Mount authentication routes.
@@ -397,9 +411,14 @@ function createApp({
 
   // GitHub Webhook endpoint raw-body pre-middleware.
   // The actual handler is attached after construction via app.locals.webhookHandler.
-  app.post('/api/v2/webhooks/github', express.raw({ type: 'application/json' }), (req, res, next) => {
+  app.post('/api/v2/webhooks/github', (req, res, next) => {
     try {
-      req.body = JSON.parse(req.body);
+      // Keep the raw bytes for signature verification BEFORE replacing
+      // req.body with the parsed object — the HMAC must be computed over
+      // exactly what GitHub signed, and parsing is lossy (key order,
+      // whitespace, unicode escapes).
+      req.rawBody = Buffer.isBuffer(req.body) ? req.body : Buffer.from('');
+      req.body = JSON.parse(req.rawBody.toString('utf8'));
       next();
     } catch (error) {
       console.error('Invalid JSON in webhook payload:', error);
