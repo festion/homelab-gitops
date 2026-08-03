@@ -72,14 +72,11 @@ function buildApp({ rawBeforeJson }) {
   }
   app.use(express.json());
   app.post('/api/v2/webhooks/github', (req, res) => {
-    // `raw` is a Buffer on BOTH branches, so reading .length off it is
-    // unambiguous. The earlier version stashed the ternary on req.rawBody and
-    // then read req.rawBody.length, which CodeQL flagged critical
-    // (js/type-confusion-through-parameter-tampering): it could not carry the
-    // Buffer.isBuffer guard across the assignment, so it saw a user-controlled
-    // request parameter reaching .length -- where an array and a string mean
-    // different things. Binding the guarded value to a local first keeps the
-    // guard and the use in one expression.
+    // `raw` is a Buffer on both branches. Note this alone did NOT satisfy
+    // CodeQL: binding the guarded value to a local was tried first and the
+    // alert simply moved with the expression, because the ternary's true
+    // branch is still req.body and the taint follows it. What fixed it was
+    // removing the .length read from the handler entirely -- see below.
     const raw = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
     req.rawBody = raw;          // still set, because production sets it for the HMAC
     try {
@@ -90,7 +87,16 @@ function buildApp({ rawBeforeJson }) {
     res.status(200).json({
       ok: true,
       rawBodyIsBuffer: Buffer.isBuffer(req.rawBody),
-      rawBodyBytes: raw.length,
+      // Echo the bytes, do NOT report a length computed here. Reading .length
+      // off anything derived from req.body is what CodeQL flags critical
+      // (js/type-confusion-through-parameter-tampering) — an array and a
+      // string mean different things there, and the Buffer.isBuffer guard
+      // does not survive into its analysis however it is arranged.
+      // The test reconstructs a Buffer from this and measures THAT, so the
+      // length is taken from locally-constructed bytes. It is also a stronger
+      // assertion: comparing the actual bytes proves they survived intact,
+      // where a count only proves the total matched.
+      rawBodyB64: raw.toString('base64'),
       parsedZen: req.body.zen,
     });
   });
@@ -114,7 +120,12 @@ describe('ops #2524 — webhook raw-body ordering', () => {
     const res = await post(buildApp({ rawBeforeJson: true }), { body });
     expect(res.status).toBe(200);
     expect(res.body.rawBodyIsBuffer).toBe(true);
-    expect(res.body.rawBodyBytes).toBe(Buffer.byteLength(body));
+    // Reconstruct locally and compare the BYTES, not just a count — the
+    // stronger assertion, and it keeps the .length read off anything derived
+    // from a request parameter (see the handler comment).
+    const echoed = Buffer.from(res.body.rawBodyB64, 'base64');
+    expect(echoed.length).toBe(Buffer.byteLength(body));
+    expect(echoed.toString('utf8')).toBe(body);
   });
 
   test('genuinely malformed JSON is still rejected with 400', async () => {
