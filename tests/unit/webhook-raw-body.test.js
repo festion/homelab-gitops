@@ -72,16 +72,25 @@ function buildApp({ rawBeforeJson }) {
   }
   app.use(express.json());
   app.post('/api/v2/webhooks/github', (req, res) => {
+    // `raw` is a Buffer on BOTH branches, so reading .length off it is
+    // unambiguous. The earlier version stashed the ternary on req.rawBody and
+    // then read req.rawBody.length, which CodeQL flagged critical
+    // (js/type-confusion-through-parameter-tampering): it could not carry the
+    // Buffer.isBuffer guard across the assignment, so it saw a user-controlled
+    // request parameter reaching .length -- where an array and a string mean
+    // different things. Binding the guarded value to a local first keeps the
+    // guard and the use in one expression.
+    const raw = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
+    req.rawBody = raw;          // still set, because production sets it for the HMAC
     try {
-      req.rawBody = Buffer.isBuffer(req.body) ? req.body : Buffer.from('');
-      req.body = JSON.parse(req.rawBody.toString('utf8'));
+      req.body = JSON.parse(raw.toString('utf8'));
     } catch (e) {
       return res.status(400).json({ error: 'Invalid JSON payload' });
     }
     res.status(200).json({
       ok: true,
       rawBodyIsBuffer: Buffer.isBuffer(req.rawBody),
-      rawBodyBytes: req.rawBody.length,
+      rawBodyBytes: raw.length,
       parsedZen: req.body.zen,
     });
   });
