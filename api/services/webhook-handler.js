@@ -419,8 +419,16 @@ class WebhookHandler extends EventEmitter {
         const event = req.get('X-GitHub-Event');
         const delivery = req.get('X-GitHub-Delivery');
 
-        // Get raw body for signature verification
-        const payload = JSON.stringify(req.body);
+        // The HMAC must be computed over the bytes GitHub actually signed.
+        // createApp.js preserves them on req.rawBody before parsing; re-
+        // serialising the parsed object is only byte-equal by luck, because
+        // JSON.parse -> JSON.stringify is lossy for \uXXXX escapes, number
+        // formatting, whitespace and key order. GitHub emits \uXXXX routinely
+        // (commit messages, issue titles, author names), so the stringify path
+        // rejected legitimate deliveries with a 401 (ops #2524).
+        // Fall back to the parsed body for mounts where the createApp pre-
+        // middleware did not run.
+        const payload = req.rawBody || JSON.stringify(req.body);
 
         // Verify signature if secret is configured
         if (this.secret && !this.verifySignature(payload, signature)) {
