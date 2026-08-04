@@ -106,6 +106,16 @@ describe('ops #2524 follow-up — webhook HMAC uses the raw bytes', () => {
     expect(payload).toEqual({ status: 'ok', event: 'push', delivery: 'deadbeef' });
   });
 
+  test('a MISSING signature is rejected 401, not 500', async () => {
+    // Buffer.from(undefined) throws inside timingSafeEqual, which the
+    // catch-all turned into a 500. A 500 reads as "server broke", not
+    // "you are not authorised", and ops #2524 acceptance item 3 wants a 401.
+    const raw = Buffer.from('{"zen":"Design for failure.","hook_id":1}', 'utf8');
+    const { statusCode, payload } = await invoke(handler, { rawBody: raw, signature: undefined });
+    expect(statusCode).toBe(401);
+    expect(payload).toEqual({ error: 'Invalid signature' });
+  });
+
   test('a genuinely wrong signature is still rejected 401', async () => {
     const raw = Buffer.from('{"zen":"Design for failure.","hook_id":1}', 'utf8');
     const { statusCode, payload } = await invoke(handler, {
@@ -135,5 +145,56 @@ describe('ops #2524 follow-up — webhook HMAC uses the raw bytes', () => {
     await handler.middleware()(req, res, () => {});
     expect(statusCode).toBe(200);
     expect(payload).toEqual({ status: 'ok', event: 'push', delivery: 'deadbeef' });
+  });
+});
+
+/**
+ * Measured on CT 123 immediately after ops #2524 deployed, 2026-08-04:
+ * GITHUB_WEBHOOK_SECRET is absent from the running process, so an
+ * unsigned POST to /api/v2/webhooks/github returned 200 {"status":"ok"}
+ * and the event was accepted for processing.
+ *
+ * Root cause: verifySignature() returned TRUE when no secret was set, and
+ * the caller's `this.secret && !verifySignature(...)` short-circuited, so
+ * the 401 branch was unreachable. A missing secret is a misconfiguration,
+ * and the safe response to "I cannot verify this" is to refuse it.
+ */
+describe('ops #2524 follow-up — no secret configured must FAIL CLOSED', () => {
+  let handler;
+
+  beforeEach(() => {
+    delete process.env.GITHUB_WEBHOOK_SECRET;
+    handler = new WebhookHandler({});          // no secret, as on CT 123
+    jest.spyOn(handler.webhooks, 'receive').mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    if (handler?.eventQueue?.pause) handler.eventQueue.pause();
+    jest.restoreAllMocks();
+  });
+
+  test('an UNSIGNED request is refused, not accepted', async () => {
+    const raw = Buffer.from('{"zen":"Design for failure."}', 'utf8');
+    const { statusCode, payload } = await invoke(handler, { rawBody: raw, signature: undefined });
+    expect(statusCode).toBe(401);
+    expect(payload).not.toEqual({ status: 'ok', event: 'push', delivery: 'deadbeef' });
+  });
+
+  test('a request with ANY signature is refused when no secret is configured', async () => {
+    // Nothing can be verified against a secret that does not exist, so a
+    // well-formed-looking signature must not buy anything either.
+    const raw = Buffer.from('{"zen":"Design for failure."}', 'utf8');
+    const { statusCode } = await invoke(handler, {
+      rawBody: raw,
+      signature: `sha256=${'0'.repeat(64)}`,
+    });
+    expect(statusCode).toBe(401);
+  });
+
+  test('the webhook is never handed to the processor without a secret', async () => {
+    const raw = Buffer.from('{"zen":"Design for failure."}', 'utf8');
+    await invoke(handler, { rawBody: raw, signature: undefined });
+    // The status code alone would not prove the event was not enqueued.
+    expect(handler.webhooks.receive).not.toHaveBeenCalled();
   });
 });

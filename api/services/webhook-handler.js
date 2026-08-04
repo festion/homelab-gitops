@@ -393,20 +393,29 @@ class WebhookHandler extends EventEmitter {
    * Verify webhook signature
    */
   verifySignature(payload, signature) {
-    if (!this.secret) {
-      console.warn('No webhook secret configured - skipping signature verification');
-      return true;
+    // FAIL CLOSED. This previously returned true when no secret was set,
+    // which made every unsigned request authentic. Measured on CT 123 on
+    // 2026-08-04: an unsigned POST returned 200 and was accepted for
+    // processing. "I cannot verify this" must never mean "this is fine".
+    if (!this.secret || !signature) {
+      return false;
     }
 
-    const expectedSignature = crypto
-      .createHmac('sha256', this.secret)
-      .update(payload)
-      .digest('hex');
-
-    return crypto.timingSafeEqual(
-      Buffer.from(`sha256=${expectedSignature}`, 'utf8'),
-      Buffer.from(signature, 'utf8')
+    const expected = Buffer.from(
+      `sha256=${crypto.createHmac('sha256', this.secret).update(payload).digest('hex')}`,
+      'utf8'
     );
+    const provided = Buffer.from(signature, 'utf8');
+
+    // timingSafeEqual THROWS on a length mismatch, which the caller's
+    // catch-all turned into a 500 -- a short or malformed header read as a
+    // server fault rather than a rejected request. Compare lengths first;
+    // the length of an HMAC-SHA256 hex digest is not a secret.
+    if (expected.length !== provided.length) {
+      return false;
+    }
+
+    return crypto.timingSafeEqual(expected, provided);
   }
 
   /**
@@ -430,8 +439,20 @@ class WebhookHandler extends EventEmitter {
         // middleware did not run.
         const payload = req.rawBody || JSON.stringify(req.body);
 
-        // Verify signature if secret is configured
-        if (this.secret && !this.verifySignature(payload, signature)) {
+        // Always verify. The old guard was `this.secret && !verify(...)`,
+        // which SHORT-CIRCUITED when no secret was configured and made the
+        // 401 branch unreachable -- so a missing secret silently disabled
+        // authentication instead of failing loudly.
+        if (!this.secret) {
+          console.error(
+            'GITHUB_WEBHOOK_SECRET is not configured - refusing webhook. ' +
+            'The endpoint cannot authenticate callers and will reject every ' +
+            'request until a secret is set.'
+          );
+          return res.status(401).json({ error: 'Invalid signature' });
+        }
+
+        if (!this.verifySignature(payload, signature)) {
           console.error('Invalid webhook signature');
           return res.status(401).json({ error: 'Invalid signature' });
         }
