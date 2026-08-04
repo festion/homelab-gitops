@@ -53,7 +53,9 @@ function invoke(handler, { rawBody, signature }) {
     body: JSON.parse(rawBody.toString('utf8')),
     get: (h) => headers[h.toLowerCase()],
   };
-  let statusCode = 200;
+  // Default 0, not 200: a handler that never calls res.status() must not read
+  // as a success.
+  let statusCode = 0;
   let payload = null;
   const res = {
     status(c) { statusCode = c; return this; },
@@ -91,14 +93,17 @@ describe('ops #2524 follow-up — webhook HMAC uses the raw bytes', () => {
       signature: sign(raw),
     });
 
-    expect(payload).not.toEqual({ error: 'Invalid signature' });
-    expect(statusCode).not.toBe(401);
+    // Assert the SUCCESS payload, not merely "not 401" -- a 500 from the
+    // catch-all would satisfy a negative assertion and look like a pass.
+    expect(statusCode).toBe(200);
+    expect(payload).toEqual({ status: 'ok', event: 'push', delivery: 'deadbeef' });
   });
 
   test('a byte-identical payload still verifies (no regression)', async () => {
     const raw = Buffer.from('{"zen":"Design for failure.","hook_id":1}', 'utf8');
-    const { statusCode } = await invoke(handler, { rawBody: raw, signature: sign(raw) });
-    expect(statusCode).not.toBe(401);
+    const { statusCode, payload } = await invoke(handler, { rawBody: raw, signature: sign(raw) });
+    expect(statusCode).toBe(200);
+    expect(payload).toEqual({ status: 'ok', event: 'push', delivery: 'deadbeef' });
   });
 
   test('a genuinely wrong signature is still rejected 401', async () => {
@@ -121,9 +126,14 @@ describe('ops #2524 follow-up — webhook HMAC uses the raw bytes', () => {
       'x-github-delivery': 'deadbeef',
     };
     const req = { body, get: (h) => headers[h.toLowerCase()] };
-    let statusCode = 200;
-    const res = { status(c) { statusCode = c; return this; }, json() { return this; } };
+    let statusCode = 0;
+    let payload = null;
+    const res = {
+      status(c) { statusCode = c; return this; },
+      json(b) { payload = b; return this; },
+    };
     await handler.middleware()(req, res, () => {});
-    expect(statusCode).not.toBe(401);
+    expect(statusCode).toBe(200);
+    expect(payload).toEqual({ status: 'ok', event: 'push', delivery: 'deadbeef' });
   });
 });
