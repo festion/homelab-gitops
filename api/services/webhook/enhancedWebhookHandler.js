@@ -40,9 +40,20 @@ class EnhancedWebhookHandler extends EventEmitter {
    * Verify webhook signature
    */
   verifySignature(payload, signature) {
+    // FAIL CLOSED. This returned true when no secret was configured, which
+    // made every unsigned request authentic. The same defect in
+    // services/webhook-handler.js was live on CT 123 on 2026-08-04 and
+    // accepted unauthenticated webhooks (ops #2524).
+    //
+    // This class is currently dead code -- nothing requires it -- but a
+    // fail-open verifier sitting unused is a loaded tripwire for whoever
+    // mounts it next, and it is cheaper to disarm than to remember.
     if (!this.secret) {
-      this.logger.warn('No webhook secret configured - skipping signature verification');
-      return true;
+      this.logger.error(
+        'No webhook secret configured - refusing webhook. Signature cannot ' +
+        'be verified, so the request is rejected rather than trusted.'
+      );
+      return false;
     }
 
     if (!signature) {
