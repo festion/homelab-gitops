@@ -77,6 +77,13 @@ jobs:
     - name: Validate package.json (Dashboard)
       run: ./scripts/ci-audit-gate.sh dashboard high
 
+    # mcp-servers/ is a first-party workspace (59 tracked files, its own
+    # lockfile) that was NEVER gated. It silently accumulated the same three
+    # highs the other workspaces were carrying, and they only surfaced because
+    # Trivy's fs scan walks the whole tree (ops #2296).
+    - name: Validate package.json (mcp-servers)
+      run: ./scripts/ci-audit-gate.sh mcp-servers high
+
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
@@ -336,6 +343,9 @@ jobs:
 
     - name: Run dependency audit (Dashboard)
       run: ./scripts/ci-audit-gate.sh dashboard high
+
+    - name: Run dependency audit (mcp-servers)
+      run: ./scripts/ci-audit-gate.sh mcp-servers high
         
     # The two "Check for critical vulnerabilities" steps that used to sit here
     # were removed. They gated on `.metadata.vulnerabilities.high + .critical`
