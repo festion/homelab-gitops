@@ -3,8 +3,18 @@ name: Enhanced Security Scanning
 on:
   push:
     branches: [ main, develop ]
+    paths-ignore:
+      - '**/*.md'
+      - '.claude/**'
+      - '.serena/**'
+      - 'docs/**'
   pull_request:
     branches: [ main, develop ]
+    paths-ignore:
+      - '**/*.md'
+      - '.claude/**'
+      - '.serena/**'
+      - 'docs/**'
   schedule:
     - cron: '0 2 * * 1' # Weekly on Monday
   workflow_dispatch:
