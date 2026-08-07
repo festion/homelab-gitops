@@ -3,8 +3,18 @@ name: Security Scan
 on:
   push:
     branches: [ main, develop ]
+    paths-ignore:
+      - '**/*.md'
+      - '.claude/**'
+      - '.serena/**'
+      - 'docs/**'
   pull_request:
     branches: [ main, develop ]
+    paths-ignore:
+      - '**/*.md'
+      - '.claude/**'
+      - '.serena/**'
+      - 'docs/**'
   schedule:
     # Run security scan daily at 2 AM UTC
     - cron: '0 2 * * *'
