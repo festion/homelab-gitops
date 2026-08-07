@@ -182,3 +182,12 @@ venv/
 /security-report-*.json
 /.eslintrc.security.json
 tests/*/reports/
+
+# Project-scope MCP config. Never tracked: it holds per-machine absolute paths
+# and an inline `env` block, which is how a real Home Assistant token reached
+# this PUBLIC repo's history in 2025 (ops #2625). Configure MCP servers at user
+# scope (~/.claude.json) instead.
+.mcp.json
+
+# git worktrees created inside the repo for session isolation
+.worktrees/
