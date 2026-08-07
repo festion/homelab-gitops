@@ -3,7 +3,7 @@ const DependencyAnalyzer = require('./dependencyAnalyzer');
 const TaskExecutionEngine = require('./taskExecutionEngine');
 const OrchestrationMonitor = require('./orchestrationMonitor');
 const FailureRecoveryService = require('./failureRecoveryService');
-const { createLogger } = require('../../config/logging');
+const { createLogger } = require('../../utils/logger');
 
 class OrchestrationService {
   constructor(services = {}) {
