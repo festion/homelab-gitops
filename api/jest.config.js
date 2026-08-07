@@ -12,9 +12,17 @@ module.exports = {
   ],
   
   // Test file patterns
+  //
+  // ops #2631: '<rootDir>/test/**/*.test.js' used to sit here and read as
+  // "api/test/ is collected". It never was. When `projects` is defined (see
+  // below) jest uses each project's own testMatch and IGNORES this top-level
+  // one, so the entry was dead config that advertised coverage nobody had.
+  // Both it and `projects` were introduced by the same commit (fc07af5,
+  // 2025-07-19), so those 11 files had never executed under any committed
+  // configuration. api/test/ is now collected by the 'Legacy API Tests'
+  // project, which is the only thing that can actually collect it.
   testMatch: [
     '<rootDir>/tests/**/*.test.js',
-    '<rootDir>/test/**/*.test.js',
     '**/__tests__/**/*.js'
   ],
   
@@ -146,6 +154,48 @@ module.exports = {
       ],
       setupFilesAfterEnv: [
         '<rootDir>/tests/setup/jest.setup.js'
+      ]
+    },
+    // ops #2631: api/test/ finally gets a project that collects it.
+    //
+    // It is a SEPARATE project on purpose. These suites need config the three
+    // projects above must not inherit, and keeping them isolated means nothing
+    // here can disturb the 200 tests that already pass.
+    //
+    // The quarantine list below is deliberate and each entry names its card.
+    // ops #2312 is the warning: the five root suites were wired up, went
+    // permanently red, and nobody read them again. A suite that cannot pass
+    // yet is quarantined by name rather than left to rot the signal -- but it
+    // is quarantined VISIBLY, in the config, not by a glob that silently
+    // fails to match.
+    {
+      displayName: 'Legacy API Tests',
+      testMatch: [
+        '<rootDir>/test/*.test.js'
+      ],
+      testPathIgnorePatterns: [
+        // ESM-only dependencies (@octokit/webhooks, chokidar). Not fixable by
+        // transformIgnorePatterns -- api declares a babel-jest transform while
+        // babel-jest/@babel/core/@babel/preset-env are all absent and no babel
+        // config exists, so the transform is inert. See ops #2659.
+        '<rootDir>/test/webhook-handler.test.js',
+        '<rootDir>/test/webhook-integration.test.js',
+        '<rootDir>/test/websocket-server.test.js',
+        // Needs chai + sinon, neither of which is a dependency. ops #2660.
+        '<rootDir>/test/coordination.test.js',
+        // Runs, but all 27 fail: the fixture's DDL trips SQLITE_ERROR
+        // "incomplete input" on a BEGIN/END trigger. ops #2660.
+        '<rootDir>/test/metrics.test.js',
+        // Run with real assertion failures -- 18 / 8 / 3 respectively. These
+        // are the ones most likely to be describing genuine defects, the way
+        // ops #2653 turned out to be. ops #2660.
+        '<rootDir>/test/compliance-service.test.js',
+        '<rootDir>/test/orchestrator.test.js',
+        '<rootDir>/test/auth.test.js'
+      ],
+      setupFilesAfterEnv: [
+        '<rootDir>/tests/setup/jest.setup.js',
+        '<rootDir>/tests/setup/database.setup.js'
       ]
     }
   ],

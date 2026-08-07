@@ -31,7 +31,7 @@ describe('Metrics System Tests', () => {
     let storage;
     let metricsService;
 
-    before(async () => {
+    beforeAll(async () => {
         // Setup test database
         testDbPath = path.join(__dirname, 'test_metrics.db');
         if (fs.existsSync(testDbPath)) {
@@ -55,7 +55,7 @@ describe('Metrics System Tests', () => {
         metricsService = new MetricsService(mockConfig, storage);
     });
 
-    after(async () => {
+    afterAll(async () => {
         if (storage) {
             await storage.close();
         }
