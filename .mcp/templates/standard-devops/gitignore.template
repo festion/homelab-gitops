@@ -23,3 +23,10 @@ venv/
 *.backup
 *.tmp
 backups/
+
+# Project-scope MCP config (ops #2628). Holds per-machine absolute paths and an
+# inline `env` block / docker `-e NAME=value` args -- i.e. credentials. Commit
+# `.mcp.json.example` with placeholders instead; this is the file a developer
+# fills in with real values, and it is how a live Home Assistant token reached
+# a PUBLIC repo's git history (ops #2625).
+.mcp.json

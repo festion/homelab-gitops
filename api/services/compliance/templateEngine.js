@@ -287,17 +287,28 @@ class TemplateEngine {
       }));
     }
 
-    // Check for MCP configuration
+    // Check for MCP configuration.
+    //
+    // This deliberately looks for `.mcp.json.example`, NOT `.mcp.json` (ops #2628).
+    // A project-scope `.mcp.json` carries an inline `env` block and docker
+    // `-e NAME=value` args, i.e. credentials, and it is the file a developer
+    // fills in with real ones. Telling every audited repo to "add .mcp.json"
+    // -- at HIGH severity -- pressures them into tracking exactly that. A real
+    // Home Assistant token reached a PUBLIC repo's history this way (ops #2625).
+    // The committed artifact is the example; the live config stays gitignored.
     if (template.requirements.mcp) {
-      const mcpConfig = path.join(repositoryPath, '.mcp.json');
-      if (!(await this.fileExists(mcpConfig))) {
+      const hasExample = await this.fileExists(path.join(repositoryPath, '.mcp.json.example'));
+      // A local (gitignored) .mcp.json also satisfies the requirement -- the repo
+      // is demonstrably MCP-configured. We just never ask for one to be added.
+      const hasLocal = await this.fileExists(path.join(repositoryPath, '.mcp.json'));
+      if (!hasExample && !hasLocal) {
         issues.push(new ComplianceIssue({
           type: ComplianceIssueType.MISSING,
           template: template.id,
-          file: '.mcp.json',
+          file: '.mcp.json.example',
           severity: ComplianceSeverity.HIGH,
-          description: 'MCP configuration file missing',
-          recommendation: 'Add .mcp.json configuration file'
+          description: 'MCP configuration example missing',
+          recommendation: 'Add a .mcp.json.example with placeholder values, and keep the real .mcp.json gitignored'
         }));
       }
     }
