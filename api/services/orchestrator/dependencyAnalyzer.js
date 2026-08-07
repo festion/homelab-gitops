@@ -1,4 +1,4 @@
-const { createLogger } = require('../../config/logging');
+const { createLogger } = require('../../utils/logger');
 const fs = require('fs').promises;
 const path = require('path');
 

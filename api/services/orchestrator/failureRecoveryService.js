@@ -1,5 +1,5 @@
 const EventEmitter = require('events');
-const { createLogger } = require('../../config/logging');
+const { createLogger } = require('../../utils/logger');
 
 class FailureRecoveryService extends EventEmitter {
   constructor(orchestrator, options = {}) {

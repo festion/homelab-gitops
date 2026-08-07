@@ -1,5 +1,5 @@
 const EventEmitter = require('events');
-const { createLogger } = require('../../config/logging');
+const { createLogger } = require('../../utils/logger');
 const DependencyAnalyzer = require('./dependencyAnalyzer');
 
 class TaskExecutionEngine extends EventEmitter {
