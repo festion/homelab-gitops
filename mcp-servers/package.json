@@ -15,7 +15,7 @@
   "author": "Claude AI Assistant",
   "license": "MIT",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.25.2",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@modelcontextprotocol/server-filesystem": "^2025.7.1"
   },
   "overrides": {
@@ -23,7 +23,7 @@
     "glob": "^11.0.0",
     "rimraf": "^6.0.0",
     "path-to-regexp": "^8.4.0",
-    "hono": "^4.12.31",
+    "hono": "^4.13.1",
     "brace-expansion": "^5.0.9",
     "fast-uri": "^3.1.5",
     "ip-address": "^10.3.1"
