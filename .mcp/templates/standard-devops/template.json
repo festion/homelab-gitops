@@ -12,7 +12,7 @@
   },
   "files": [
     {
-      "path": ".mcp.json",
+      "path": ".mcp.json.example",
       "type": "merge",
       "source": "mcp-config.json",
       "merge_strategy": "merge_json",
@@ -43,7 +43,7 @@
     }
   ],
   "compliance": {
-    "required_files": [".mcp.json", "CLAUDE.md"],
+    "required_files": [".mcp.json.example", "CLAUDE.md"],
     "required_directories": ["scripts"],
     "scoring_weights": {
       "files": 0.6,
