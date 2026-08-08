@@ -15,8 +15,6 @@ This project has been standardized with the `standard-devops` template, providin
 
 The following MCP servers are configured for this project:
 
-- **filesystem**: File system access and manipulation
-- **serena**: Development workflow orchestration
 - **github**: GitHub API integration for repository operations
 
 ## Development Workflow
