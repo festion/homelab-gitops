@@ -199,14 +199,14 @@ class TemplateApplicator:
         return planned_changes
 
     def apply_template(self, template_path: Path, repo_path: Path) -> Dict[str, Any]:
-        """Apply template to repository (actual application)"""
+        """Plan template application; actual (non-dry-run) application is not implemented"""
         if self.dry_run:
             return self.apply_template_dry_run(template_path, repo_path)
 
-        logger.info(f"Applying template to repository: {repo_path}")
-        # This would be the actual implementation for applying changes
-        # For testing purposes, we'll just return the dry-run results
-        return self.apply_template_dry_run(template_path, repo_path)
+        raise NotImplementedError(
+            "Template application is not implemented; this tool is plan-only. "
+            "Only dry_run=True (apply_template_dry_run) is supported."
+        )
 
 
 def main():
