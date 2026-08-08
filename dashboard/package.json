@@ -69,6 +69,7 @@
     "postcss": "^8.5.23",
     "axios": "^1.18.0",
     "brace-expansion": "^5.0.9",
-    "minimatch": "^10.2.1"
+    "minimatch": "^10.2.1",
+    "test-exclude": "^7.0.2"
   }
 }
