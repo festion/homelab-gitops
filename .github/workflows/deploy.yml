@@ -127,6 +127,25 @@ jobs:
     env:
       PROD_HOST: gitopsdashboard.mgmt.lakehouse.wtf
       PROD_USER: root
+      # ops #2638. `ssh -i` does NOT isolate a key — it APPENDS to the
+      # identities ssh would already offer, so the calls below could succeed
+      # on a different credential than the one they name, and nothing in the
+      # config text would say which. That is the #2003 runner-roulette shape
+      # the comment above describes as fixed: self-containment stopped the
+      # deploy DEPENDING on a pre-placed key, but did not stop it OFFERING
+      # one. Nothing is at rest on the runners today (ops #2609 removed it),
+      # so this is safe by circumstance; IdentitiesOnly makes it safe by
+      # construction.
+      #
+      # Defined here rather than per call site so an added invocation
+      # inherits the isolation instead of silently omitting it. The tilde is
+      # left unexpanded by the shell and resolved by ssh itself, so it must
+      # not be quoted at the call sites.
+      #
+      # Scope: IdentitiesOnly=yes excludes the DEFAULT identities, not keys
+      # named in an ssh *config* — genuine isolation only while the runner
+      # has no ~/.ssh/config.
+      SSH_OPTS: "-i ~/.ssh/deploy_key -o IdentitiesOnly=yes"
       ARTIFACT_NAME: deployment-package-${{ github.sha }}
       TARBALL: homelab-gitops-auditor-${{ github.sha }}.tar.gz
     steps:
@@ -148,13 +167,13 @@ jobs:
 
       - name: Ship tarball to prod
         run: |
-          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new \
+          scp $SSH_OPTS -o StrictHostKeyChecking=accept-new \
             "$TARBALL" \
             "$PROD_USER@$PROD_HOST:/tmp/$TARBALL"
 
       - name: Atomic-swap install on prod
         run: |
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new "$PROD_USER@$PROD_HOST" bash -se << EOF
+          ssh $SSH_OPTS -o StrictHostKeyChecking=accept-new "$PROD_USER@$PROD_HOST" bash -se << EOF
           set -euo pipefail
 
           INSTALL_DIR=/opt/gitops
