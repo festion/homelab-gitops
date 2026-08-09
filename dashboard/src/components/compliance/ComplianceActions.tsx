@@ -42,18 +42,40 @@ export const ComplianceActions: React.FC<ComplianceActionsProps> = ({
       });
       
       const result = await response.json();
-      
-      if (response.ok) {
+
+      // ops #2716: branching on response.ok alone rendered a green
+      // "Successfully applied N template(s)" for a run in which every template
+      // FAILED — the endpoint answers 200 with an all-failed results array, and
+      // the per-template success flags were never inspected. Derive the verdict
+      // from the body; treat a malformed/absent results array as failure rather
+      // than success, so a shape change can never resurrect the false green.
+      const results = Array.isArray(result?.results) ? result.results : null;
+      const succeeded = results ? results.filter((r: { success?: boolean }) => r?.success === true).length : 0;
+      const allSucceeded = results !== null && results.length > 0 && succeeded === results.length;
+
+      if (response.ok && allSucceeded) {
         setLastResult({
           success: true,
-          message: `Successfully applied ${templates.length} template(s)`,
+          message: `Successfully applied ${succeeded} template(s)`,
           pullRequestUrl: result.pullRequestUrl,
           jobId: result.jobId
         });
-        
+
         // Invalidate queries to refresh data
         queryClient.invalidateQueries({ queryKey: ['compliance'] });
         onSuccess?.();
+      } else if (response.ok) {
+        // 200, but the work did not succeed. Name what actually happened.
+        const failed = results ? results.length - succeeded : 0;
+        const detail = results === null
+          ? 'the server returned no per-template results'
+          : `${failed} of ${results.length} template(s) failed`;
+        const firstError = results?.find((r: { error?: string }) => r?.error)?.error;
+        setLastResult({
+          success: false,
+          message: `Template application failed — ${detail}${firstError ? `: ${firstError}` : ''}`,
+          jobId: result.jobId
+        });
       } else {
         setLastResult({
           success: false,
