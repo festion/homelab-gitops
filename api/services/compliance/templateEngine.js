@@ -323,15 +323,26 @@ class TemplateEngine {
     const { dryRun = true, createPR = false, backupDir = null } = options;
 
     try {
+      // ops #2716: the CLI declares `action` as a REQUIRED positional with
+      // choices {list,validate,apply,analyze}. Omitting it made argparse exit 2
+      // before the applicator was ever reached — so this path had NEVER worked,
+      // on apply or on dry-run (argparse rejects before --dry-run is consulted).
       const args = [
         this.applicatorScript,
+        'apply',
         '--template', templateName,
         '--repository', repositoryPath
       ];
 
-      if (dryRun) {
-        args.push('--dry-run');
-      }
+      // The CLI computes `dry_run = not args.apply` — `--dry-run` is decorative
+      // and ONLY `--apply` makes a run real. Passing neither (the old
+      // dryRun=false path) therefore silently PLANNED and exited 0, which the
+      // caller reads as success. Adding the action positional alone would have
+      // turned that into a green "Successfully applied N template(s)" for a run
+      // that wrote nothing — a worse failure than the exit-2 it replaced.
+      // With --apply, the tool's plan-only refusal (PR #227 / ops #2648)
+      // surfaces as a non-zero exit, which is the intended loud outcome.
+      args.push(dryRun ? '--dry-run' : '--apply');
 
       if (this.verbose) {
         args.push('--verbose');
