@@ -19,6 +19,29 @@ updates:
     labels:
       - "dependencies"
       - "github-actions"
+    groups:
+      # Dependabot treats each SUBPATH of an action repo as an independent
+      # dependency — github/codeql-action/init, /analyze and /upload-sarif are
+      # three separate `uses:` strings, so it will happily bump one and leave
+      # the others behind. Those three MUST move together: `init` writes a
+      # config file stamped with its own version and `analyze` refuses to load
+      # a config written by a different one.
+      #
+      # This is not hypothetical. On 2026-08-10 PR #234 bumped /analyze alone
+      # to v4.37.6 and auto-merged, leaving /init at v4.35.4. Every security
+      # scan then failed with
+      #   "Loaded a configuration file for version '4.35.4', but running
+      #    version '4.37.6'"
+      # on main and on every PR, for 11 days. The matching /init bump (#237)
+      # could not merge because the split it was meant to repair made its own
+      # checks red. Fixed by hand in #242.
+      #
+      # Grouping is the fix for the CAUSE. The exact-version trailing comments
+      # added in #242 (`# v4.37.6`, not `# v4`) are the fix for the
+      # DETECTABILITY — a split used to render as no visible change in the diff.
+      codeql-action:
+        patterns:
+          - "github/codeql-action*"
 
   - package-ecosystem: "npm"
     directory: "/api"
