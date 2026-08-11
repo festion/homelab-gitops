@@ -14,6 +14,14 @@ on:
       - '.claude/**'
       - 'docs/**'
       - '.gitignore'
+      # Same reasoning as the entries above, applied to CI definitions: the
+      # deploy job builds its tarball from api/, dashboard/dist, config/ and
+      # scripts/ only, so a change under .github/ ships a byte-identical
+      # artifact. Without this, every workflow-only change — including each
+      # github_actions dependabot bump — fires a full prod redeploy for no
+      # change, against a shared staging dir whose concurrent-deploy race
+      # caused a live outage on 2026-07-02.
+      - '.github/**'
   workflow_dispatch:
     inputs:
       environment:
