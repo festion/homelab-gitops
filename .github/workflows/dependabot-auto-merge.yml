@@ -2,7 +2,8 @@ name: Dependabot auto-merge
 
 # Auto-merges Dependabot patch/minor PRs once the branch-protection required
 # status checks (Unit Tests, lint-and-test) pass. Major version bumps are left
-# for manual review. `--auto` arms the merge but GATES it on those checks, so a
+# for manual review, as is the ENTIRE github_actions ecosystem (see the step
+# comment below). `--auto` arms the merge but GATES it on those checks, so a
 # failing test never merges. Runs only for dependabot-authored PRs.
 #
 # The merge is enabled with a fine-grained PAT (DEPENDABOT_AUTOMERGE_TOKEN, a
@@ -25,10 +26,26 @@ jobs:
         id: metadata
         uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
 
+      # github_actions is excluded deliberately, on top of the dependabot.yml
+      # grouping added in #243. Grouping fixes the CAUSE (partial bumps of a
+      # version-coupled set); this is the belt-and-suspenders half.
+      #
+      # Why this ecosystem and not the others: a github_actions bump modifies
+      # the CI system itself — the thing that would catch a bad change. A bad
+      # npm bump gets caught by CI; a bad workflow bump can disable or break
+      # the very checks that would catch it. Demonstrated 2026-08-10: PR #234
+      # auto-merged a codeql-action/analyze bump on its own, leaving /init a
+      # version behind, and every security scan failed for 11 days without
+      # blocking a single merge (only Unit Tests and lint-and-test are
+      # required here — see ops #2373).
+      #
+      # Note the damaging case was a SUCCESSFUL auto-merge, not a failed one.
+      # Every other ecosystem still auto-merges patch/minor as before.
       - name: Enable auto-merge for patch and minor updates
         if: >-
+          steps.metadata.outputs.package-ecosystem != 'github_actions' && (
           steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
-          steps.metadata.outputs.update-type == 'version-update:semver-minor'
+          steps.metadata.outputs.update-type == 'version-update:semver-minor')
         run: gh pr merge --auto --squash "$PR_URL"
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
