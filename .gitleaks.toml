@@ -159,6 +159,13 @@ paths = [
   '''(^|/)tests?/''',
   '''(^|/)__tests__/''',
   '''(^|/)spec/''',
+  # Go puts tests in a FILE SUFFIX beside the code, not in a directory, so the
+  # three entries above never fire in a Go repo (ops #2837). Measured on
+  # birdnet-gone: 9 of its 14 non-bulk findings were Go test fixtures.
+  # TRADE-OFF, stated rather than buried: a real credential committed in a
+  # _test.go file is no longer detected. That is the same trade the directory
+  # entries above already make for every other language.
+  '''_test\.go$''',
   '''(^|/)\.jest-cache[^/]*/''',                # Jest transform / haste-map caches
   '''\.pkl$''',                                # pickle binaries (Serena)
   '''\.log$''',                                # log files
@@ -171,8 +178,16 @@ paths = [
 ]
 
 # Stop matches that are obviously placeholder / docs / test fixtures.
-# Each entry is a regex that, if it matches the LINE (not just the match),
-# suppresses the finding.
+#
+# ⚠ Each entry is matched against the CAPTURED SECRET, not against the line.
+#   No `regexTarget` is set, and gitleaks defaults to the secret. A previous
+#   version of this comment said "the LINE (not just the match)", which is
+#   wrong and is an expensive kind of wrong: an entry written to match the
+#   surrounding line silently suppresses NOTHING -- no error, no warning, the
+#   finding simply keeps firing. Measured 2026-08-12 (ops #2837) while
+#   allowlisting a PEM placeholder: a line-shaped entry left the finding count
+#   unchanged, and only re-scanning revealed it. Anchor entries to the value
+#   (`^...$`), not to its context.
 regexes = [
   # Test-fixture UUIDs (zero-uuid, all-f-uuid).
   '''00000000-0000-0000-0000-000000000000''',
