@@ -93,6 +93,14 @@ regex = '''-----BEGIN ((RSA|EC|DSA|OPENSSH|PGP) )?PRIVATE KEY( BLOCK)?-----'''
 keywords = ["BEGIN", "PRIVATE KEY"]
 
 [[rules]]
+id = "anthropic-api-key"
+description = "Anthropic API key (`sk-ant-api03-…` and similar version prefixes)"
+# Format: `sk-ant-api<N>-` then ~95 chars base64url. Self-anchored — no
+# keyword needed; the prefix is unique enough not to false-positive.
+regex = '''sk-ant-api\d{2,}-[A-Za-z0-9_-]{90,}'''
+keywords = ["sk-ant-api"]
+
+[[rules]]
 id = "generic-bearer-token"
 description = "Generic bearer / authorization with long secret"
 # Loose match for `Authorization: Bearer <60+ chars>` or `auth_token = <secret>`.
@@ -151,6 +159,13 @@ paths = [
   '''(^|/)tests?/''',
   '''(^|/)__tests__/''',
   '''(^|/)spec/''',
+  # Go puts tests in a FILE SUFFIX beside the code, not in a directory, so the
+  # three entries above never fire in a Go repo (ops #2837). Measured on
+  # birdnet-gone: 9 of its 14 non-bulk findings were Go test fixtures.
+  # TRADE-OFF, stated rather than buried: a real credential committed in a
+  # _test.go file is no longer detected. That is the same trade the directory
+  # entries above already make for every other language.
+  '''_test\.go$''',
   '''(^|/)\.jest-cache[^/]*/''',                # Jest transform / haste-map caches
   '''\.pkl$''',                                # pickle binaries (Serena)
   '''\.log$''',                                # log files
@@ -163,8 +178,16 @@ paths = [
 ]
 
 # Stop matches that are obviously placeholder / docs / test fixtures.
-# Each entry is a regex that, if it matches the LINE (not just the match),
-# suppresses the finding.
+#
+# ⚠ Each entry is matched against the CAPTURED SECRET, not against the line.
+#   No `regexTarget` is set, and gitleaks defaults to the secret. A previous
+#   version of this comment said "the LINE (not just the match)", which is
+#   wrong and is an expensive kind of wrong: an entry written to match the
+#   surrounding line silently suppresses NOTHING -- no error, no warning, the
+#   finding simply keeps firing. Measured 2026-08-12 (ops #2837) while
+#   allowlisting a PEM placeholder: a line-shaped entry left the finding count
+#   unchanged, and only re-scanning revealed it. Anchor entries to the value
+#   (`^...$`), not to its context.
 regexes = [
   # Test-fixture UUIDs (zero-uuid, all-f-uuid).
   '''00000000-0000-0000-0000-000000000000''',
@@ -196,6 +219,15 @@ regexes = [
   '''ghp_1234567890[a-f0-9]+''',
   # Cloudflare token placeholder shape used by Traefik docs.
   '''hga_your_api_key_here''',
+  # Documented example curl credentials — weak placeholder passwords in docs
+  # (`curl -u admin:proxmox123`, `root:changeme`). Never real; a genuine
+  # leaked cred would not be one of these throwaway example values. (#1999)
+  '''(?i)\b(admin|root|user):(proxmox123|password|passwd|changeme|example|placeholder|test)\b''',
+  # Stripe-style placeholder API keys in docs (`sk_live_abc123...`,
+  # `sk_test_...`). Real Stripe keys are 24+ random chars with no
+  # `abc123`/ellipsis tell. (#1999)
+  '''sk_(live|test)_[A-Za-z0-9]*\.\.\.''',
+  '''sk_(live|test)_(abc123|xxx|placeholder|example|your)[A-Za-z0-9]*''',
   # Angle-bracket placeholders standardized in our 2026-05-08 rotation work.
   # Catches `<OLD_…>`, `<NEW_…>`, `<SEE_INFISICAL:…>`, `<LAKEHOUSE_…>`,
   # `<WIKI_…>`, etc. — explicit upper-snake placeholder shape.
