@@ -24,7 +24,7 @@ Vaultwarden is deployed in an Active-Standby HA configuration using PostgreSQL a
 ### PostgreSQL Database
 - **Database**: vaultwarden
 - **User**: vaultwarden
-- **Password**: p7PEF7NgRj3VS3XkGCEeILzTkZzu7i63
+- **Password**: $(infisical-get VAULTWARDEN_DB_PASSWORD)
 - **Host**: 192.168.1.123:5432
 
 ### Vaultwarden Admin
@@ -36,7 +36,7 @@ Vaultwarden is deployed in an Active-Standby HA configuration using PostgreSQL a
 ### Primary/Standby Environment (/opt/vaultwarden/.env)
 ```bash
 DOMAIN=https://vault.internal.lakehouse.wtf
-DATABASE_URL=postgresql://vaultwarden:p7PEF7NgRj3VS3XkGCEeILzTkZzu7i63@192.168.1.123:5432/vaultwarden
+DATABASE_URL=postgresql://vaultwarden:$(infisical-get VAULTWARDEN_DB_PASSWORD)@192.168.1.123:5432/vaultwarden
 WEB_VAULT_FOLDER=/opt/vaultwarden/web-vault
 WEB_VAULT_ENABLED=true
 DATA_FOLDER=/opt/vaultwarden/data
