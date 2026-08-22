@@ -19,7 +19,7 @@ on:
 
 jobs:
   quality-check:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     name: Automated Code Quality
 
     steps:
