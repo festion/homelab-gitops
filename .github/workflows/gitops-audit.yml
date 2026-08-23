@@ -68,9 +68,10 @@ jobs:
 
       - name: Validate shell scripts
         run: |
-          # Install shellcheck for shell script validation
-          sudo apt-get update
-          sudo apt-get install -y shellcheck
+          # shellcheck provided by IaC (roles/github-runner). See PR #669:
+          # the runner user has no passwordless sudo, so `sudo apt-get` here
+          # failed on its first line regardless of the package being present.
+          command -v shellcheck >/dev/null || { echo '::error::shellcheck missing - expected from roles/github-runner'; exit 1; }
           
           # Check all shell scripts
           find scripts -name "*.sh" -type f -exec shellcheck {} \;
@@ -90,8 +91,9 @@ jobs:
 
       - name: Set up required tools
         run: |
-          sudo apt-get update
-          sudo apt-get install -y jq curl git
+          # jq/curl/git provided by IaC (roles/github-runner); verified present
+          # as the runner user on both runners 2026-08-23.
+          for t in jq curl git; do command -v "$t" >/dev/null || { echo "::error::$t missing - expected from roles/github-runner"; exit 1; }; done
 
       - name: Run comprehensive audit (simulation)
         env:

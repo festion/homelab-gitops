@@ -35,8 +35,12 @@ jobs:
 
       - name: Install system dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y shellcheck
+          # shellcheck is provided by IaC (homelab-iac roles/github-runner,
+          # PR #669) because the self-hosted runner user has NO passwordless
+          # sudo by design. The previous `sudo apt-get` here died on its FIRST
+          # line with `sudo: a password is required` — preinstalling the
+          # package could not fix that, since the failure was the sudo call.
+          command -v shellcheck >/dev/null || { echo '::error::shellcheck missing - expected from roles/github-runner'; exit 1; }
 
       - name: Install pre-commit
         run: |

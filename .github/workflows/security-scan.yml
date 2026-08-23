@@ -75,8 +75,8 @@ jobs:
     
     - name: Scan shell scripts with ShellCheck
       run: |
-        sudo apt-get update
-        sudo apt-get install -y shellcheck
+        # shellcheck provided by IaC (roles/github-runner) - see PR #669.
+        command -v shellcheck >/dev/null || { echo '::error::shellcheck missing - expected from roles/github-runner'; exit 1; }
         find scripts -name "*.sh" -exec shellcheck {} \;
       continue-on-error: true
     
