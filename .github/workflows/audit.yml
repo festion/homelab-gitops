@@ -22,9 +22,17 @@ jobs:
       - name: Run Git Audit Script
         shell: pwsh
         run: |
-          Write-Host "Running GitAudit.ps1..."
+          # ops #3220: the file is scripts/gitaudit.ps1 (all lowercase). This
+          # invocation used ./scripts/GitAudit.ps1 and worked ONLY because
+          # windows-latest has a case-insensitive filesystem. On any
+          # case-sensitive runner — every Linux image, hosted or self-hosted —
+          # the path resolves to nothing, the try/catch below reports it as a
+          # generic "Script error", and the real cause (one capital letter)
+          # is invisible in the failure. The sibling workflow
+          # weekly_audit_email.yml already spells it correctly.
+          Write-Host "Running gitaudit.ps1..."
           try {
-            ./scripts/GitAudit.ps1 -ErrorAction Stop
+            ./scripts/gitaudit.ps1 -ErrorAction Stop
             Write-Host "✅ Audit script completed."
           } catch {
             Write-Host "❌ Script error: $($_.Exception.Message)"
