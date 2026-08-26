@@ -24,6 +24,13 @@ jobs:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
     
+    # Runs before the npm installs on purpose: it needs only bash, wget and
+    # node, so it still reports if a dependency install breaks. Placed after
+    # setup-node so the script's `node -c api/server.js` check actually
+    # executes -- without node on PATH that branch warns and passes.
+    - name: Validate the one-line installer
+      run: bash test-installer.sh
+
     - name: Install dependencies (API)
       run: |
         cd api
