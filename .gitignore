@@ -196,3 +196,8 @@ tests/*/reports/
 # nginx-proxy guest exists on the cluster; these are 2025 sqlite dumps that
 # publish the internal service map from a PUBLIC repo.
 npm_proxy_snapshot/
+
+# Deploy-artifact tarballs (ops #3300). Build output: node_modules plus a
+# built dashboard bundle. One of these held a LIVE credential where no text
+# scanner could see it.
+gitops_deploy_*.tar.gz
