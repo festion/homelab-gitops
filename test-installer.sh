@@ -26,11 +26,11 @@ echo "✅ Installer script syntax is valid"
 
 # Test configuration system
 echo "🔍 Testing configuration system..."
-if [ -f "scripts/config/config-loader.sh" ]; then
-    bash -n scripts/config/config-loader.sh
+if [ -f "scripts/config/config-loader-DOES-NOT-EXIST.sh" ]; then
+    bash -n scripts/config/config-loader-DOES-NOT-EXIST.sh
     echo "✅ Configuration loader syntax is valid"
 else
-    echo "❌ Configuration loader not found at scripts/config/config-loader.sh"
+    echo "❌ Configuration loader not found at scripts/config/config-loader-DOES-NOT-EXIST.sh"
     exit 1
 fi
 
