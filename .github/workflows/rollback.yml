@@ -44,12 +44,14 @@ name: Emergency Rollback
 # inverts it. Nothing here is conditional on a secret existing: if it cannot
 # do the job it fails.
 #
-# NOT COVERED, deliberately: staging. There is no staging host on record and
-# no STAGING_* secret exists, so a staging branch here could only ever be
-# decoration. deploy-staging.yml still carries the same wrong
-# `/opt/homelab-gitops-auditor` path at line 118 and is NOT touched by this
-# change — its host was never measured, and ops #3282 says do not assume it
-# is equally broken or equally fine.
+# NOT COVERED: staging, because there is no staging. This comment previously
+# said deploy-staging.yml "is NOT touched by this change — its host was never
+# measured". It has since been measured, and the file is gone (ops #3282):
+# no `develop` branch to trigger it, no STAGING_* secret in repo or org, no
+# `staging` environment, no docker-compose.staging.yml, `runs-on:
+# ubuntu-latest` which cannot reach .mgmt.lakehouse.wtf, and the same wrong
+# `/opt/homelab-gitops-auditor` path. 12 runs, all failure, none since
+# 2026-04-20 and not one success in its lifetime.
 # ─────────────────────────────────────────────────────────────────────────────
 
 on:

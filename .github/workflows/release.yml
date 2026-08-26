@@ -138,14 +138,9 @@ jobs:
         
         ## Deployment Commands
         
-        ### Staging
-        \`\`\`bash
-        gh workflow run deploy-staging.yml
-        \`\`\`
-        
         ### Production
         \`\`\`bash
-        gh workflow run deploy-production.yml
+        gh workflow run deploy.yml
         \`\`\`
         
         ## Rollback (if needed)
@@ -366,23 +361,20 @@ jobs:
     if: ${{ !contains(needs.prepare-release.outputs.version, 'alpha') && !contains(needs.prepare-release.outputs.version, 'beta') && !contains(needs.prepare-release.outputs.version, 'rc') }}
     
     steps:
-    - name: Trigger staging deployment
-      uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
-      with:
-        script: |
-          await github.rest.actions.createWorkflowDispatch({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            workflow_id: 'deploy-staging.yml',
-            ref: '${{ needs.prepare-release.outputs.tag }}'
-          });
-          console.log('Triggered staging deployment');
-          
-    - name: Wait for staging deployment
-      run: |
-        echo "Waiting for staging deployment to complete..."
-        sleep 180 # Wait 3 minutes for staging
-        
+    # ops #3282 -- the "Trigger staging deployment" and "Wait for staging
+    # deployment" steps were removed here because deploy-staging.yml is gone.
+    # It could never have worked: no `develop` branch to trigger it, no
+    # STAGING_* secret, no `staging` environment, no docker-compose.staging.yml,
+    # the pre-ops-#3282 install path, and `runs-on: ubuntu-latest`, which cannot
+    # reach .mgmt.lakehouse.wtf. 12 runs, all failure, none since 2026-04-20.
+    #
+    # ⚠ Removing them changes nothing about safety, because the "wait" never
+    # gated anything: createWorkflowDispatch returns immediately and the step
+    # that followed was `sleep 180`, whose result was never read. Production was
+    # dispatched regardless of whether staging succeeded, failed, or never ran.
+    # That this job auto-deploys production on any v* tag with no real gate is a
+    # separate and larger question -- ops #3307. This change does not address it
+    # and deliberately leaves the production dispatch exactly as it was.
     - name: Trigger production deployment
       uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
       with:
