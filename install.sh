@@ -2,7 +2,7 @@
 
 # GitOps Auditor One-Line Installer
 # Inspired by Proxmox Community Helper Scripts
-# Usage: bash -c "$(wget -qLO - https://raw.githubusercontent.com/festion/homelab-gitops-auditor/main/install.sh)"
+# Usage: bash -c "$(wget -qLO - https://raw.githubusercontent.com/festion/homelab-gitops/main/install.sh)"
 
 set -euo pipefail
 
@@ -177,7 +177,7 @@ install_gitops_auditor() {
     # Clone and setup GitOps Auditor
     pct exec $LXC_ID -- bash -c "
         cd /opt
-        git clone https://github.com/festion/homelab-gitops-auditor.git gitops >/dev/null 2>&1
+        git clone https://github.com/festion/homelab-gitops.git gitops >/dev/null 2>&1
         cd gitops
 
         # Install API dependencies
@@ -288,7 +288,7 @@ get_current_version() {
 
 # Function to get latest version
 get_latest_version() {
-    LATEST_VERSION=$(curl -s https://api.github.com/repos/festion/homelab-gitops-auditor/releases/latest | grep '"tag_name"' | cut -d'"' -f4 2>/dev/null || echo "main")
+    LATEST_VERSION=$(curl -s https://api.github.com/repos/festion/homelab-gitops/releases/latest | grep '"tag_name"' | cut -d'"' -f4 2>/dev/null || echo "main")
 }
 
 # Function to perform upgrade
@@ -422,7 +422,7 @@ show_completion_info() {
     echo -e "  Shell:  ${BLUE}pct enter $DISPLAY_CONTAINER${NC}"
     echo ""
     echo -e "${YELLOW}📚 Documentation:${NC}"
-    echo -e "  GitHub: ${BLUE}https://github.com/festion/homelab-gitops-auditor${NC}"
+    echo -e "  GitHub: ${BLUE}https://github.com/festion/homelab-gitops${NC}"
     echo -e "  Config: ${BLUE}pct exec $DISPLAY_CONTAINER -- /opt/gitops/scripts/config-manager.sh show${NC}"
     echo ""
 }
