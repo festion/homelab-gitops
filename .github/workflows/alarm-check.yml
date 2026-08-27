@@ -1,0 +1,50 @@
+name: Check the deploy-failure alarm
+
+# ops #3310. The deploy's failure alarm is an `if: failure()` job, so the only
+# thing that exercises its CREDENTIALS in production is the preflight step
+# inside `deploy` -- which means the alarm's health is observable only as a side
+# effect of shipping. That is backwards for a control whose entire job is to
+# work on the worst day.
+#
+# This workflow answers "is the alarm alive?" on demand, without deploying
+# anything. It matters that it is SEPARATE from deploy.yml: a `workflow_dispatch`
+# there runs `deploy-homelab` unconditionally (its `if:` names the event with no
+# further gate), so dispatching the deploy to test the alarm ships to CT 123 --
+# an atomic swap and a service restart, on a shared staging dir whose concurrent
+# -deploy race caused a live outage on 2026-07-02. Testing an alarm must not be
+# able to cause the incident it watches for.
+#
+# It also closes a gap nothing else can: a repository secret's VALUE cannot be
+# read back by any API, so validating the copy in Infisical says nothing about
+# the copy that was pasted here. A truncated paste or a stray newline passes
+# every local check identically. Only a run that CONSUMES the secret settles it,
+# and this is the cheapest such run.
+
+on:
+  workflow_dispatch:
+
+# Read-only: this job builds nothing, ships nothing, and touches no host.
+permissions:
+  contents: read
+
+jobs:
+  alarm-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # `preflight` hits users/validate.json, which checks the token+user pair
+      # WITHOUT sending a notification -- so this is safe to run as often as
+      # anyone likes and never pages anybody.
+      #
+      # It exits 0 in all three states (valid / rejected / missing) on purpose:
+      # a Pushover outage must never be able to fail a deploy, and this workflow
+      # shares its code. So READ THE ANNOTATIONS, not the green checkmark --
+      # a ::warning:: means the secrets are missing and a ::error:: means they
+      # are set but rejected. Both render on the run summary.
+      - name: Preflight - is the deploy-failure alarm actually alive?
+        env:
+          PUSHOVER_API_TOKEN: ${{ secrets.PUSHOVER_API_TOKEN }}
+          PUSHOVER_USER_KEY: ${{ secrets.PUSHOVER_USER_KEY }}
+        run: bash scripts/pushover_notify.sh preflight
