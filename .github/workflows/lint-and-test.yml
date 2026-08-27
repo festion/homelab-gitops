@@ -39,6 +39,12 @@ jobs:
     - name: Test the deploy-failure Pushover alarm
       run: bash scripts/tests/test_pushover_notify.sh
 
+    # ops #3202. The weekly audit's PAT check was a fail-open guard for 47
+    # consecutive Sundays. This suite pins the properties that make its
+    # replacement a real capability test; it needs bash only.
+    - name: Test the weekly-audit PAT capability check
+      run: bash scripts/tests/test_pat_validation_is_a_capability_test.sh
+
     - name: Install dependencies (API)
       run: |
         cd api

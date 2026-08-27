@@ -26,15 +26,74 @@ jobs:
           Write-Host "🔍 Full file tree from runner root:"
           Get-ChildItem -Recurse | ForEach-Object { Write-Host $_.FullName }
 
-      - name: Validate GitHub PAT is set
+      # ops #3202. This step was named "Validate GitHub PAT is set" and tested
+      # ONLY that the variable was non-empty. A revoked or expired PAT is a
+      # non-empty string, so the guard passed green and the real failure
+      # surfaced two steps later as a generic script error:
+      #
+      #   ❌ Failed to fetch repos from GitHub API:
+      #      { "message": "Bad credentials", "status": "401" }
+      #   ##[error]Process completed with exit code 1.
+      #
+      # It failed that way every Sunday for 47 consecutive runs -- last success
+      # 2025-09-28, first failure 2025-10-05 -- while the step whose entire job
+      # was to catch this reported success each time.
+      #
+      # Presence is not validity: a credential is identified only by
+      # capability-testing the specific value. GET /user is the cheapest call
+      # that exercises the PAT itself, so the job now fails at the step that
+      # NAMES the cause rather than two steps downstream.
+      #
+      # The token is never printed: only the HTTP status and GitHub's own
+      # message are surfaced, and the Authorization header is built inline so
+      # it never lands in a variable that could be echoed by a later debug step.
+      - name: Validate the GitHub PAT actually works
         shell: pwsh
         env:
           GH_REPO_PAT: ${{ secrets.GH_REPO_PAT }}
         run: |
           if (-not $env:GH_REPO_PAT) {
-          Write-Error "❌ GH_REPO_PAT is not set. Cannot fetch repos via GitHub API."
-          exit 1
+            Write-Error "GH_REPO_PAT is not set. Cannot fetch repos via GitHub API."
+            exit 1
           }
+
+          # Splatting, not backtick line-continuations: a stray space after a
+          # backtick is invisible in review and breaks the parse at runtime,
+          # and this step cannot be run locally (no pwsh on the dev host) so
+          # CI would be the first thing to see it.
+          #
+          # -SkipHttpErrorCheck (pwsh 7+, present on windows-latest) so a 401
+          # returns a response object instead of throwing: the status is the
+          # thing being measured, and a generic catch would discard it.
+          $params = @{
+            Uri                = 'https://api.github.com/user'
+            Method             = 'GET'
+            SkipHttpErrorCheck = $true
+            TimeoutSec         = 20
+            Headers            = @{
+              Authorization = "Bearer $env:GH_REPO_PAT"
+              'User-Agent'  = 'homelab-gitops-auditor'
+              Accept        = 'application/vnd.github+json'
+            }
+          }
+          $resp = Invoke-WebRequest @params
+          $code = [int]$resp.StatusCode
+
+          if ($code -eq 200) {
+            $login = ($resp.Content | ConvertFrom-Json).login
+            Write-Host "GH_REPO_PAT authenticates as '$login' (HTTP 200)."
+            exit 0
+          }
+
+          # GitHub names the cause in .message ("Bad credentials" on a revoked
+          # or expired PAT) without revealing the value. Measured both arms
+          # against the live API: 401 carries .message and no .login; 200
+          # carries .login and no .message.
+          $msg = '<unparseable body>'
+          try { $msg = ($resp.Content | ConvertFrom-Json).message } catch { }
+          Write-Host "::error::GH_REPO_PAT is set but REJECTED by GitHub: HTTP $code - $msg"
+          Write-Host "::error::The audit cannot fetch repos. Rotate the PAT and update the GH_REPO_PAT repository secret. (ops #3202)"
+          exit 1
 
       - name: Run GitOps Audit Script
         shell: pwsh
