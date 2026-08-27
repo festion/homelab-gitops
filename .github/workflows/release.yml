@@ -354,46 +354,30 @@ jobs:
         if [ "$PRERELEASE" = "true" ]; then args+=(--prerelease); fi
         gh release create "${args[@]}"
 
-  deploy-release:
-    name: Deploy Release
-    runs-on: ubuntu-latest
-    needs: [prepare-release, create-release]
-    if: ${{ !contains(needs.prepare-release.outputs.version, 'alpha') && !contains(needs.prepare-release.outputs.version, 'beta') && !contains(needs.prepare-release.outputs.version, 'rc') }}
-    
-    steps:
-    # ops #3282 -- the "Trigger staging deployment" and "Wait for staging
-    # deployment" steps were removed here because deploy-staging.yml is gone.
-    # It could never have worked: no `develop` branch to trigger it, no
-    # STAGING_* secret, no `staging` environment, no docker-compose.staging.yml,
-    # the pre-ops-#3282 install path, and `runs-on: ubuntu-latest`, which cannot
-    # reach .mgmt.lakehouse.wtf. 12 runs, all failure, none since 2026-04-20.
-    #
-    # ⚠ Removing them changes nothing about safety, because the "wait" never
-    # gated anything: createWorkflowDispatch returns immediately and the step
-    # that followed was `sleep 180`, whose result was never read. Production was
-    # dispatched regardless of whether staging succeeded, failed, or never ran.
-    # That this job auto-deploys production on any v* tag with no real gate is a
-    # separate and larger question -- ops #3307. This change does not address it
-    # and deliberately leaves the production dispatch exactly as it was.
-    - name: Trigger production deployment
-      uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
-      with:
-        script: |
-          // Only deploy stable releases to production automatically
-          if (!'${{ needs.prepare-release.outputs.version }}'.includes('alpha') && 
-              !'${{ needs.prepare-release.outputs.version }}'.includes('beta') && 
-              !'${{ needs.prepare-release.outputs.version }}'.includes('rc')) {
-            
-            await github.rest.actions.createWorkflowDispatch({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'deploy-production.yml',
-              ref: '${{ needs.prepare-release.outputs.tag }}'
-            });
-            console.log('Triggered production deployment');
-          } else {
-            console.log('Skipping production deployment for pre-release version');
-          }
+  # ops #3307 -- the `deploy-release` job was REMOVED here. It was a three-step
+  # deploy chain in which every step was broken, and it had never run: 0 runs on
+  # workflow id 203072051, against a control of 204 runs on deploy.yml.
+  #
+  #   * two steps dispatched deploy-staging.yml, which never once succeeded and
+  #     was retired by ops #3282 (12 runs, all failure, none since 2026-04-20)
+  #   * the gate between them was `sleep 180`, whose result was never read --
+  #     createWorkflowDispatch returns immediately, so it was a guess, not a wait
+  #   * the last step dispatched `deploy-production.yml`, WHICH HAS NEVER
+  #     EXISTED. There is no such file in this directory; the dispatch would
+  #     have 404'd. The real production workflow is deploy.yml.
+  #
+  # It was also fully redundant. deploy.yml already triggers on `tags: ['v*']`
+  # directly, runs on self-hosted runners that can reach .mgmt.lakehouse.wtf,
+  # and has the 204 runs. Repairing this chain would have meant inventing a
+  # staging environment from scratch to reproduce something deploy.yml already
+  # does correctly.
+  #
+  # ⚠ REMOVING IT DOES NOT CHANGE WHETHER A v* TAG SHIPS PRODUCTION. It does,
+  # via deploy.yml's own tag trigger, and that is a separate open question on
+  # ops #3307 -- deliberately not answered here.
+  #
+  # Nothing depended on this job: post-release needs [prepare-release,
+  # create-release], and deploy-release was a leaf.
 
   post-release:
     name: Post-Release Actions
