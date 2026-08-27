@@ -31,6 +31,14 @@ jobs:
     - name: Validate the one-line installer
       run: bash test-installer.sh
 
+    # ops #3310. The deploy's failure alarm is an `if: failure()` step, so in
+    # production it runs only during the incident that needed it. This suite is
+    # the only thing that ever exercises it on a good day. Needs bash, curl and
+    # python3 only -- all present on ubuntu-latest -- so it sits here with the
+    # installer check rather than behind the npm installs.
+    - name: Test the deploy-failure Pushover alarm
+      run: bash scripts/tests/test_pushover_notify.sh
+
     - name: Install dependencies (API)
       run: |
         cd api
