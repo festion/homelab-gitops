@@ -118,9 +118,12 @@ sudo systemctl restart gitops-dashboard
 rm -rf /tmp/gitops-*
 rm -rf repos/*
 
-# Reset to last known good configuration
-git reset --hard HEAD~1
-./scripts/deployment/deploy-production.sh
+# Roll production back to a previous build via the Emergency Rollback
+# workflow (.github/workflows/rollback.yml) -- it restores from the
+# timestamped backups on the host, so no local git changes are needed.
+gh workflow run rollback.yml \
+  -f reason="<why we're rolling back>" \
+  -f backup=<gitops-YYYYMMDD_HHMMSS>   # omit to restore the most recent backup
 ```
 
 ### Configuration Recovery
