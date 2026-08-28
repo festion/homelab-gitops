@@ -50,7 +50,7 @@ jobs:
     
     steps:
     - name: Checkout repository
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       
     # ops #3310. Validate the failure alarm on EVERY run, including green ones.
     # An `if: failure()` notification is otherwise exercised only during the
@@ -358,7 +358,7 @@ jobs:
     if: failure()
     steps:
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # ops #3308 established that this deploy's failures flap BY RUNNER --
       # succeeding on two runners and failing on a third -- so the alert has to
