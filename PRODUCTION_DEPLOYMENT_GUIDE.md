@@ -107,11 +107,13 @@ This configures:
 ### 4. Initial Deployment
 
 ```bash
-# Deploy application stack
-./scripts/deploy-production.sh latest production
+# Production deploys ship via GitHub Actions (.github/workflows/deploy.yml),
+# not a local script. A push to main auto-triggers it; to dispatch it
+# manually:
+gh workflow run deploy.yml -f environment=production
 
-# Verify deployment
-./scripts/deploy-production.sh health
+# Verify deployment (the same check deploy.yml's own smoke-test step runs):
+curl -f http://gitopsdashboard.mgmt.lakehouse.wtf:3070/api/v2/platform/health
 ```
 
 ## Deployment Procedures
@@ -119,11 +121,12 @@ This configures:
 ### Standard Deployment
 
 ```bash
-# Deploy specific version
-./scripts/deploy-production.sh v1.2.0 production
+# Deploy a specific version: pushing tag v1.2.0 triggers deploy.yml
+# automatically (it also triggers on: push: tags: ['v*']), or dispatch the
+# workflow directly against main:
+gh workflow run deploy.yml -f environment=production
 
-# Dry run deployment
-./scripts/deploy-production.sh v1.2.0 production true
+# deploy.yml has no dry-run mode -- every run ships to the target host.
 ```
 
 ### Blue-Green Deployment
@@ -142,8 +145,10 @@ The deployment script automatically uses blue-green strategy:
 # List available backups
 ./scripts/backup.sh list
 
-# Rollback to specific backup
-./scripts/deploy-production.sh rollback backup-20231215-143022
+# Rollback to a specific backup via the Emergency Rollback workflow
+# (.github/workflows/rollback.yml). Backup names look like
+# gitops-YYYYMMDD_HHMMSS under /opt/gitops-backups on the prod host.
+gh workflow run rollback.yml -f reason="<why we're rolling back>" -f backup=gitops-20231215_143022
 
 # Emergency rollback to last known good state
 docker-compose -f docker-compose.production.yml down
@@ -242,7 +247,7 @@ Backups run automatically via cron:
 
 ```bash
 # Check system health
-./scripts/deploy-production.sh health
+curl -f http://gitopsdashboard.mgmt.lakehouse.wtf:3070/api/v2/platform/health
 
 # Review logs
 docker-compose logs --tail=100 api
@@ -277,7 +282,7 @@ sudo journalctl -u fail2ban --since "1 week ago"
 ```bash
 # Update Docker images
 docker-compose pull
-./scripts/deploy-production.sh latest production
+gh workflow run deploy.yml -f environment=production
 
 # Security audit
 sudo ./scripts/security-setup.sh validate
@@ -379,7 +384,7 @@ docker-compose exec database psql -U homelab_user -d homelab_gitops -c "SELECT *
 
 3. **Verify Recovery**
    ```bash
-   ./scripts/deploy-production.sh health
+   curl -f http://gitopsdashboard.mgmt.lakehouse.wtf:3070/api/v2/platform/health
    curl -k https://your-domain.com/health
    ```
 
@@ -419,7 +424,7 @@ docker-compose exec database psql -U homelab_user -d homelab_gitops -c "SELECT *
    # Update .env file with new secrets
    
    # Restart services with new configuration
-   ./scripts/deploy-production.sh latest production
+   gh workflow run deploy.yml -f environment=production
    
    # Update security rules
    sudo ./scripts/security-setup.sh setup

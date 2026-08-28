@@ -57,7 +57,9 @@ mv backup_*.tar.gz /backup/deployments/
 ### Step 3: Deploy New Version
 ```bash
 # For production deployment
-./scripts/deployment/deploy-production.sh
+# Production ships via GitHub Actions (.github/workflows/deploy.yml), not a
+# local script. A push to main auto-triggers it; to dispatch it manually:
+gh workflow run deploy.yml -f environment=production
 
 # For development/staging
 ./scripts/deploy.sh
@@ -111,16 +113,14 @@ sudo systemctl start gitops-dashboard
 ./scripts/dev/debug-api.sh
 ```
 
-### Git-based Rollback
+### Emergency Rollback
 ```bash
-# Identify last known good commit
-git log --oneline -10
-
-# Reset to previous version
-git reset --hard <commit-hash>
-
-# Redeploy
-./scripts/deployment/deploy-production.sh
+# Production rollback restores a previous build from the timestamped
+# backups on the host (.github/workflows/rollback.yml) -- it does not
+# require resetting git history or redeploying.
+gh workflow run rollback.yml \
+  -f reason="<why we're rolling back>" \
+  -f backup=<gitops-YYYYMMDD_HHMMSS>   # omit to restore the most recent backup
 ```
 
 ## 3-Tier Environment Architecture
