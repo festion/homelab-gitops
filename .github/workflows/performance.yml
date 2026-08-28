@@ -276,7 +276,7 @@ jobs:
         fi
         
     - name: Upload performance artifacts
-      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: performance-results-${{ github.sha }}
         path: |
@@ -368,7 +368,7 @@ jobs:
         fi
         
     - name: Upload Lighthouse results
-      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: lighthouse-results-${{ github.sha }}
         path: |
@@ -436,7 +436,7 @@ jobs:
         echo "- Review error rates during peak load testing" >> PERFORMANCE_SUMMARY.md
         
     - name: Upload performance summary
-      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: performance-summary-${{ github.sha }}
         path: PERFORMANCE_SUMMARY.md
