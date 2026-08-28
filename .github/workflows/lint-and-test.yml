@@ -60,6 +60,22 @@ jobs:
         python3 scripts/check-workflow-needs.py --self-test
         python3 scripts/check-workflow-needs.py
 
+    # ops #3312. deploy.yml sends its production install step to CT 123 inside a
+    # heredoc. Every shellcheck step in this repo reads scripts/*.sh, so the one
+    # shell that runs as ROOT ON PRODUCTION is the one shell nothing lints. A
+    # dropped backslash turns `cp -a "\$INSTALL_DIR" "\$BACKUP"` into
+    # `cp -a "" ""`, which PARSES -- so `bash -n` alone would not catch it and
+    # the error surfaces at deploy time.
+    #
+    # --self-test runs FIRST and on purpose: `bash -n` on an empty string
+    # succeeds, so a checker whose extractor silently returned nothing would
+    # print a clean pass forever. The self-test asserts it goes red on a
+    # dropped backslash before the real run is believed.
+    - name: Lint remote heredocs in workflows
+      run: |
+        python3 scripts/check-workflow-heredocs.py --self-test
+        python3 scripts/check-workflow-heredocs.py
+
     - name: Install dependencies (API)
       run: |
         cd api
