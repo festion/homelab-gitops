@@ -61,7 +61,7 @@ jobs:
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@5595ccaf912efad79be6eef63a5619ff05969be3 # v4.37.6
+      uses: github/codeql-action/init@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28 # v4.37.8
       with:
         languages: javascript
         config-file: ./.github/codeql/codeql-config.yml
@@ -93,7 +93,7 @@ jobs:
         npm run build
         
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@5595ccaf912efad79be6eef63a5619ff05969be3 # v4.37.6
+      uses: github/codeql-action/analyze@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28 # v4.37.8
 
   container-security:
     name: Container Security Scan
@@ -141,7 +141,7 @@ jobs:
         
     - name: Upload Trivy scan results
       if: steps.image.outputs.built == 'true'
-      uses: github/codeql-action/upload-sarif@5595ccaf912efad79be6eef63a5619ff05969be3 # v4.37.6
+      uses: github/codeql-action/upload-sarif@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28 # v4.37.8
       with:
         sarif_file: 'trivy-results.sarif'
         category: container-image
@@ -214,7 +214,7 @@ jobs:
         exit-code: '0'
 
     - name: Upload Trivy scan results
-      uses: github/codeql-action/upload-sarif@5595ccaf912efad79be6eef63a5619ff05969be3 # v4.37.6
+      uses: github/codeql-action/upload-sarif@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28 # v4.37.8
       with:
         sarif_file: 'trivy-fs-results.sarif'
         # Distinct category. Both this job and the dormant container job upload
