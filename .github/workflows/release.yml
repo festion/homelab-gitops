@@ -452,8 +452,10 @@ jobs:
         - Checksums: \`checksums.txt\`
         
         ## Deployment Status
-        - **Staging:** ${{ needs.deploy-release.result == 'success' && 'Deployed' || 'Pending' }}
-        - **Production:** ${{ needs.deploy-release.result == 'success' && !contains(needs.prepare-release.outputs.version, 'alpha') && !contains(needs.prepare-release.outputs.version, 'beta') && !contains(needs.prepare-release.outputs.version, 'rc') && 'Deployed' || 'Manual' }}
+        - **Production:** deployed by \`deploy.yml\`, which triggers independently on this
+          same \`v*\` tag. \`release.yml\` cannot observe that run, so this report does not
+          report its result -- check [Deployment Workflows](${{ github.server_url }}/${{ github.repository }}/actions/workflows/deploy.yml).
+        - **Staging:** no staging deploy exists. \`deploy-staging.yml\` was retired by ops #3282.
         
         ## Quick Links
         - [Release Page](${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ needs.prepare-release.outputs.tag }})

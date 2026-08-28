@@ -45,6 +45,21 @@ jobs:
     - name: Test the weekly-audit PAT capability check
       run: bash scripts/tests/test_pat_validation_is_a_capability_test.sh
 
+    # ops #3347. PR #273 removed release.yml's `deploy-release` job and left two
+    # `needs.deploy-release` expressions behind. GitHub does not reject that --
+    # the context is simply empty, so the comparison is falsy and the release
+    # report would have said "Production: Manual" on every release while
+    # deploy.yml was in fact deploying production. release.yml has never run
+    # (0 runs, against 209 for deploy.yml), so its first execution would have
+    # been a real release. The check has to be static; waiting for a run is
+    # waiting for the incident. Needs python3 + pyyaml only, so it sits with the
+    # other pre-npm checks.
+    - name: Check workflow `needs` references resolve
+      run: |
+        python3 -m pip install --quiet pyyaml
+        python3 scripts/check-workflow-needs.py --self-test
+        python3 scripts/check-workflow-needs.py
+
     - name: Install dependencies (API)
       run: |
         cd api
