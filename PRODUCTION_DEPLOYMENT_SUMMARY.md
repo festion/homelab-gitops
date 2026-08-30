@@ -39,7 +39,7 @@ All components of the production deployment have been successfully implemented a
 - SSL certificate management
 
 ### 5. ✅ Deployment Automation
-- **scripts/deploy-production.sh**: Blue-green deployment script
+- **scripts/deployment/deploy-production.sh**: Blue-green deployment script
 - Automated rollback capabilities
 - Health checks and validation
 - Pre and post-deployment procedures
@@ -129,7 +129,7 @@ nano .env  # Configure all required variables
 sudo ./scripts/security-setup.sh setup
 
 # 4. Deploy application
-./scripts/deploy-production.sh latest production
+./scripts/deployment/deploy-production.sh latest production
 
 # 5. Verify deployment
 ./scripts/health-check.sh check
@@ -159,13 +159,13 @@ sudo ./scripts/security-setup.sh ssl
 ### Deployment Operations
 ```bash
 # Standard deployment
-./scripts/deploy-production.sh v1.2.0 production
+./scripts/deployment/deploy-production.sh v1.2.0 production
 
 # Dry run deployment
-./scripts/deploy-production.sh v1.2.0 production true
+./scripts/deployment/deploy-production.sh v1.2.0 production true
 
 # Rollback to backup
-./scripts/deploy-production.sh rollback backup-20231215-143022
+./scripts/deployment/deploy-production.sh rollback backup-20231215-143022
 
 # Health check
 ./scripts/health-check.sh check
