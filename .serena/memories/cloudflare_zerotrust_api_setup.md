@@ -23,8 +23,40 @@ Mobile (WARP App) → Cloudflare Zero Trust → Tunnel (LXC 102) → Traefik →
 |--------|-------------|
 | `CF_ZEROTRUST_API` | API token with Zero Trust permissions |
 | `CF_ACCOUNT_ID` | Cloudflare account ID: `32a26bf8c9151367d438168652ec0fde` |
-| `CF_CLAUDE_API` | DNS-only API token (no Zero Trust access) |
-| `CF_DNS_API_TOKEN` | DNS API token for Traefik cert challenges |
+| `CF_CLAUDE_API` | **NOT DNS-only.** Byte-identical to `CF_ZEROTRUST_API` — same Cloudflare token id, and it has Zero Trust. No consumers; slated for deletion. |
+| `CF_DNS_API_TOKEN` | DNS token used by Traefik cert challenges (this is the one Semaphore env id=2 actually holds). **Also carries Zero Trust** — it is not DNS-scoped either. |
+
+> ### ⚠ The documented least-privilege split does not exist (measured 2026-08-31, ops #3471)
+>
+> This file previously described `CF_CLAUDE_API` as a "DNS-only API token (no Zero Trust
+> access)". **That was never true.** It was written on 2026-02-03 in the same commit that
+> created the helper script, was never revisited, and stood for 209 days.
+>
+> What was measured, against the live Cloudflare API:
+>
+> - `CF_CLAUDE_API` and `CF_ZEROTRUST_API` are the **same token** — identical value, identical
+>   token id. Two names, one credential.
+> - `CF_DNS_API_TOKEN` is a genuinely different token, and it **also** grants Zero Trust,
+>   confirmed on two independent Access endpoints.
+> - **All three names resolve to a token with Zero Trust.** There is no DNS-only Cloudflare
+>   token in the store under any name.
+>
+> The probe discriminates rather than always succeeding: the same token returns `403`
+> `success=false` on `/accounts/{acct}/tokens`, so Cloudflare is genuinely enforcing a
+> permission set and still granting Access. A test that returned 200 for everything would
+> prove nothing.
+>
+> **Consequences, until a properly-scoped token is minted:**
+>
+> - Do not reach for "the DNS one". Whichever of the three names you pick, you get Zero Trust.
+> - Rotation is three-way: revoking the shared token id breaks `CF_CLAUDE_API` **and**
+>   `CF_ZEROTRUST_API` at once.
+> - The fix is to mint a token whose permissions are DNS-edit only, and whose acceptance
+>   criterion is that it **fails** on `/access/apps`. No existing token meets that today.
+>
+> Do not re-describe any of these as least-privilege without re-running that negative test.
+> Rewriting this note to point at `CF_DNS_API_TOKEN` as "the DNS-only one" would repeat the
+> original error under a new name.
 
 ## API Token Permissions (CF_ZEROTRUST_API)
 
