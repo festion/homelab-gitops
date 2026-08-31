@@ -5,7 +5,17 @@ const orchestrationProfiles = {
     repositories: 'all',
     applyTemplates: true,
     template: 'standard-devops',
-    workflow: 'audit.yml',
+    // ops #3202 -- was 'audit.yml', which is deleted. That workflow ran
+    // gitaudit.ps1 WITHOUT GH_REPO_PAT, so the script never fetched or cloned
+    // anything and audited an empty `repos/` directory: every daily run was
+    // green and reported "Directory 'repos' does not exist. No repositories to
+    // audit." Repointed at gitops-audit.yml, which is the workflow that
+    // actually performs the audit-and-quality work this profile names.
+    //
+    // If the intent was specifically the repo-inventory audit rather than code
+    // quality, this profile should be removed instead -- nothing has performed
+    // that inventory since 2025-10-05.
+    workflow: 'gitops-audit.yml',
     stages: [
       {
         name: 'audit',
