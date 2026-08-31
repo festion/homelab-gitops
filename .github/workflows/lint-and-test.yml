@@ -45,6 +45,19 @@ jobs:
     - name: Test the weekly-audit PAT capability check
       run: bash scripts/tests/test_pat_validation_is_a_capability_test.sh
 
+    # ops #3202 items 3-4. Pins the runner and the absence of the
+    # filesystem-enumeration debug step, plus the portability facts the runner
+    # change rests on.
+    #
+    # WIRED IN DELIBERATELY, AND LATE. The suite was written, fire-tested and
+    # committed before anyone noticed it was not in this file -- three test
+    # files existed and two ran. That is exactly the shape ops #3474 and #3483
+    # are about: a suite that is linted but never executed, whose green comes
+    # from somewhere else entirely. It was caught only by reading the CI log
+    # for its own assertions and not finding them. Needs bash only.
+    - name: Test the audit-email runner and debug-step removal
+      run: bash scripts/tests/test_audit_email_runner_and_debug.sh
+
     # ops #3347. PR #273 removed release.yml's `deploy-release` job and left two
     # `needs.deploy-release` expressions behind. GitHub does not reject that --
     # the context is simply empty, so the comparison is falsy and the release
