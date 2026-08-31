@@ -12,19 +12,31 @@ on:
 
 jobs:
   audit:
-    runs-on: windows-latest
+    # ops #3202 item 4 — was `windows-latest`, which GitHub bills at 2x the
+    # Linux rate. Nothing here needs Windows: `pwsh` (PowerShell 7) ships on
+    # the ubuntu images, and scripts/gitaudit.ps1 was checked for portability
+    # before this moved —
+    #
+    #   no drive letters, no backslash paths, no Windows-only cmdlets
+    #     (Get-WmiObject / Get-CimInstance / ComObject / Add-Type / *.exe)
+    #   `output` spelled lower-case at every one of its 5 use sites, so a
+    #     case-sensitive filesystem cannot break the report path
+    #   -Encoding utf8 stated explicitly on all three report writes
+    #   the only external dependency is `git`, present on ubuntu runners
+    #
+    # ⚠ Steps 1-4 validate on the next run. Steps 5-8 (audit script, report,
+    # email) CANNOT be validated on either runner until GH_REPO_PAT is rotated
+    # — the job has failed at step 4 every Sunday since 2025-10-05, so those
+    # steps have not executed in ~11 months. Moving the runner does not change
+    # that, and does not hide it: a portability problem would surface as a
+    # failure in the step where it happens.
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           path: homelab-gitops-auditor
-
-      - name: Root level debug Show full file tree
-        shell: pwsh
-        run: |
-          Write-Host "🔍 Full file tree from runner root:"
-          Get-ChildItem -Recurse | ForEach-Object { Write-Host $_.FullName }
 
       # ops #3202. This step was named "Validate GitHub PAT is set" and tested
       # ONLY that the variable was non-empty. A revoked or expired PAT is a
