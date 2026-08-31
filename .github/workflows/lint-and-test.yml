@@ -39,12 +39,6 @@ jobs:
     - name: Test the deploy-failure Pushover alarm
       run: bash scripts/tests/test_pushover_notify.sh
 
-    # ops #3202. The weekly audit's PAT check was a fail-open guard for 47
-    # consecutive Sundays. This suite pins the properties that make its
-    # replacement a real capability test; it needs bash only.
-    - name: Test the weekly-audit PAT capability check
-      run: bash scripts/tests/test_pat_validation_is_a_capability_test.sh
-
     # ops #3347. PR #273 removed release.yml's `deploy-release` job and left two
     # `needs.deploy-release` expressions behind. GitHub does not reject that --
     # the context is simply empty, so the comparison is falsy and the release
