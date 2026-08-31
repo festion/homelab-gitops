@@ -1,3 +1,30 @@
+// ops #3202 -- THREE PROFILES WERE REMOVED HERE, and why matters more than
+// that they went.
+//
+//   compliance-check        -> compliance.yml
+//   dependency-update       -> dependency-update.yml
+//   disaster-recovery-test  -> disaster-recovery.yml
+//
+// None of those workflows exists, and none ever has. This is not decorative
+// config: pipelineOrchestrator.js:151 reads config.workflow and :284 passes it
+// to triggerPipeline(), which calls github.actions.createWorkflowDispatch() --
+// so dispatching any of them 404s against the GitHub API, deep inside an
+// orchestration run rather than at config load.
+//
+// They were removed rather than repointed because no existing workflow is a
+// defensible substitute. rollback.yml is not a disaster-recovery test;
+// dependabot-auto-merge.yml merges Dependabot's PRs rather than running an
+// update pipeline; nothing here does licence/policy compliance. Repointing
+// them would have replaced a loud 404 with a workflow that runs and reports
+// success for something it did not do -- strictly worse.
+//
+// To bring one back: add the workflow first, then re-add the profile. The test
+// at api/test/orchestration-profiles.test.js enforces that ordering.
+//
+// ⚠ Note `compliance-check` also survives as an ACTION name inside
+// full-gitops-audit's stages, handled by taskExecutionEngine.js:335. The same
+// string is both a profile key and an action; only the PROFILE was removed.
+
 const orchestrationProfiles = {
   'full-gitops-audit': {
     name: 'Full GitOps Audit & Compliance',
@@ -162,99 +189,8 @@ const orchestrationProfiles = {
     }
   },
 
-  'compliance-check': {
-    name: 'Compliance Validation',
-    description: 'Comprehensive compliance check across all repositories',
-    repositories: 'all',
-    applyTemplates: false,
-    workflow: 'compliance.yml',
-    stages: [
-      {
-        name: 'policy-check',
-        parallel: true,
-        actions: ['check-security-policies', 'validate-license-compliance', 'audit-dependencies']
-      },
-      {
-        name: 'documentation-audit',
-        parallel: true,
-        actions: ['check-readme', 'validate-changelogs', 'audit-documentation']
-      },
-      {
-        name: 'reporting',
-        sequential: true,
-        actions: ['generate-compliance-report', 'update-compliance-dashboard']
-      }
-    ],
-    timeout: 20 * 60 * 1000, // 20 minutes
-    complianceStandards: ['SOC2', 'ISO27001', 'GDPR'],
-    reportFormat: 'detailed'
-  },
 
-  'dependency-update': {
-    name: 'Dependency Update Pipeline',
-    description: 'Update dependencies across all repositories',
-    repositories: 'all',
-    filters: {
-      hasPackageManager: true
-    },
-    applyTemplates: false,
-    workflow: 'dependency-update.yml',
-    stages: [
-      {
-        name: 'analysis',
-        parallel: true,
-        actions: ['check-outdated-deps', 'vulnerability-assessment', 'compatibility-check']
-      },
-      {
-        name: 'updates',
-        dependency_ordered: true,
-        actions: ['update-dependencies', 'run-tests', 'security-validation']
-      },
-      {
-        name: 'verification',
-        parallel: true,
-        actions: ['integration-tests', 'performance-validation', 'regression-check']
-      }
-    ],
-    timeout: 120 * 60 * 1000, // 120 minutes
-    updateStrategy: 'minor-only',
-    breakingChangeHandling: 'manual-review',
-    testRequirement: 'mandatory'
-  },
 
-  'disaster-recovery-test': {
-    name: 'Disaster Recovery Test',
-    description: 'Test disaster recovery procedures across infrastructure',
-    repositories: [
-      'infrastructure-base',
-      'backup-system',
-      'monitoring-stack',
-      'core-services'
-    ],
-    applyTemplates: false,
-    workflow: 'disaster-recovery.yml',
-    stages: [
-      {
-        name: 'backup-verification',
-        sequential: true,
-        actions: ['verify-backups', 'test-backup-integrity', 'check-backup-schedules']
-      },
-      {
-        name: 'recovery-simulation',
-        sequential: true,
-        actions: ['simulate-failure', 'execute-recovery', 'validate-recovery']
-      },
-      {
-        name: 'documentation-update',
-        parallel: true,
-        actions: ['update-runbooks', 'generate-dr-report', 'notify-stakeholders']
-      }
-    ],
-    timeout: 180 * 60 * 1000, // 180 minutes
-    testEnvironment: 'staging',
-    backupValidation: true,
-    recoveryTimeObjective: 4 * 60 * 60 * 1000 // 4 hours
-  },
 
   'performance-optimization': {
     name: 'Performance Optimization',
@@ -265,7 +201,11 @@ const orchestrationProfiles = {
       isProduction: true
     },
     applyTemplates: false,
-    workflow: 'performance-optimization.yml',
+    // ops #3202 -- was 'performance-optimization.yml', which does not exist.
+    // performance.yml ("Performance Testing", daily cron) is the workflow that
+    // actually does this work: it builds both apps, installs perf tooling and
+    // drives the API server under test.
+    workflow: 'performance.yml',
     stages: [
       {
         name: 'baseline-measurement',
