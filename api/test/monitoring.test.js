@@ -414,6 +414,62 @@ describe('Pipeline Health Monitor Tests', () => {
 
       const alerts = mockServices.alerting.getAlerts();
       assert(alerts.length > 0, 'Should have generated an alert for a 0% success rate repository');
+      // EXACT count, not `> 0`. `> 0` is true at 1 and at 2, so it cannot see
+      // the double-fire the next test covers.
+      assert.strictEqual(alerts.length, 1,
+        `the gap case must produce exactly ONE alert, got ${alerts.length}: ` +
+        JSON.stringify(alerts.map(a => a.title)));
+    });
+
+    // ops #2657 review. The success-rate arm sits OUTSIDE the if/else-if chain,
+    // so a repository that is BOTH `critical` AND below minSuccessRate fires
+    // twice for one condition.
+    //
+    // MEASURED, because the obvious reproduction does NOT trigger it:
+    //   50 runs all failing        -> warning,  score 76.00 -> 1 alert
+    //   50 runs failing AND slow   -> critical, score 65.25 -> 2 alerts
+    // 76 fails the `score < 75` arm, so the plain all-failing case was never
+    // double-firing. Reaching `critical` needs slow runs too. The numbers in
+    // ops #2657's card (critical, 59.3) come from a different run shape than
+    // its own stated reproduction produces -- print the health object, never
+    // assume it.
+    //
+    // Worth fixing anyway: ops #2296 on this board is "repo-security-audit
+    // double-pages every dependency CVE" -- same class, already costing signal.
+    // A repo that is failing AND slow is the one you least want to page twice.
+    it('alerts exactly ONCE for a repo that is both critical and below minSuccessRate (ops #2657)', async () => {
+      mockServices.metrics.getPipelineRuns = async () =>
+        Array.from({ length: 50 }, () =>
+          TestUtils.createMockRun({ conclusion: 'failure', duration: 3600, queueTime: 600 }));
+
+      const repo = 'test-repo-1';
+      const health = await healthMonitor.checkRepositoryHealth(repo);
+      // Assert the FIXTURE reaches the state under test. Without this the test
+      // passes vacuously if scoring ever changes and `critical` stops being
+      // reachable this way -- a green result that proves nothing.
+      assert.strictEqual(health.status, 'critical',
+        `fixture must actually reach critical, got ${health.status} score ${health.score}`);
+
+      await healthMonitor.checkThresholds(repo, health);
+
+      const alerts = mockServices.alerting.getAlerts();
+      assert.strictEqual(alerts.length, 1,
+        `one unhealthy repository must produce ONE alert, got ${alerts.length}: ` +
+        JSON.stringify(alerts.map(a => a.title)));
+    });
+
+    it('a HEALTHY repo at 100% success alerts NOT AT ALL (control)', async () => {
+      // Without this, "exactly one alert" is satisfiable by a rule that fires
+      // once for everything.
+      mockServices.metrics.getPipelineRuns = async () =>
+        Array.from({ length: 20 }, () => TestUtils.createMockRun({ conclusion: 'success' }));
+
+      const repo = 'test-repo-1';
+      const health = await healthMonitor.checkRepositoryHealth(repo);
+      await healthMonitor.checkThresholds(repo, health);
+
+      assert.strictEqual(mockServices.alerting.getAlerts().length, 0,
+        'a healthy repository must not alert at all');
     });
 
     it('should send alerts for performance degradation', async () => {

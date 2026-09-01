@@ -566,15 +566,24 @@ class PipelineHealthMonitor {
         health,
         issues: health.issues
       });
-    }
-
-    // Volume-independent gate: a low-run-count repository can score above
-    // the checks above purely because it has too few runs to accumulate
-    // enough penalty, even at a 0% success rate. Alert on the observed
-    // success rate directly, regardless of the score-based status above.
-    const successRate = health.checks?.pipeline?.metrics?.successRate;
-    const minSuccessRate = this.thresholds.pipeline.minSuccessRate;
-    if (successRate != null && successRate < minSuccessRate) {
+    } else if (this.isBelowMinSuccessRate(health)) {
+      // Volume-independent gate: a low-run-count repository can score above
+      // both arms above purely because it has too few runs to accumulate
+      // enough penalty, even at a 0% success rate. Measured: 3 failing runs
+      // score 79.0 and clear the `< 75` cutoff, so nothing alerted at all.
+      //
+      // ON THE SAME if/else-if CHAIN, deliberately. Appended as a separate
+      // block it fired IN ADDITION to the arms above, so a repository that is
+      // both `critical` and below minSuccessRate paged twice for one
+      // condition — measured at 2 alerts for 50 failing-and-slow runs.
+      // ops #2296 on this board is the same class ("repo-security-audit
+      // double-pages every dependency CVE"), and alert noise is what gets a
+      // channel muted. One condition, one alert.
+      //
+      // The gap case still reaches here: it is `warning` with score >= 75, so
+      // it falls through both arms above.
+      const successRate = health.checks.pipeline.metrics.successRate;
+      const minSuccessRate = this.thresholds.pipeline.minSuccessRate;
       await this.sendAlert({
         level: 'warning',
         title: 'Pipeline Success Rate Below Threshold',
@@ -584,6 +593,14 @@ class PipelineHealthMonitor {
         issues: health.issues
       });
     }
+  }
+
+  // Extracted so the chain above stays readable and the null-guard lives in one
+  // place. A MISSING successRate must never alert — absent is not zero.
+  isBelowMinSuccessRate(health) {
+    const successRate = health.checks?.pipeline?.metrics?.successRate;
+    return successRate != null
+      && successRate < this.thresholds.pipeline.minSuccessRate;
   }
 
   async sendAlert(alert) {
