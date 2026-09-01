@@ -397,6 +397,25 @@ describe('Pipeline Health Monitor Tests', () => {
       assert(criticalAlert, 'Should have generated a critical alert');
     });
 
+    it('should alert on low success rate even with few runs (ops #2657)', async () => {
+      // 3 runs, all failing: the volume-sensitive score alone stays above
+      // the warning-alert cutoff (see the quarantined test above), but the
+      // observed success rate (0%) is far below minSuccessRate (85%) and
+      // must alert regardless of run volume.
+      mockServices.metrics.getPipelineRuns = async () => [
+        TestUtils.createMockRun({ conclusion: 'failure' }),
+        TestUtils.createMockRun({ conclusion: 'failure' }),
+        TestUtils.createMockRun({ conclusion: 'failure' })
+      ];
+
+      const repo = 'test-repo-1';
+      const health = await healthMonitor.checkRepositoryHealth(repo);
+      await healthMonitor.checkThresholds(repo, health);
+
+      const alerts = mockServices.alerting.getAlerts();
+      assert(alerts.length > 0, 'Should have generated an alert for a 0% success rate repository');
+    });
+
     it('should send alerts for performance degradation', async () => {
       // Mock performance degradation
       const mockTrend = { degradation: 0.25, trend: 0.25 }; // 25% degradation
