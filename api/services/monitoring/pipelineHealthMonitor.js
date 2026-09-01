@@ -552,6 +552,23 @@ class PipelineHealthMonitor {
         issues: health.issues
       });
     }
+
+    // Volume-independent gate: a low-run-count repository can score above
+    // the checks above purely because it has too few runs to accumulate
+    // enough penalty, even at a 0% success rate. Alert on the observed
+    // success rate directly, regardless of the score-based status above.
+    const successRate = health.checks?.pipeline?.metrics?.successRate;
+    const minSuccessRate = this.thresholds.pipeline.minSuccessRate;
+    if (successRate != null && successRate < minSuccessRate) {
+      await this.sendAlert({
+        level: 'warning',
+        title: 'Pipeline Success Rate Below Threshold',
+        message: `${repository} success rate is ${successRate.toFixed(1)}% (threshold: ${minSuccessRate}%)`,
+        repository,
+        health,
+        issues: health.issues
+      });
+    }
   }
 
   async sendAlert(alert) {
