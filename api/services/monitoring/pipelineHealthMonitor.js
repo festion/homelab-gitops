@@ -2,12 +2,27 @@ const { createLogger } = require('../../utils/logger');
 const { MetricsService } = require('../metrics');
 const PipelineAnomalyDetector = require('./pipelineAnomalyDetector');
 
+// ops #2656. Kept byte-identical to the list the three sibling services already
+// use as their fallback (pipelineService.js:446, pipelineCollector.js:459), so
+// a deployment with no MONITORED_REPOSITORIES configured monitors the SAME set
+// everywhere rather than four services disagreeing about what "default" means.
+const DEFAULT_MONITORED_REPOSITORIES = [
+  'homelab-gitops-auditor',
+  'home-assistant-config'
+];
+
 class PipelineHealthMonitor {
   constructor(services) {
     this.logger = createLogger('PipelineHealthMonitor');
     this.metrics = services.metrics || new MetricsService();
     this.websocket = services.websocket;
     this.alerting = services.alerting;
+    // ops #2656. OPTIONAL, unlike PipelineService which throws without it: this
+    // class is constructed in several places that pass only metrics/websocket/
+    // alerting, and requiring config here would break them. When absent,
+    // getConfiguredRepositories() falls back to the env var and then to
+    // DEFAULT_MONITORED_REPOSITORIES.
+    this.config = services.config || null;
     
     this.healthChecks = new Map();
     this.thresholds = this.loadHealthThresholds();
@@ -587,11 +602,44 @@ class PipelineHealthMonitor {
   }
 
   async getConfiguredRepositories() {
-    // This should be implemented based on your configuration system
-    // For now, return a default set that can be configured
-    return process.env.MONITORED_REPOSITORIES ? 
-      process.env.MONITORED_REPOSITORIES.split(',').map(r => r.trim()) : 
-      [];
+    // ops #2656. This used to read process.env.MONITORED_REPOSITORIES with NO
+    // default, while three sibling services read the same setting through the
+    // config system WITH one:
+    //   services/pipeline/pipelineService.js:451
+    //   services/metrics/collectors/pipelineCollector.js:464
+    //   services/compliance/complianceService.js:723
+    // That name appears in no deployment config, .env example or ansible role
+    // in this repo, so the branch always yielded [] — performHealthChecks()
+    // then iterated an empty array, checked nothing, and emitted no alerts.
+    // A monitor watching zero repositories is indistinguishable from a healthy
+    // estate, and there was no log line for the empty set either.
+    //
+    // Resolution order: injected config -> env var -> built-in default.
+    // The env var is kept because it was the pre-existing escape hatch and
+    // removing it would be a silent behaviour change for anyone relying on it.
+    let repos;
+
+    if (this.config && typeof this.config.get === 'function') {
+      repos = this.config.get('MONITORED_REPOSITORIES', DEFAULT_MONITORED_REPOSITORIES);
+    } else if (process.env.MONITORED_REPOSITORIES) {
+      repos = process.env.MONITORED_REPOSITORIES.split(',').map(r => r.trim());
+    } else {
+      repos = DEFAULT_MONITORED_REPOSITORIES;
+    }
+
+    repos = Array.isArray(repos) ? repos.filter(Boolean) : [];
+
+    if (repos.length === 0) {
+      // The empty set is the dangerous state and it used to be silent. Say so
+      // loudly: every downstream health check will now pass by checking nothing.
+      this.logger.warn(
+        'MONITORED_REPOSITORIES resolved to an EMPTY list — health checks will ' +
+        'iterate nothing and report no alerts, which is indistinguishable from ' +
+        'a healthy estate. Set MONITORED_REPOSITORIES or inject a config.'
+      );
+    }
+
+    return repos;
   }
 
   calculatePerformanceTrend(runs) {

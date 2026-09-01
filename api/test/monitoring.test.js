@@ -207,6 +207,80 @@ describe('Pipeline Health Monitor Tests', () => {
     });
   });
 
+  // ops #2656. getConfiguredRepositories() read process.env.MONITORED_REPOSITORIES
+  // with no default while three sibling services read the same setting through
+  // the config system WITH one. That name appears in no deployment config, .env
+  // example or ansible role, so the branch always yielded [] and
+  // performHealthChecks() iterated an empty array, checked nothing, and emitted
+  // no alerts. A health monitor watching zero repositories is indistinguishable
+  // from a healthy estate — it fails in the reassuring direction and logged
+  // nothing about the empty set.
+  //
+  // The mock metrics service in this file DOES implement
+  // getMonitoredRepositories(), which is why the fall-through was invisible here:
+  // the tests never reached the branch that breaks in production. These tests
+  // exercise getConfiguredRepositories() directly for that reason.
+  describe('Monitored repository resolution (ops #2656)', () => {
+    const ENV_KEY = 'MONITORED_REPOSITORIES';
+    let savedEnv;
+
+    beforeEach(() => {
+      savedEnv = process.env[ENV_KEY];
+      delete process.env[ENV_KEY];
+    });
+
+    afterEach(() => {
+      if (savedEnv === undefined) delete process.env[ENV_KEY];
+      else process.env[ENV_KEY] = savedEnv;
+    });
+
+    it('resolves a NON-empty list with no config and no env var', async () => {
+      // The defect: this returned [] and nothing said so.
+      const monitor = new PipelineHealthMonitor(TestUtils.createMockServices());
+      const repos = await monitor.getConfiguredRepositories();
+
+      assert(Array.isArray(repos), 'must return an array');
+      assert(repos.length > 0,
+        'a default-constructed monitor resolved ZERO repositories — it would ' +
+        'check nothing and report healthy');
+    });
+
+    it('prefers an injected config over the built-in default', async () => {
+      const monitor = new PipelineHealthMonitor({
+        ...TestUtils.createMockServices(),
+        config: { get: (key, fallback) => (key === ENV_KEY ? ['only-this'] : fallback) }
+      });
+
+      assert.deepStrictEqual(await monitor.getConfiguredRepositories(), ['only-this']);
+    });
+
+    it('still honours the env var when no config is injected', async () => {
+      // Backwards compatibility: the pre-existing escape hatch must keep working.
+      process.env[ENV_KEY] = 'alpha, beta';
+      const monitor = new PipelineHealthMonitor(TestUtils.createMockServices());
+
+      assert.deepStrictEqual(await monitor.getConfiguredRepositories(), ['alpha', 'beta']);
+    });
+
+    it('warns when the resolved list is empty rather than failing silently', async () => {
+      // An empty set must be VISIBLE. Forcing it via config proves the warning
+      // path exists without depending on the default being empty.
+      const warnings = [];
+      const monitor = new PipelineHealthMonitor({
+        ...TestUtils.createMockServices(),
+        config: { get: () => [] }
+      });
+      monitor.logger = { ...monitor.logger, warn: (m) => warnings.push(String(m)) };
+
+      const repos = await monitor.getConfiguredRepositories();
+
+      assert.strictEqual(repos.length, 0, 'this arm deliberately forces the empty case');
+      assert(warnings.length > 0,
+        'an empty monitored-repository set produced no warning — the silence is ' +
+        'the defect, not the emptiness');
+    });
+  });
+
   describe('Health Checks', () => {
     it('should perform comprehensive health checks', async () => {
       const healthReport = await healthMonitor.performHealthChecks();
