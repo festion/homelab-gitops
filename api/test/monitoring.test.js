@@ -207,6 +207,20 @@ describe('Pipeline Health Monitor Tests', () => {
     });
   });
 
+  describe('Monitored Repositories', () => {
+    it('should resolve a non-empty repository list for a default-constructed monitor', async () => {
+      // Deliberately uses no services (no metrics.getMonitoredRepositories
+      // override, no config), so getConfiguredRepositories() falls through to
+      // its config-backed default rather than a mock's canned repo list.
+      const defaultMonitor = new PipelineHealthMonitor({});
+
+      const repos = await defaultMonitor.getConfiguredRepositories();
+
+      assert(Array.isArray(repos));
+      assert(repos.length > 0, 'expected a non-empty default repository list');
+    });
+  });
+
   describe('Health Checks', () => {
     it('should perform comprehensive health checks', async () => {
       const healthReport = await healthMonitor.performHealthChecks();
