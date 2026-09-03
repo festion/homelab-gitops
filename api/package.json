@@ -8,7 +8,7 @@
     "bcrypt": "^6.0.0",
     "chokidar": "^5.0.0",
     "cors": "^2.8.5",
-    "express": "^4.18.2",
+    "express": "^5.2.1",
     "express-rate-limit": "^8.5.1",
     "express-validator": "^7.2.1",
     "express-ws": "^5.0.2",
@@ -65,7 +65,7 @@
     "rimraf": "^6.0.0",
     "fast-xml-parser": "^5.7.0",
     "fast-xml-builder": "^1.2.0",
-    "fast-uri": "^3.1.5",
+    "fast-uri": "^3.1.7",
     "@smithy/middleware-retry": {
       "uuid": "^14.0.0"
     },
