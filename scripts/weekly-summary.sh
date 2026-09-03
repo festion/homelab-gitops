@@ -14,8 +14,16 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 [[ -f "${PROJECT_ROOT}/.env" ]] && source "${PROJECT_ROOT}/.env"
 
 LOKI_URL="${LOKI_URL:-http://192.168.1.170:3100}"
-PROXMOX_HOST="${PROXMOX_HOST:-192.168.1.137}"
+PROXMOX_HOST="${PROXMOX_HOST:-192.168.1.124}"
 PROXMOX2_HOST="${PROXMOX2_HOST:-192.168.1.125}"
+# Node NAME for the per-node API paths below. The cluster has no node called
+# "proxmox" — the three are proxmox1/2/3 — so the old hardcoded path 404'd and
+# the Storage and Backups sections silently rendered empty (ops #2641).
+PROXMOX_NODE="${PROXMOX_NODE:-proxmox1}"
+# Branch the weekly report is committed to. UNSET means archive on disk only:
+# this runs unattended from cron, and pushing whatever branch HEAD happens to
+# be on is how an unattended push to main happens (ops #2641).
+REPORT_BRANCH="${REPORT_BRANCH:-}"
 VIKUNJA_URL="${VIKUNJA_URL:-http://192.168.1.143:3456}"
 VIKUNJA_TOKEN="${VIKUNJA_TOKEN:-${VIKUNJA_API_TOKEN:-}}"
 EMAIL_TO="${GITOPS_TO_EMAIL:-jeremy.ames@outlook.com}"
@@ -234,7 +242,7 @@ collect_infrastructure_status() {
         # Storage usage from node
         local storage_status
         storage_status=$(ssh -o ConnectTimeout=5 -o BatchMode=yes "root@${PROXMOX_HOST}" \
-            "pvesh get /nodes/proxmox/storage --output-format json" 2>/dev/null)
+            "pvesh get /nodes/${PROXMOX_NODE}/storage --output-format json" 2>/dev/null)
 
         if [[ -n "$storage_status" ]]; then
             echo "### Storage"
@@ -249,7 +257,7 @@ collect_infrastructure_status() {
         # Recent backup status (last 7 days)
         local backup_tasks
         backup_tasks=$(ssh -o ConnectTimeout=5 -o BatchMode=yes "root@${PROXMOX_HOST}" \
-            "pvesh get /nodes/proxmox/tasks --typefilter vzdump --limit 50 --output-format json" 2>/dev/null)
+            "pvesh get /nodes/${PROXMOX_NODE}/tasks --typefilter vzdump --limit 50 --output-format json" 2>/dev/null)
 
         if [[ -n "$backup_tasks" ]]; then
             local week_ago_ts
@@ -576,11 +584,50 @@ commit_report() {
         log_info "[DRY RUN] Would commit and push report"
         return 0
     fi
-    cd "${PROJECT_ROOT}" || return 1
-    git add "docs/weekly-summaries/${REPORT_DATE}.md"
-    git commit -m "docs: weekly summary ${REPORT_DATE}" 2>/dev/null
-    git pushx 2>/dev/null || git push 2>/dev/null
-    log_success "Report committed and pushed"
+
+    # Opt-in. With REPORT_BRANCH unset the report is archived on disk and mailed,
+    # and nothing touches git — the safe default for an unattended cron job.
+    if [[ -z "${REPORT_BRANCH}" ]]; then
+        log_info "REPORT_BRANCH unset — report left uncommitted at ${MARKDOWN_FILE}"
+        return 0
+    fi
+
+    cd "${PROJECT_ROOT}" || { log_error "cannot cd to ${PROJECT_ROOT}"; return 1; }
+
+    # Pin to an explicit branch. This checkout is shared: any session can move
+    # HEAD between cron ticks, so the branch has to be asserted, not inherited.
+    local head_branch
+    head_branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"
+    if [[ "${head_branch}" != "${REPORT_BRANCH}" ]]; then
+        log_error "HEAD is on '${head_branch}', not REPORT_BRANCH='${REPORT_BRANCH}' — refusing to commit or push"
+        return 1
+    fi
+
+    if ! git add "docs/weekly-summaries/${REPORT_DATE}.md"; then
+        log_error "git add failed for docs/weekly-summaries/${REPORT_DATE}.md"
+        return 1
+    fi
+
+    if git diff --cached --quiet -- "docs/weekly-summaries/${REPORT_DATE}.md"; then
+        log_info "Report unchanged for ${REPORT_DATE} — nothing to commit"
+        return 0
+    fi
+
+    if ! git commit -m "docs: weekly summary ${REPORT_DATE}"; then
+        log_error "git commit failed — report staged but not committed"
+        return 1
+    fi
+
+    # Explicit refspec: pushes the report branch and only the report branch,
+    # regardless of remote tracking config.
+    if ! git push origin "refs/heads/${REPORT_BRANCH}:refs/heads/${REPORT_BRANCH}"; then
+        log_error "git push to ${REPORT_BRANCH} failed — the commit is local only"
+        return 1
+    fi
+
+    # PROJECT_INDEX.md is deliberately NOT regenerated here: `git pushx` pushes
+    # the ambient HEAD and then makes a second unattended commit of its own.
+    log_success "Report committed and pushed to ${REPORT_BRANCH}"
 }
 
 cleanup() {
@@ -617,7 +664,10 @@ main() {
 
     # Deliver
     send_email
-    commit_report
+    if ! commit_report; then
+        log_error "=== Weekly summary complete, but the report was NOT committed ==="
+        return 1
+    fi
 
     log_success "=== Weekly summary complete ==="
 }
@@ -636,8 +686,11 @@ case "${1:-}" in
         echo "Environment Variables:"
         echo "  GITOPS_TO_EMAIL    Recipient email (default: jeremy.ames@outlook.com)"
         echo "  LOKI_URL           Loki endpoint (default: http://192.168.1.170:3100)"
-        echo "  PROXMOX_HOST       Proxmox node 1 (default: 192.168.1.137)"
+        echo "  PROXMOX_HOST       Proxmox node 1 (default: 192.168.1.124)"
         echo "  PROXMOX2_HOST      Proxmox node 2 (default: 192.168.1.125)"
+        echo "  PROXMOX_NODE       Node name for per-node API paths (default: proxmox1)"
+        echo "  REPORT_BRANCH      Branch to commit the report to; unset = do not"
+        echo "                     touch git at all (the default)"
         echo "  VIKUNJA_URL        Vikunja API (default: http://192.168.1.143:3456)"
         echo "  VIKUNJA_TOKEN      Vikunja API token (or VIKUNJA_API_TOKEN from .env)"
         exit 0
