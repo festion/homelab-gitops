@@ -11,6 +11,7 @@ const { createFakeConfig } = require('../fakes');
 const PipelineService = require('../../services/pipeline/pipelineService');
 const PipelineCollector = require('../../services/metrics/collectors/pipelineCollector');
 const ComplianceService = require('../../services/compliance/complianceService');
+const PipelineHealthMonitor = require('../../services/monitoring/pipelineHealthMonitor');
 const { createFakeTemplateEngine } = require('../fakes/templateEngine');
 
 const RAW = 'repo-a, repo-b ,repo-c,';
@@ -43,5 +44,31 @@ describe('MONITORED_REPOSITORIES string-vs-array normalisation', () => {
     const result = await service.getMonitoredRepositories();
 
     expect(result).toEqual(EXPECTED);
+  });
+  // ops #3586: the FOURTH reader. Its ops #2656 fix ends with
+  // `Array.isArray(repos) ? repos.filter(Boolean) : []`, which is not an
+  // array for a string and so yielded [] -- a health monitor watching NOTHING
+  // for a correctly-documented config value. That is the ops #2656 failure
+  // arriving through a different door, and it would have left this monitor
+  // disagreeing with the three services above about what the estate is.
+  it('PipelineHealthMonitor.getConfiguredRepositories splits a comma-separated string config value', async () => {
+    const config = createFakeConfig({ MONITORED_REPOSITORIES: RAW });
+    const monitor = new PipelineHealthMonitor({ config });
+
+    const result = await monitor.getConfiguredRepositories();
+
+    expect(result).toEqual(EXPECTED);
+  });
+
+  it('PipelineHealthMonitor still returns [] for a genuinely empty setting', async () => {
+    // NEGATIVE CONTROL. Without it, a normalise step that returned the
+    // default list for every falsy input would pass the test above too, and
+    // the empty-set warning this monitor exists to emit would never fire.
+    const config = createFakeConfig({ MONITORED_REPOSITORIES: ' , ,' });
+    const monitor = new PipelineHealthMonitor({ config });
+
+    const result = await monitor.getConfiguredRepositories();
+
+    expect(result).toEqual([]);
   });
 });
