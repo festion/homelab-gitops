@@ -22,6 +22,7 @@
 
 const EventEmitter = require('events');
 const { sanitizeForLog } = require('../../lib/safe-exec');
+const { normalizeConfigList } = require('../../utils/configList');
 
 const REPO_METRICS_FIELDS = [
     'total',
@@ -448,7 +449,7 @@ class PipelineService extends EventEmitter {
             'home-assistant-config'
         ];
         
-        return this.config.get('MONITORED_REPOSITORIES', defaultRepos);
+        return normalizeConfigList(this.config.get('MONITORED_REPOSITORIES', defaultRepos));
     }
 
     async makeGitHubAPICall(endpoint, data = {}, method = 'GET') {
