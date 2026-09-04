@@ -1,20 +1,29 @@
 name: Enhanced Security Scanning
 
+# NO paths-ignore, deliberately, and both halves of that matter.
+#
+# 1. `Secret Detection` (below) is a REQUIRED status check on main. A required
+#    check that is filtered out does not report "skipped" -- it never reports
+#    at all, so GitHub blocks the PR forever with no failing check to point at.
+#    Any docs-only PR was therefore permanently unmergeable. Measured on PR
+#    #306 (one file, docs/*.md): three of four required checks green, the
+#    fourth simply absent, mergeStateStatus=BLOCKED.
+#
+# 2. The ignored paths were the WORST possible ones to exclude from a secret
+#    scan in this repo. Markdown and agent-written trees are exactly where
+#    credentials have leaked here: a live Vaultwarden admin token sat in a
+#    `.serena/memories/*.md` for 6.5 months, and this repo publishes
+#    `.serena/` from a PUBLIC remote. A credential in a prose sentence matches
+#    no shape-based rule, so the scan is the only thing that would have caught
+#    it -- and it was switched off for precisely those files.
+#
+# The cost is running TruffleHog on documentation changes. That is cheap, and
+# it is the case the scan exists for.
 on:
   push:
     branches: [ main, develop ]
-    paths-ignore:
-      - '**/*.md'
-      - '.claude/**'
-      - '.serena/**'
-      - 'docs/**'
   pull_request:
     branches: [ main, develop ]
-    paths-ignore:
-      - '**/*.md'
-      - '.claude/**'
-      - '.serena/**'
-      - 'docs/**'
   schedule:
     - cron: '0 2 * * 1' # Weekly on Monday
   workflow_dispatch:
