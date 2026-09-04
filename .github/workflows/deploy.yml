@@ -192,7 +192,7 @@ jobs:
 
       - name: Atomic-swap install on prod
         run: |
-          ssh $SSH_OPTS -o StrictHostKeyChecking=accept-new "$PROD_USER@$PROD_HOST" bash -se << EOF
+          ssh $SSH_OPTS -o StrictHostKeyChecking=accept-new "$PROD_USER@$PROD_HOST" "TARBALL='/tmp/${TARBALL}' bash -se" <<'EOF'
           set -euo pipefail
 
           INSTALL_DIR=/opt/gitops
@@ -200,17 +200,17 @@ jobs:
           OLD_DIR=/opt/gitops-old
           BACKUP_DIR=/opt/gitops-backups
           UNIT=/etc/systemd/system/gitops-audit-api.service
-          TARBALL=/tmp/$TARBALL
+          # TARBALL arrives from the ssh command string above (ops #3382).
 
           echo "==> Creating staging dir"
-          rm -rf "\$STAGING_DIR"
-          mkdir -p "\$STAGING_DIR"
-          tar -xzf "\$TARBALL" -C "\$STAGING_DIR"
+          rm -rf "$STAGING_DIR"
+          mkdir -p "$STAGING_DIR"
+          tar -xzf "$TARBALL" -C "$STAGING_DIR"
 
           echo "==> Disk preflight (ops #3299)"
           # The two steps below each materialise a full copy of the install
-          # tree: npm ci inflates \$STAGING_DIR to roughly the size of
-          # \$INSTALL_DIR, and the backup is a literal cp -a of it. Check for
+          # tree: npm ci inflates $STAGING_DIR to roughly the size of
+          # $INSTALL_DIR, and the backup is a literal cp -a of it. Check for
           # room BEFORE starting, so a shortage is a clean refusal with the
           # service still running rather than a half-finished cp -a.
           #
@@ -221,26 +221,26 @@ jobs:
           # window is therefore not where a disk-full deploy hurts -- ops #3299
           # said it was, and that reading does not survive checking st_dev.
           # The genuine hazard is a cp -a that dies partway and leaves a
-          # TRUNCATED directory in \$BACKUP_DIR looking exactly like a backup,
+          # TRUNCATED directory in $BACKUP_DIR looking exactly like a backup,
           # which retention would then keep in preference to a good older one.
           # That is what this preflight and the .partial staging below prevent.
-          NEED_KB=\$(( \$(du -sk "\$INSTALL_DIR" | cut -f1) * 2 ))
-          FREE_KB=\$(df -Pk "\$BACKUP_DIR" | awk 'NR==2 {print \$4}')
-          echo "install tree needs ~\${NEED_KB} KB for staging+backup; \${FREE_KB} KB free"
-          if [ "\$FREE_KB" -lt "\$NEED_KB" ]; then
-            echo "REFUSING TO DEPLOY: need ~\${NEED_KB} KB free on \$BACKUP_DIR, have \${FREE_KB} KB." >&2
+          NEED_KB=$(( $(du -sk "$INSTALL_DIR" | cut -f1) * 2 ))
+          FREE_KB=$(df -Pk "$BACKUP_DIR" | awk 'NR==2 {print $4}')
+          echo "install tree needs ~${NEED_KB} KB for staging+backup; ${FREE_KB} KB free"
+          if [ "$FREE_KB" -lt "$NEED_KB" ]; then
+            echo "REFUSING TO DEPLOY: need ~${NEED_KB} KB free on $BACKUP_DIR, have ${FREE_KB} KB." >&2
             echo "Production is UNTOUCHED and still running -- nothing was stopped or swapped." >&2
             echo "Free space by pruning /opt/gitops-backups, then re-run. See ops #3299." >&2
             exit 1
           fi
 
           echo "==> Installing production root deps (ajv/lodash used by config/)"
-          cd "\$STAGING_DIR"
+          cd "$STAGING_DIR"
           npm ci --omit=dev --no-audit --no-fund --silent || \
             npm install --omit=dev --no-audit --no-fund --silent --no-package-lock
 
           echo "==> Installing production API deps in staging"
-          cd "\$STAGING_DIR/api"
+          cd "$STAGING_DIR/api"
           # sqlite3 prebuilt binaries link against GLIBC 2.38; Debian 12 has
           # 2.36. The api "postinstall" guard (scripts/ensure-sqlite3.js) runs
           # during this npm ci and compiles sqlite3 from source when the
@@ -252,38 +252,38 @@ jobs:
           # the atomic rename doesn't wipe it. Paths are tolerant of missing
           # sources (first-ever deploy has no state to preserve).
           for rel in audit-history api/data wiki-agent.db logs; do
-            src="\$INSTALL_DIR/\$rel"
-            dst="\$STAGING_DIR/\$rel"
-            if [ -e "\$src" ]; then
-              mkdir -p "\$(dirname "\$dst")"
-              rm -rf "\$dst"
-              cp -a "\$src" "\$dst"
-              echo "preserved: \$rel"
+            src="$INSTALL_DIR/$rel"
+            dst="$STAGING_DIR/$rel"
+            if [ -e "$src" ]; then
+              mkdir -p "$(dirname "$dst")"
+              rm -rf "$dst"
+              cp -a "$src" "$dst"
+              echo "preserved: $rel"
             fi
           done
 
-          echo "==> Backing up current \$INSTALL_DIR"
-          mkdir -p "\$BACKUP_DIR"
-          BACKUP="\$BACKUP_DIR/gitops-\$(date +%Y%m%d_%H%M%S)"
+          echo "==> Backing up current $INSTALL_DIR"
+          mkdir -p "$BACKUP_DIR"
+          BACKUP="$BACKUP_DIR/gitops-$(date +%Y%m%d_%H%M%S)"
           # ops #3299 -- copy to .partial and rename only on success. A cp -a
           # killed by ENOSPC (or anything else) otherwise leaves a truncated
           # tree named exactly like a real backup, which the retention line
           # below would keep while discarding a COMPLETE older one. The rename
           # is within one filesystem, so it is atomic and free.
-          cp -a "\$INSTALL_DIR" "\$BACKUP.partial"
-          mv "\$BACKUP.partial" "\$BACKUP"
-          echo "Backup: \$BACKUP"
+          cp -a "$INSTALL_DIR" "$BACKUP.partial"
+          mv "$BACKUP.partial" "$BACKUP"
+          echo "Backup: $BACKUP"
 
           echo "==> Ensuring systemd unit points at repo server.js"
           # server.js lives at /opt/gitops/api/server.js after deploy; the
           # existing unit targets /opt/gitops/current/api/minimal-phase2-server.js
           # (pre-reconciliation). Idempotent rewrite: only touches if needed.
-          if /usr/bin/grep -q minimal-phase2-server.js "\$UNIT" || \
-             /usr/bin/grep -q /opt/gitops/current/api "\$UNIT"; then
+          if /usr/bin/grep -q minimal-phase2-server.js "$UNIT" || \
+             /usr/bin/grep -q /opt/gitops/current/api "$UNIT"; then
             /usr/bin/sed -i \
               -e 's|^WorkingDirectory=.*|WorkingDirectory=/opt/gitops/api|' \
               -e 's|^ExecStart=.*|ExecStart=/usr/bin/node server.js|' \
-              "\$UNIT"
+              "$UNIT"
             systemctl daemon-reload
             echo "systemd unit updated"
           else
@@ -294,16 +294,16 @@ jobs:
           systemctl stop gitops-audit-api
 
           echo "==> Atomic swap"
-          rm -rf "\$OLD_DIR"
-          mv "\$INSTALL_DIR" "\$OLD_DIR"
-          mv "\$STAGING_DIR" "\$INSTALL_DIR"
+          rm -rf "$OLD_DIR"
+          mv "$INSTALL_DIR" "$OLD_DIR"
+          mv "$STAGING_DIR" "$INSTALL_DIR"
 
           echo "==> Starting service"
           systemctl start gitops-audit-api
 
           echo "==> Cleanup"
-          rm -f "\$TARBALL"
-          rm -rf "\$OLD_DIR"
+          rm -f "$TARBALL"
+          rm -rf "$OLD_DIR"
           # Retain only the last 2 backups (ops #3299). Was 5, which held
           # 1.8 GB -- 4.7x the app itself -- on a 7.8 GB rootfs at 72%, because
           # each backup is a full cp -a INCLUDING node_modules and nothing is
@@ -314,8 +314,8 @@ jobs:
           # NOTE the ordering: gitops-*.partial DOES match the gitops-* glob
           # below, so a leftover partial would otherwise occupy a retention slot
           # and could push a COMPLETE backup out. Sweep partials first.
-          rm -rf "\$BACKUP_DIR"/gitops-*.partial
-          ls -1dt "\$BACKUP_DIR"/gitops-* 2>/dev/null | tail -n +3 | xargs -r rm -rf
+          rm -rf "$BACKUP_DIR"/gitops-*.partial
+          ls -1dt "$BACKUP_DIR"/gitops-* 2>/dev/null | tail -n +3 | xargs -r rm -rf
           EOF
 
       - name: Smoke test endpoints

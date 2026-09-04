@@ -68,7 +68,12 @@ jobs:
     - name: Lint remote heredocs in workflows
       run: |
         python3 scripts/check-workflow-heredocs.py --self-test
-        python3 scripts/check-workflow-heredocs.py
+        # --strict since ops #3382: deploy.yml:195 was the one UNQUOTED_DELIMITER
+        # holding this back, and it is now <<'EOF'. The flag was off only so
+        # wiring this check into CI would not red the build on a pre-existing
+        # condition -- an advisory nobody can act on is decoration, and a check
+        # people must disable to merge is a check people disable.
+        python3 scripts/check-workflow-heredocs.py --strict
 
     - name: Install dependencies (API)
       run: |
