@@ -7,6 +7,7 @@
 
 const EventEmitter = require('events');
 const { PipelineMetrics } = require('../../../models/metrics');
+const { normalizeConfigList } = require('../../../utils/configList');
 
 class PipelineCollector extends EventEmitter {
     constructor(config, githubMCP = null, pipelineService = null) {
@@ -461,7 +462,7 @@ class PipelineCollector extends EventEmitter {
             'home-assistant-config'
         ];
         
-        return this.config.get('MONITORED_REPOSITORIES', defaultRepos);
+        return normalizeConfigList(this.config.get('MONITORED_REPOSITORIES', defaultRepos));
     }
 
     /**

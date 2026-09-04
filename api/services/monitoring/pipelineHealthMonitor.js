@@ -1,6 +1,7 @@
 const { createLogger } = require('../../utils/logger');
 const { MetricsService } = require('../metrics');
 const PipelineAnomalyDetector = require('./pipelineAnomalyDetector');
+const { normalizeConfigList } = require('../../utils/configList');
 
 // ops #2656. Kept byte-identical to the list the three sibling services already
 // use as their fallback (pipelineService.js:446, pipelineCollector.js:459), so
@@ -661,6 +662,23 @@ class PipelineHealthMonitor {
       repos = DEFAULT_MONITORED_REPOSITORIES;
     }
 
+    // ops #3586: normalise BEFORE the array guard below. config.get() returns
+    // a comma-separated STRING whenever the value came from
+    // config/settings.conf — loadConfigFile() parses KEY=value text and
+    // assigns every value verbatim (config-loader.js:50-82), and the setting
+    // is documented as comma-separated in docs/PIPELINE-API.md:241 and
+    // docs/COMPLIANCE-API.md:405.
+    //
+    // Without this, `Array.isArray(repos) ? ... : []` sees a string, is not
+    // an array, and yields [] -- so following the documentation makes this
+    // monitor watch NOTHING, which is the exact ops #2656 failure arriving
+    // through a different door. The three sibling readers normalise via the
+    // same helper; leaving this one out would have them disagree about what
+    // the estate is, and only once someone actually configures the setting.
+    //
+    // The array guard stays as a genuine safety net for a non-list, non-string
+    // value rather than being the thing that eats a valid one.
+    repos = normalizeConfigList(repos);
     repos = Array.isArray(repos) ? repos.filter(Boolean) : [];
 
     if (repos.length === 0) {

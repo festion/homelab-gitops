@@ -9,6 +9,7 @@ const EventEmitter = require('events');
 const path = require('path');
 const fs = require('fs').promises;
 const { sanitizeForLog } = require('./templateEngine');
+const { normalizeConfigList } = require('../../utils/configList');
 const {
   RepositoryCompliance,
   ComplianceIssue,
@@ -720,7 +721,7 @@ class ComplianceService extends EventEmitter {
     }
 
     // Get from config or discover locally
-    const configRepos = this.config.get('MONITORED_REPOSITORIES', []);
+    const configRepos = normalizeConfigList(this.config.get('MONITORED_REPOSITORIES', []));
     if (configRepos.length > 0) {
       return configRepos;
     }
