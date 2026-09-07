@@ -1,0 +1,13 @@
+# ripgrep-only. These paths are TRACKED but gitignored, and git
+# exempts tracked files from .gitignore while ripgrep does not --
+# so they are committed, diffed and shipped through PRs while being
+# invisible to search. Re-included here for rg only: the config templates someone greps to find what keys a service needs.
+# Nothing about git changes.
+
+!.env.template
+!api/.env.example
+!dev-run.sh
+!test-installer.sh
+!scripts/test-migrations.js
+!api/test-infisical.js
+!api/test-infisical-admin.js
