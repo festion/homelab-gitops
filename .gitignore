@@ -49,7 +49,14 @@ npm_proxy_snapshot/*
 !npm_proxy_snapshot/.gitkeep
 
 # Node modules and dependencies
-node_modules/
+#
+# NO TRAILING SLASH on node_modules, deliberately (workspace-7wg). A trailing
+# slash matches DIRECTORIES ONLY, and per-worktree node_modules in this repo are
+# SYMLINKS -- .worktrees/review-295/api/node_modules pointed at a worktree that
+# had since been removed, so git reported it untracked and that worktree read
+# dirty forever. scripts/tests/test_gitignore_node_modules.sh asserts all three
+# spellings (directory, symlink, dangling symlink) are ignored.
+node_modules
 jspm_packages/
 
 # Build output

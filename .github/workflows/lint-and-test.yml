@@ -36,8 +36,39 @@ jobs:
     # the only thing that ever exercises it on a good day. Needs bash, curl and
     # python3 only -- all present on ubuntu-latest -- so it sits here with the
     # installer check rather than behind the npm installs.
-    - name: Test the deploy-failure Pushover alarm
-      run: bash scripts/tests/test_pushover_notify.sh
+    #
+    # workspace-7wg: this step used to NAME test_pushover_notify.sh, so a second
+    # shell test could be added, committed and reviewed without ever executing --
+    # which is exactly ops #2717 in this same repo (14 workflows, none running the
+    # Python test that had just been added; 22 green checks over a regression test
+    # that had never run). Discover instead, the way python-tests.yml already
+    # does, so the next scripts/tests/test_*.sh is covered without anyone
+    # remembering to edit this file.
+    - name: Assert at least one shell test exists
+      # A discovery loop over zero files exits 0 -- indistinguishable from "all
+      # tests passed". Without this guard, deleting or renaming every test turns
+      # this job GREEN rather than red.
+      run: |
+        count=$(find scripts/tests -name 'test_*.sh' -type f | wc -l)
+        echo "discovered $count shell test file(s) under scripts/tests/"
+        find scripts/tests -name 'test_*.sh' -type f
+        if [ "$count" -eq 0 ]; then
+          echo "::error::no scripts/tests/test_*.sh found — job would pass vacuously"
+          exit 1
+        fi
+
+    - name: Run shell tests
+      run: |
+        set -euo pipefail
+        rc=0
+        while IFS= read -r t; do
+          echo "::group::$t"
+          # Every test runs even if an earlier one fails, so one red does not
+          # hide the state of the rest; the job still fails if any did.
+          bash "$t" || { echo "::error::$t FAILED"; rc=1; }
+          echo "::endgroup::"
+        done < <(find scripts/tests -name 'test_*.sh' -type f | sort)
+        exit "$rc"
 
     # ops #3347. PR #273 removed release.yml's `deploy-release` job and left two
     # `needs.deploy-release` expressions behind. GitHub does not reject that --
