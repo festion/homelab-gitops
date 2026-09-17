@@ -208,3 +208,6 @@ npm_proxy_snapshot/
 # built dashboard bundle. One of these held a LIVE credential where no text
 # scanner could see it.
 gitops_deploy_*.tar.gz
+
+# Serena agent working memories — never track (ops #2989, #3288)
+.serena/
