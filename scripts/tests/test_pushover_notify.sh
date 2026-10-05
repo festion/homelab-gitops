@@ -192,7 +192,9 @@ mkdir -p "$TMP/shim"
 cat > "$TMP/shim/curl" <<SHIM
 #!/usr/bin/env bash
 printf '%s\n' "\$@" > "$TMP/curl_argv"
-cat > "$TMP/curl_stdin"
+# Only read stdin when curl was told to (-K); otherwise a pre-fix script that
+# gives curl no stdin would hang this shim instead of failing the test.
+case " \$* " in *" /dev/stdin "*) cat > "$TMP/curl_stdin" ;; *) : > "$TMP/curl_stdin" ;; esac
 exec "$REAL_CURL" "\$@" < "$TMP/curl_stdin"
 SHIM
 chmod +x "$TMP/shim/curl"
