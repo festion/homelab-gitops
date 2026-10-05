@@ -17,7 +17,11 @@ fail=0
 ok()  { printf 'ok   - %s\n' "$1"; }
 bad() { printf 'FAIL - %s\n' "$1"; fail=1; }
 
-RE='(--data-urlencode|--data-raw|--data-binary|--data|--form-string|--form|-d|-F)\s+"?(token|user)=\$(?!\(cfg_escape )'
+# Review on #336: quotes may sit on either side of `=` (`token="$T"`,
+# `'token='"$T"`) and the user field has suffixed spellings (`user_key=`).
+# This is a lint over spellings, not a parser; the per-sender shim tests below
+# are what pin argv for the real senders.
+RE='(--data-urlencode|--data-raw|--data-binary|--data|--form-string|--form|-d|-F)\s+["'"'"']*(token|user[_a-z]*)=["'"'"']*\$(?!\(cfg_escape )'
 scan() { grep -nP -- "$RE" "$@" 2>/dev/null; }   # prints hits, rc 0 if any
 
 # --- positive controls: each must be flagged ---------------------------------
@@ -30,6 +34,9 @@ POS=(
   "curl -d \"user${E}U\" https://x"
   "curl --data-urlencode \"token${E}(cat /x)\" https://x"
   "curl --data \"token${E}(cfg_escape_not \\\"${D}T\\\")\" https://x"
+  "curl --form-string token=\"${D}T\" https://x"
+  "curl -F 'token='\"${D}T\" https://x"
+  "curl --form-string \"user_key${E}U\" https://x"
 )
 i=0
 for line in "${POS[@]}"; do
