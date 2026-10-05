@@ -8,7 +8,18 @@
     "deliberately with fresh reasoning rather than by habit.",
     "",
     "Only add an entry when the vulnerable code path is genuinely unreachable in",
-    "this application, and say how that was established."
+    "this application, and say how that was established.",
+    "",
+    "Matching is by advisory id ONLY: one entry silences that id in every audited",
+    "directory. `directory` is used only for the \"entry no longer matches\" warning,",
+    "so it names where the entry is expected to apply, not where it is enforced."
   ],
-  "allow": []
+  "allow": [
+    {
+      "id": "GHSA-vfj7-8cjw-p6xm",
+      "directory": ".",
+      "review_by": "2026-11-05",
+      "reason": "braces 3.0.3 (GHSA-vfj7-8cjw-p6xm) has no patched version upstream. Reached via root chokidar ^3.5.3 and jest micromatch (same transitive path appears in api/ and dashboard/; the gate matches by id only). Exposure: brace patterns come from repo config/globs at build/test time, never user input, so the nested-pattern stack-exhaustion DoS is not reachable. Re-review by 2026-11-05 (ops #4362)."
+    }
+  ]
 }

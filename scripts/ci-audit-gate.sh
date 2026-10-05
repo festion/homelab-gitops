@@ -94,7 +94,7 @@ rc = 0
 for ghsa, info, entry, review_by in expired:
     print(f"::error::[{directory}] allowlist entry {ghsa} EXPIRED on {review_by}. "
           f"Re-assess it and either fix the advisory or extend review_by deliberately. "
-          f"Context: {entry.get('why_not_fixed', '')[:200]}")
+          f"Context: {entry.get('reason', '')[:200]}")
     rc = 1
 
 for ghsa, info in blocking:
