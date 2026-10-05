@@ -5,7 +5,7 @@ on:
     branches: [ main ]
     tags: [ 'v*' ]
     # Skip the full build + prod redeploy for documentation-only pushes. The
-    # deploy package (see the `deploy` job) copies api/dashboard/config/scripts
+    # deploy package (see the `deploy` job) copies api/config/scripts
     # only — never .claude/ or docs — so a docs change ships an identical
     # artifact. workflow_dispatch is unaffected (it ignores paths filters), so a
     # manual deploy is always available.
@@ -15,7 +15,7 @@ on:
       - 'docs/**'
       - '.gitignore'
       # Same reasoning as the entries above, applied to CI definitions: the
-      # deploy job builds its tarball from api/, dashboard/dist, config/ and
+      # deploy job builds its tarball from api/, config/ and
       # scripts/ only, so a change under .github/ ships a byte-identical
       # artifact. Without this, every workflow-only change — including each
       # github_actions dependabot bump — fires a full prod redeploy for no
@@ -74,16 +74,6 @@ jobs:
         cd api
         npm ci --only=production
     
-    - name: Install dependencies (Dashboard)
-      run: |
-        cd dashboard
-        npm ci
-    
-    - name: Build Dashboard for production
-      run: |
-        cd dashboard
-        npm run build
-    
     - name: Create deployment package
       run: |
         # Create a clean directory for deployment files
@@ -91,7 +81,6 @@ jobs:
 
         # Copy only the files we need for deployment
         cp -r api deploy-staging/
-        cp -r dashboard/dist deploy-staging/dashboard
         cp -r config deploy-staging/
         cp package.json deploy-staging/
         cp package-lock.json deploy-staging/ 2>/dev/null || true
@@ -105,6 +94,17 @@ jobs:
         
         # Create deployment package from staging directory
         tar -czf homelab-gitops-auditor-${{ github.sha }}.tar.gz -C deploy-staging .
+
+        # ops #4355: the dashboard UI is retired. Prove the tarball carries the
+        # API and no UI build (the API reads audit-history/latest.json, written
+        # on the host by sync_github_repos.sh, not anything shipped here).
+        listing=$(tar -tzf homelab-gitops-auditor-${{ github.sha }}.tar.gz)
+        if echo "$listing" | grep -q '^\./dashboard/'; then
+          echo "::error::deploy tarball contains the dashboard UI (./dashboard/)"; exit 1
+        fi
+        for must in ./api/server.js ./api/audit-data-path.js; do
+          echo "$listing" | grep -qx "$must" || { echo "::error::deploy tarball is missing $must"; exit 1; }
+        done
     
     - name: Upload deployment artifact
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
