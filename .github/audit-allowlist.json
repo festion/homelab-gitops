@@ -1,4 +1,15 @@
 {
+  "_comment": [
+    "Advisories the npm-audit CI gate is allowed to ignore, each with a reason and",
+    "an expiry. Consumed by scripts/ci-audit-gate.sh.",
+    "",
+    "An entry is NOT a dismissal -- the gate FAILS once review_by passes, so an",
+    "exception cannot rot silently. If it is still unfixable on that date, extend it",
+    "deliberately with fresh reasoning rather than by habit.",
+    "",
+    "Only add an entry when the vulnerable code path is genuinely unreachable in",
+    "this application, and say how that was established."
+  ],
   "allow": [
     {
       "id": "GHSA-vfj7-8cjw-p6xm",
