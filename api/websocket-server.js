@@ -122,6 +122,17 @@ class WebSocketManager {
     return allowedOrigins.includes(origin) || process.env.NODE_ENV === 'development';
   }
 
+  // ops #4355 review: chokidar tests `ignored` against the FULL path, watch
+  // root included, so a dot-anywhere regex silenced every event when the root
+  // sat under a dot-directory (e.g. a dev checkout in .worktrees/). Only the
+  // entry's own name decides, and the watch root itself is never ignored
+  // (a root that is itself a dot-dir would otherwise watch nothing).
+  static isIgnored(p, root) {
+    const abs = path.resolve(String(p));
+    if (root && abs === path.resolve(root)) return false;
+    return path.basename(abs).startsWith('.');
+  }
+
   setupFileWatcher() {
     const watchPath = path.resolve(this.auditDataPath);
     const watchDir = path.dirname(watchPath);
@@ -133,7 +144,7 @@ class WebSocketManager {
     // stays pinned to the OLD target and never fires. A re-point shows up as
     // add/change of latest.json or of the new timestamped report here.
     this.watcher = chokidar.watch(watchDir, {
-      ignored: /(^|[\/\\])\../,
+      ignored: (p) => WebSocketManager.isIgnored(p, watchDir),
       persistent: true,
       ignoreInitial: true,
       depth: 0,

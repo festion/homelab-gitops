@@ -71,6 +71,20 @@ describe('WebSocketManager audit feed', () => {
     expect(mgr.broadcastUpdate).toHaveBeenCalledTimes(1);
   });
 
+  test('hidden-file filter looks at the entry name only, never the parent path', () => {
+    expect(WebSocketManager.isIgnored('/home/dev/repo/.worktrees/x/audit-history')).toBe(false);
+    expect(WebSocketManager.isIgnored('/opt/gitops/audit-history/2026-10-05T08:02:06Z.json')).toBe(false);
+    expect(WebSocketManager.isIgnored('/opt/gitops/audit-history/.latest.json.tmp')).toBe(true);
+    mockWatch.mockReturnValue(new EventEmitter());
+    make(path.join(dir, '.hidden-parent', 'latest.json'));
+    mgr.setupFileWatcher();
+    const opts = mockWatch.mock.calls[mockWatch.mock.calls.length - 1][1];
+    const root = path.dirname(mgr.auditDataPath);
+    expect(opts.ignored(root)).toBe(false);                       // the dot-named root itself
+    expect(opts.ignored(path.join(root, 'latest.json'))).toBe(false);
+    expect(opts.ignored(path.join(root, '.tmp-write'))).toBe(true);
+  });
+
   test('REAL chokidar: re-pointing the latest.json symlink fires an event', () => {
     const script = `
       const fs=require('fs'),path=require('path'),os=require('os');
