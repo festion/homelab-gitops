@@ -1,14 +1,10 @@
 {
-  "_comment": [
-    "Advisories the npm-audit CI gate is allowed to ignore, each with a reason and",
-    "an expiry. Consumed by scripts/ci-audit-gate.sh.",
-    "",
-    "An entry is NOT a dismissal -- the gate FAILS once review_by passes, so an",
-    "exception cannot rot silently. If it is still unfixable on that date, extend it",
-    "deliberately with fresh reasoning rather than by habit.",
-    "",
-    "Only add an entry when the vulnerable code path is genuinely unreachable in",
-    "this application, and say how that was established."
-  ],
-  "allow": []
+  "allow": [
+    {
+      "id": "GHSA-vfj7-8cjw-p6xm",
+      "directory": ".",
+      "review_by": "2026-11-05",
+      "reason": "braces 3.0.3 (GHSA-vfj7-8cjw-p6xm) has no patched version upstream. Reached via root chokidar ^3.5.3 and jest micromatch (same transitive path appears in api/ and dashboard/; the gate matches by id only). Exposure: brace patterns come from repo config/globs at build/test time, never user input, so the nested-pattern stack-exhaustion DoS is not reachable. Re-review by 2026-11-05 (ops #4362)."
+    }
+  ]
 }
