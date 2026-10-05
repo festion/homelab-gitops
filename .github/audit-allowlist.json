@@ -8,7 +8,11 @@
     "deliberately with fresh reasoning rather than by habit.",
     "",
     "Only add an entry when the vulnerable code path is genuinely unreachable in",
-    "this application, and say how that was established."
+    "this application, and say how that was established.",
+    "",
+    "Matching is by advisory id ONLY: one entry silences that id in every audited",
+    "directory. `directory` is used only for the \"entry no longer matches\" warning,",
+    "so it names where the entry is expected to apply, not where it is enforced."
   ],
   "allow": [
     {
