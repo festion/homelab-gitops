@@ -122,29 +122,54 @@ class WebSocketManager {
     return allowedOrigins.includes(origin) || process.env.NODE_ENV === 'development';
   }
 
+  // ops #4355 review: chokidar tests `ignored` against the FULL path, watch
+  // root included, so a dot-anywhere regex silenced every event when the root
+  // sat under a dot-directory (e.g. a dev checkout in .worktrees/). Only the
+  // entry's own name decides, and the watch root itself is never ignored
+  // (a root that is itself a dot-dir would otherwise watch nothing).
+  static isIgnored(p, root) {
+    const abs = path.resolve(String(p));
+    if (root && abs === path.resolve(root)) return false;
+    return path.basename(abs).startsWith('.');
+  }
+
   setupFileWatcher() {
     const watchPath = path.resolve(this.auditDataPath);
-    
-    this.watcher = chokidar.watch(watchPath, {
-      ignored: /^\./,
+    const watchDir = path.dirname(watchPath);
+    const watchName = path.basename(watchPath);
+
+    // Watch the DIRECTORY, not the file. In prod the path is a symlink
+    // (audit-history/latest.json) that sync_github_repos.sh re-points at a new
+    // timestamped file; chokidar follows symlinks, so a watch on the link
+    // stays pinned to the OLD target and never fires. A re-point shows up as
+    // add/change of latest.json or of the new timestamped report here.
+    this.watcher = chokidar.watch(watchDir, {
+      ignored: (p) => WebSocketManager.isIgnored(p, watchDir),
       persistent: true,
       ignoreInitial: true,
+      depth: 0,
       awaitWriteFinish: {
         stabilityThreshold: 500,
         pollInterval: 100
       }
     });
-    
-    this.watcher.on("change", () => {
+
+    const onAuditFile = (file) => {
+      const name = path.basename(file);
+      if (name !== watchName && !/^\d{4}-\d{2}-\d{2}T.*\.json$/.test(name)) {
+        return;
+      }
       const now = Date.now();
       if (now - this.lastBroadcastTime < this.debounceDelay) {
         return; // Debounce rapid file changes
       }
-      
+
       console.log("📄 Audit data changed, broadcasting update");
       this.broadcastUpdate();
       this.lastBroadcastTime = now;
-    });
+    };
+    this.watcher.on("change", onAuditFile);
+    this.watcher.on("add", onAuditFile);
 
     this.watcher.on("error", (error) => {
       console.error("❌ File watcher error:", error);
@@ -155,7 +180,7 @@ class WebSocketManager {
       }, 5000);
     });
 
-    console.log(`👀 File watcher setup for: ${watchPath}`);
+    console.log(`👀 File watcher setup for: ${watchPath} (watching ${watchDir})`);
   }
 
   setupHeartbeat() {

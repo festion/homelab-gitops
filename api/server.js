@@ -16,6 +16,7 @@ const wikiRoutes = require('./routes/wiki');
 
 const SecurityMiddleware = require('./middleware/security');
 const { createApp } = require('./createApp');
+const { resolveAuditDataPath } = require('./audit-data-path');
 
 const config = new ConfigLoader();
 
@@ -69,9 +70,7 @@ async function initializeWikiAgent() {
   }
 }
 
-const auditDataPath = isDev
-  ? path.join(rootDir, 'dashboard/public/GitRepoReport.json')
-  : '/opt/gitops/dashboard/GitRepoReport.json';
+const auditDataPath = resolveAuditDataPath(isDev, rootDir);
 
 let wsManager;
 
