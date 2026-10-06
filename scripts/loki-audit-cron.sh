@@ -62,6 +62,14 @@ send_pushover() {
         return 1
     fi
 
+    # ops #4372 — Pushover rejects a message over 1024 characters (the page is lost).
+    # Cap the RAW text before any escaping; count characters, never exit non-zero.
+    message=$(exec 2>/dev/null; LC_ALL=C.UTF-8
+      m=$message s='… (truncated)'
+      [ "${#m}" -gt 1024 ] && m="${m:0:$((1024 - ${#s}))}$s"
+      printf '%sx' "$m")
+    message=${message%x}
+
     # Credentials go to curl on stdin via -K, never argv (ops #4348).
     curl -s https://api.pushover.net/1/messages.json -o /dev/null -K /dev/stdin <<CFG
 --form-string "token=$(cfg_escape "$PUSHOVER_API_TOKEN")"
