@@ -46,6 +46,18 @@ repos:
               api/node_modules/
           )
 
+  # Secret scanning. Pin: v8.21.2 (gitleaks). Bump centrally in
+  # `operations/templates/gitleaks/.pre-commit-config-fragment.yaml`.
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
+        args: ["--config=.gitleaks.toml"]
+        # The hook scans the whole staged diff (pass_filenames: false), but
+        # pre-commit SKIPS it when every staged file matches the global
+        # exclude below (logs/, audit-history/, repos/, deploy tarballs).
+        always_run: true
+
 # Global excludes for WSL2 compatibility
 exclude: |
   (?x)^(
@@ -58,16 +70,3 @@ exclude: |
       audit-history/|
       gitops_deploy_.*\.tar\.gz$
   )
-# Append this stanza to a repo's existing `.pre-commit-config.yaml`.
-# If the repo has no pre-commit config yet, see `pre-commit-config.minimal.yaml`
-# in this directory for a complete starter file.
-#
-# Pin: v8.21.2 (gitleaks). Bump centrally in
-# `operations/templates/gitleaks/.pre-commit-config-fragment.yaml`,
-# then re-roll across submodules via the README procedure.
-
-  - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.21.2
-    hooks:
-      - id: gitleaks
-        args: ["--config=.gitleaks.toml"]
