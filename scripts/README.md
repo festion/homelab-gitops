@@ -38,14 +38,6 @@ scripts/
 │   ├── deploy_container_monitoring.sh
 │   ├── stop_local_lvm_containers.sh
 │   └── cleanup_cloned_containers.sh
-├── phase2/                     # Phase 2 specific scripts
-│   ├── deploy-phase2-production.sh
-│   ├── migrate-phase2.sh
-│   ├── orchestrate-phase2-deployment.sh
-│   ├── rollback-deployment.sh
-│   ├── setup-phase2-monitoring.sh
-│   ├── validate-deployment-readiness.sh
-│   └── validate-phase2-deployment.sh
 ├── services/                   # Service management scripts
 ├── templates/                  # Template application
 │   ├── apply-template.sh

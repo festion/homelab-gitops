@@ -182,11 +182,6 @@ pct exec ${CONTAINER_ID} -- bash -c "
     cd /opt/gitops-auditor/api
     npm install >/dev/null 2>&1
     
-    # Install/update dashboard dependencies  
-    cd /opt/gitops-auditor/dashboard
-    npm install >/dev/null 2>&1
-    npm run build >/dev/null 2>&1
-    
     # Create development configuration
     cd /opt/gitops-auditor
     cat > .env.development << 'EOF'
@@ -282,10 +277,7 @@ case \"\$1\" in
     start)
         echo \"🚀 Starting development environment...\"
         systemctl start gitops-auditor
-        cd /opt/gitops-auditor/dashboard
-        npm run dev &
         echo \"✅ Development environment started\"
-        echo \"📊 Dashboard: http://\$(hostname -I | awk '{print \$1}'):5173\"
         echo \"📡 API: http://\$(hostname -I | awk '{print \$1}'):3070\"
         echo \"🏠 Home Assistant: http://\$(hostname -I | awk '{print \$1}'):8123\"
         ;;
@@ -351,7 +343,6 @@ case \"\$1\" in
         echo \"\"
         echo \"🌐 Service Checks:\"
         curl -f http://localhost:3070/audit 2>/dev/null && echo \"✅ API: OK\" || echo \"❌ API: Failed\"
-        curl -f http://localhost:5173 2>/dev/null && echo \"✅ Dashboard: OK\" || echo \"❌ Dashboard: Not Running\"
         ;;
     *)
         echo \"GitOps Enhanced Development Environment\"
@@ -370,7 +361,6 @@ case \"\$1\" in
         echo \"  esphome-dev        - ESPHome development commands\"
         echo \"\"
         echo \"Access URLs:\"
-        echo \"  Dashboard: http://\$(hostname -I | awk '{print \$1}'):5173\"
         echo \"  API: http://\$(hostname -I | awk '{print \$1}'):3070\"
         echo \"  Home Assistant: http://\$(hostname -I | awk '{print \$1}'):8123\"
         ;;
@@ -419,7 +409,6 @@ IP=$(pct exec ${CONTAINER_ID} -- hostname -I | awk '{print $1}')
 echo -e "${GREEN}✅ Enhanced Development Environment Setup Complete!${NC}"
 echo ""
 echo -e "${YELLOW}📊 Development Environment Access:${NC}"
-echo -e "   Dashboard: http://${IP}:5173"
 echo -e "   API: http://${IP}:3070"
 echo -e "   Home Assistant: http://${IP}:8123"
 echo ""

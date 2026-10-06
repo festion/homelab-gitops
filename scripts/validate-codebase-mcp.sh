@@ -244,8 +244,8 @@ validate_python_mcp() {
 validate_js_ts_fallback() {
     local file="$1"
     
-    if [[ -f "$PROJECT_ROOT/dashboard/package.json" ]]; then
-        cd "$PROJECT_ROOT/dashboard"
+    if [[ -f "$PROJECT_ROOT/api/package.json" ]]; then
+        cd "$PROJECT_ROOT/api"
         if command -v npx >/dev/null 2>&1; then
             local eslint_args="--quiet"
             if [[ "$FIX_MODE" == "true" ]]; then

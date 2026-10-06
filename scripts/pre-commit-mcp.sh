@@ -95,8 +95,8 @@ validate_with_fallback() {
     case "$file_type" in
         "javascript"|"typescript")
             if command -v npx >/dev/null 2>&1; then
-                if [[ -f "$PROJECT_ROOT/dashboard/package.json" ]]; then
-                    cd "$PROJECT_ROOT/dashboard"
+                if [[ -f "$PROJECT_ROOT/api/package.json" ]]; then
+                    cd "$PROJECT_ROOT/api"
                     if npx eslint --quiet "$file_path" 2>/dev/null; then
                         log_success "ESLint validation passed for $file_path"
                         return 0
