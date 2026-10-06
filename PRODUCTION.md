@@ -1,3 +1,5 @@
+> **RETIRED (ops #4374):** the Phase 2 deploy scripts (`scripts/phase2/`) were removed and the dashboard UI was retired (ops #4355). Live deploys use `.github/workflows/deploy.yml`. This document is historical; its commands no longer work.
+
 # Production Deployment Guide
 
 > **Dashboard UI retired (ops #4355, ops #4365).** The `dashboard/` tree was deleted and the API (`api/`) is the only deployable. Any dashboard/Vite/nginx-static steps below are historical and no longer apply.

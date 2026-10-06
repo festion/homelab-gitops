@@ -94,18 +94,9 @@ validate_with_fallback() {
     
     case "$file_type" in
         "javascript"|"typescript")
-            if command -v npx >/dev/null 2>&1; then
-                if [[ -f "$PROJECT_ROOT/dashboard/package.json" ]]; then
-                    cd "$PROJECT_ROOT/dashboard"
-                    if npx eslint --quiet "$file_path" 2>/dev/null; then
-                        log_success "ESLint validation passed for $file_path"
-                        return 0
-                    else
-                        log_error "ESLint validation failed for $file_path"
-                        return 1
-                    fi
-                fi
-            fi
+            # The ESLint fallback ran inside dashboard/, retired in ops #4355. api/
+            # has no ESLint config, so pointing it there made every file fail
+            # (ops #4374 review). Same behaviour as before: skip with a warning.
             log_warning "ESLint not available, skipping JS/TS validation"
             return 0
             ;;

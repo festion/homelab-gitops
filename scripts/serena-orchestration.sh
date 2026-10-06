@@ -285,15 +285,8 @@ orchestrate_deploy_workflow() {
     # Step 2: Build application
     log_info "Step 2: Build application"
     # TODO: serena filesystem build-application --environment="$environment"
-    if [[ -f "$PROJECT_ROOT/dashboard/package.json" ]]; then
-        cd "$PROJECT_ROOT/dashboard"
-        if npm run build; then
-            log_success "Application build completed"
-        else
-            log_error "Application build failed"
-            return 1
-        fi
-    fi
+    # No build step: the dashboard UI was retired (ops #4355) and the API runs from source.
+    log_success "Application build skipped (nothing to build)"
     
     # Step 3: Create deployment package
     log_info "Step 3: Create deployment package"
