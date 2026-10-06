@@ -1,97 +1,74 @@
 # Project Index: homelab-gitops
+
 ## 1. Core Purpose
-The `homelab-gitops` project serves as a comprehensive GitOps auditor and project template for homelab environments. Its primary functions include auditing Git repositories for uncommitted changes, stale tags, missing files, and sync drift, serving these audit results via an Express API. It also integrates with various Model Context Protocol (MCP) servers and facilitates automated documentation generation and GitHub project management, designed for self-hosted infrastructure and GitOps workflows.
+
+The `homelab-gitops` project serves as a comprehensive GitOps Auditor and a project template for homelab environments. Its primary functions include auditing Git repositories for uncommitted changes, stale tags, missing files, and local-vs-GitHub synchronization drift, with results previously served via a React dashboard (now retired) backed by an Express API. Additionally, it provides a robust framework with integrated MCP (Model Context Protocol) servers, automated documentation generation, and streamlined GitHub project management.
 
 ## 2. Architecture
-The project is structured around a Node.js/Express API (e.g., `api/server.js`, `api/server-v2.js`) that runs on port 3070. This API is responsible for orchestrating Git repository audits and exposing the results. Key architectural components include:
-- **API Backend**: Built with Express.js, handling requests related to audit reports, MCP integrations, and other core functionalities. It includes middleware for authentication, authorization, and security, and interacts with various models for data persistence (e.g., compliance, metrics, users).
-- **MCP Server Integration**: Utilizes over 10 pre-configured MCP servers for managing different aspects of the homelab, such as filesystem, network, GitHub, and Home Assistant. The `api/mcp-connector.js` facilitates this integration.
-- **Automated Documentation**: Leverages template-driven generation for `CLAUDE.md` and `README.md`, ensuring up-to-date project documentation.
-- **GitHub Integration**: Features workflows, issue templates, and project board management through dedicated scripts and API components (e.g., `api/github-mcp-manager.js`).
-- **Configuration Management**: A `config` directory (e.g., `api/config-loader.js`, `config/deployment-config.json`) handles environment-specific settings, logging, and security configurations.
-- **Scheduled Jobs**: Includes jobs for compliance checking and metrics collection (e.g., `api/jobs/complianceChecker.js`, `api/jobs/metricsCollector.js`).
-- **Performance Testing**: A `perf` directory provides tools for benchmarking and performance analysis.
+
+The codebase is structured around an **Express.js API** (within the `api/` directory) that handles integrations with various services (GitHub, MCP), processes audit data, and provides core backend functionalities. **MCP Servers** (managed within the `.mcp/` and related directories) extend capabilities across diverse homelab services such as Filesystem, Network-FS, GitHub, Home Assistant, Proxmox, TrueNAS, WikiJS, Serena Enhanced, Code Linter, and Directory Polling. Automation and GitOps workflows are facilitated by shell scripts (`scripts/`), GitHub Actions (`.github/workflows/`), and scheduled cron jobs (`cron/`). Audit reports and historical snapshots are stored in dedicated `output/` and `audit-history/` directories, respectively. Configuration for the entire system is centralized in the `config/` directory.
 
 ## 3. Key Files
 
-### API Entry Points & Servers
-- `api/server.js`: Main API server entry point.
-- `api/server-mcp.js`: API server specifically for MCP integration.
-- `api/server-v2.js`: A potential newer version or alternative API server.
-- `api/createApp.js`: Centralized application creation logic.
-
-### Authentication & Security
-- `api/AUTHENTICATION.md`: Documentation on API authentication.
-- `api/SECURITY_IMPLEMENTATION.md`: Documentation on security implementation.
-- `api/config/security-config-example.json`: Example security configuration.
-- `api/middleware/auth.js`: Authentication middleware.
-- `api/middleware/authorization.js`: Authorization middleware.
-- `api/middleware/security.js`: General security middleware.
-- `api/middleware/enhanced-auth.js`, `api/middleware/enhanced-security.js`, `api/middleware/enhanced-security-headers.js`: Enhanced security middleware components.
-
-### Configuration
-- `api/config-loader.js`: Utility for loading configurations.
-- `api/config/infisical-admin.js`, `api/config/infisical.js`: Infisical-related configurations.
-- `api/config/logging.js`: Logging configuration.
-- `api/config/orchestrationProfiles.js`: Orchestration profile configurations.
-
-### MCP & Integration
-- `api/mcp-connector.js`: Connects to MCP servers.
-- `api/MCP_INTEGRATION.md`, `api/MCP_INTEGRATION_WIKI.md`: Documentation for MCP integration.
-- `api/github-mcp-manager.js`: Manages GitHub MCP integration.
-- `api/wiki-agent-manager.js`: Manages Wiki.js agent integration.
-- `.mcp/README.md`: Readme for the MCP components.
-
-### Utilities & Services
-- `api/add-homepage-secrets.js`: Script to add homepage secrets.
-- `api/csv-export.js`: CSV export functionality.
-- `api/email-notifications.js`: Email notification service.
-- `api/enhanced-discovery-manager.js`: Manages enhanced discovery processes.
-- `api/serena-orchestrator.js`: Serena orchestrator integration.
-
-### Data Models
-- `api/models/compliance.js`: Database model for compliance.
-- `api/models/database.js`: Core database connection and utility functions.
-- `api/models/metrics.js`: Database model for metrics.
-- `api/models/pipeline.js`: Database model for pipelines.
-- `api/models/user.js`: Database model for users.
-
-### Jobs & Performance
-- `api/jobs/complianceChecker.js`: Scheduled job for compliance checks.
-- `api/jobs/metricsCollector.js`: Scheduled job for metrics collection.
-- `api/perf/README.md`: Performance testing documentation.
-- `api/perf/baseline.json`: Performance baseline data.
-- `api/perf/harness.js`: Performance testing harness.
-
-### Testing
-- `api/jest.config.js`, `api/jest.simple.config.js`: Jest testing configurations.
-- `api/.github/workflows/test.yml`: GitHub Actions workflow for testing.
-- `api/test/`: Directory for API tests.
-- `api/test-infisical-admin.js`, `api/test-infisical.js`: Specific Infisical integration tests.
-
-### Root Level
-- `CLAUDE.md`: AI assistant instructions.
-- `README.md`: Project overview and quick start guide.
-- `API_SPECIFICATION.md`: API specification documentation.
+*   `./api/add-homepage-secrets.js`: Script to integrate homepage secrets.
+*   `./api/AUTHENTICATION.md`: API authentication documentation.
+*   `./api/config/infisical-admin.js`: Infisical admin configuration.
+*   `./api/config/infisical.js`: General Infisical integration configuration.
+*   `./api/config-loader.js`: Utility for loading API configurations.
+*   `./api/config/logging.js`: API logging configuration.
+*   `./api/config/orchestrationProfiles.js`: Orchestration profile definitions.
+*   `./api/config/security-config-example.json`: Example security configuration for the API.
+*   `./api/createApp.js`: Main Express application creation module.
+*   `./api/csv-export.js`: Handles CSV export functionality for the API.
+*   `./api/docs/LOGGING.md`: Detailed logging documentation for the API.
+*   `./api/email-notifications.js`: Module for sending email notifications from the API.
+*   `./api/enhanced-discovery-manager.js`: Manages enhanced discovery processes within the API.
+*   `./api/github-mcp-manager.js`: Manages GitHub-related MCP interactions for the API.
+*   `./api/.github/workflows/test.yml`: GitHub Actions workflow for API testing.
+*   `./api/jest.config.js`: Jest testing framework configuration for the API.
+*   `./api/jobs/complianceChecker.js`: API job for compliance checking.
+*   `./api/jobs/metricsCollector.js`: API job for collecting system metrics.
+*   `./api/lib/safe-exec.js`: Utility for safe execution of shell commands in the API.
+*   `./api/mcp-connector.js`: Module responsible for connecting to MCP servers.
+*   `./api/MCP_INTEGRATION.md`: Documentation for MCP integration within the API.
+*   `./api/middleware/auth.js`: API authentication middleware.
+*   `./api/middleware/authorization.js`: API authorization middleware.
+*   `./api/middleware/enhanced-security.js`: Enhanced security middleware for the API.
+*   `./api/models/database.js`: Database connection and utility module for the API.
+*   `./api/models/user.js`: User data model for the API.
+*   `./api/package.json`: Node.js package manifest for the API.
+*   `./api/phase2-endpoints.js`: Specific API endpoints for Phase 2 development.
+*   `./api/SECURITY_IMPLEMENTATION.md`: API security implementation documentation.
+*   `./api/serena-orchestrator.js`: Orchestration module for Serena functionalities.
+*   `./api/server.js`: Primary entry point for the API server.
+*   `./api/server-mcp.js`: Dedicated API server for MCP interactions.
+*   `./api/server-v2.js`: Version 2 of the API server.
+*   `./api/test-infisical-admin.js`: Tests for Infisical admin functionality.
+*   `./api/test-infisical.js`: Tests for general Infisical integration.
+*   `./CLAUDE.md`: Instructions and production wiring for AI assistants.
+*   `./README.md`: Project overview, key features, and quick start guide.
+*   `./scripts/apply-template.sh`: Script for applying project templates.
+*   `./scripts/setup-mcp-config.sh`: Script for configuring MCP servers.
+*   `./scripts/sync_github_repos.sh`: Script for manually synchronizing GitHub repositories.
+*   `./scripts/deploy.sh`: Script for deploying the API service.
 
 ## 4. Dependencies
-The project primarily relies on Node.js and Express.js for its API backend. Key dependencies inferred from the presence of `api/package.json` and related files include:
-- **Express.js**: For building the RESTful API.
-- **Database drivers**: Likely for a relational or NoSQL database, given the `api/models` directory (e.g., PostgreSQL, MySQL, MongoDB).
-- **Jest**: For unit and integration testing.
-- **ESLint/Prettier**: For code quality and formatting.
-- **Security-related libraries**: For authentication, authorization, and other security features (e.g., JWT, bcrypt, helmet).
-- **Logging libraries**: For application logging (e.g., Winston, Morgan).
-- **Configuration management libraries**: For handling environment variables and configuration files.
-- **HTTP client libraries**: For making external API calls (e.g., to GitHub, Infisical).
+
+*   **Node.js/npm**: Runtime environment and package manager for the API services.
+*   **Express.js**: Web application framework used by the API.
+*   **Systemd**: Service manager used for `gitops-audit-api` in production.
+*   **Git**: Fundamental for GitOps auditing and repository management.
+*   **Infisical**: Employed for secrets management.
+*   **Jest**: Testing framework used for API unit and integration tests.
+*   **`operations` repository**: An external, related project providing documentation and standard operating procedures.
 
 ## 5. Common Tasks
-- **Develop/Modify API Endpoints**: Add new routes, update existing ones in `api/routes/`, and extend logic within `api/services/` and `api/models/`.
-- **Configure MCP Integrations**: Adjust or add new MCP server connections and logic via `api/mcp-connector.js` and related configuration files.
-- **Manage Security**: Update authentication and authorization middleware in `api/middleware/`, and modify security configurations in `api/config/`.
-- **Implement Scheduled Jobs**: Create or modify background jobs for tasks like compliance checks (`api/jobs/complianceChecker.js`) or metrics collection (`api/jobs/metricsCollector.js`).
-- **Update Documentation**: Generate or refine `CLAUDE.md`, `README.md`, or other markdown files within the `docs/` or `api/docs/` directories based on changes to the codebase or features.
-- **Perform Testing**: Write and run unit/integration tests using Jest, located in `api/test/` and `api/tests/`.
-- **Analyze Performance**: Utilize tools in `api/perf/` to benchmark API endpoints and identify performance bottlenecks.
-- **Manage GitHub Workflows**: Modify CI/CD configurations and other automation scripts in `.github/workflows/`.
-- **Add New Features**: Implement new functionalities, ensuring adherence to existing architectural patterns, and creating corresponding tests and documentation.
+
+*   **Project Initialization**: Set up a new project by cloning the repository and running `./scripts/apply-template.sh`. An interactive setup is available with `--interactive`.
+*   **MCP Server Configuration**: Configure the integrated MCP servers using `./scripts/setup-mcp-config.sh`.
+*   **GitHub Project Setup**: Initialize GitHub project features (e.g., issue templates, project boards) with `./scripts/apply-github-project-template.py`.
+*   **Manual Git Audit**: Trigger a manual audit of configured Git repositories by executing `/opt/gitops/scripts/sync_github_repos.sh`.
+*   **API Deployment**: Deploy the API service to production using `scripts/deploy.sh`.
+*   **Secrets Management**: Add and manage homepage secrets, often involving `api/add-homepage-secrets.js` and Infisical.
+*   **Testing**: Run API tests using Jest (e.g., `npm test` within the `api/` directory).
+*   **Linting**: Ensure code quality by adhering to `.eslintrc.js` and running linting scripts like `setup-linting.sh`.
