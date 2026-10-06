@@ -2482,29 +2482,6 @@ phase2Router.post('/compliance/apply',
   }
 });
 
-// ===============================
-// WebSocket Support Endpoints
-// ===============================
-
-// Get WebSocket connection info
-phase2Router.get('/websocket/info', (req, res) => {
-  res.json({
-    url: process.env.NODE_ENV === 'development' 
-      ? 'ws://localhost:3071' 
-      : 'wss://gitops.internal/ws',
-    channels: [
-      'templates',
-      'pipelines',
-      'dependencies',
-      'quality',
-      'operations',
-      'compliance'
-    ],
-    reconnectInterval: 5000,
-    heartbeatInterval: 30000
-  });
-});
-
 // ===== WEBHOOK MANAGEMENT ENDPOINTS =====
 
 // Get webhook status and statistics
