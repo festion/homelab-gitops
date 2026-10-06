@@ -183,6 +183,58 @@ else
   bad "notify: an unresolvable job/runner degrades and still sends (rc=$rc)"; echo "$out"
 fi
 
+# --- ops #4348: credentials must be on curl's STDIN, never in its argv --------
+# argv is readable by any local user (ps, /proc/<pid>/cmdline), including other
+# CI jobs on a shared runner. A shim curl records its argv and stdin, then runs
+# the REAL curl with the same stdin, so the stub server still sees the request.
+REAL_CURL="$(command -v curl)"
+mkdir -p "$TMP/shim"
+cat > "$TMP/shim/curl" <<SHIM
+#!/usr/bin/env bash
+printf '%s\n' "\$@" > "$TMP/curl_argv"
+# Only read stdin when curl was told to (-K); otherwise a pre-fix script that
+# gives curl no stdin would hang this shim instead of failing the test.
+case " \$* " in *" /dev/stdin "*) cat > "$TMP/curl_stdin" ;; *) : > "$TMP/curl_stdin" ;; esac
+exec "$REAL_CURL" "\$@" < "$TMP/curl_stdin"
+SHIM
+chmod +x "$TMP/shim/curl"
+FAKE_TOK="FAKETOKENaaaa1111bbbb2222cccc33"
+FAKE_USR="FAKEUSERdddd4444eeee5555ffff66"
+HOSTILE=$'quote" back\\slash newline\n--form-string "priority=2'
+for m in preflight notify; do
+  echo valid > "$TMP/mode"
+  rm -f "$TMP/curl_argv" "$TMP/curl_stdin" "$TMP/last_request"
+  out="$(run "$m" PATH="$TMP/shim:$PATH" PUSHOVER_API_TOKEN="$FAKE_TOK" \
+         PUSHOVER_USER_KEY="$FAKE_USR" FAILED_JOBS="$HOSTILE")"; rc=$?
+  if [ ! -s "$TMP/curl_argv" ]; then
+    bad "$m: shim curl never ran, argv test proves nothing"; continue
+  fi
+  if [ "$rc" -eq 0 ] && ! grep -qF "$FAKE_TOK" "$TMP/curl_argv" && ! grep -qF "$FAKE_USR" "$TMP/curl_argv"; then
+    ok "$m: fake credentials are ABSENT from curl argv"
+  else
+    bad "$m: credentials in curl argv or run failed (rc=$rc)"
+  fi
+  if grep -qF "$FAKE_TOK" "$TMP/curl_stdin" && grep -qF "$FAKE_USR" "$TMP/curl_stdin"; then
+    ok "$m: fake credentials are PRESENT on curl stdin"
+  else
+    bad "$m: credentials missing from curl stdin"
+  fi
+  if grep -qF "$FAKE_TOK" "$TMP/last_request" && grep -qF "$FAKE_USR" "$TMP/last_request"; then
+    ok "$m: credentials reached the wire intact"
+  else
+    bad "$m: credentials did not reach the wire"
+  fi
+done
+# Hostile message (notify only): the quote/backslash/newline must arrive as DATA
+# in the message field, and must not forge an extra priority=2 field.
+if grep -qF 'quote" back\slash newline' "$TMP/last_request" \
+   && ! grep -q 'name="priority"[^-]*2' "$TMP/last_request" \
+   && [ "$(grep -c 'name="priority"' "$TMP/last_request")" -eq 1 ]; then
+  ok "notify: hostile message (quote, backslash, newline) stays data, forges no field"
+else
+  bad "notify: hostile message was mangled or forged a field"; sed 's/FAKE[A-Za-z0-9]*/<fake>/g' "$TMP/last_request" | head -30
+fi
+
 # --- secrets must not leak into the deploy log -------------------------------
 echo invalid > "$TMP/mode"
 out="$(run preflight PUSHOVER_API_TOKEN=SUPERSECRETTOKEN PUSHOVER_USER_KEY=SUPERSECRETUSER)"

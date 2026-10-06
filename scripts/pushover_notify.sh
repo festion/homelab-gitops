@@ -54,6 +54,17 @@ MESSAGES_URL="${PUSHOVER_API_URL:-https://api.pushover.net/1/messages.json}"
 
 log() { echo "[pushover] $*"; }
 
+# Credentials go to curl on stdin via -K, never argv: argv is world-readable
+# through ps and /proc/<pid>/cmdline (ops #4348). -K is a line-oriented parser,
+# so every interpolated value is escaped.
+cfg_escape() {
+  local s=${1//\\/\\\\}
+  s=${s//\"/\\\"}
+  s=${s//$'\r'/\\r}
+  s=${s//$'\n'/\\n}
+  printf '%s' "$s"
+}
+
 summary() {
   # Surface on the run's summary page, not only in the step log, so a warning on
   # a green deploy is actually seen. No-op when unset (local runs / tests).
@@ -89,10 +100,11 @@ case "$MODE" in
     # Capability-test the actual values. Presence is not validity: the 400 that
     # started ops #2480 came from a credential that WAS set in the workflow.
     # users/validate.json checks token+user without sending a notification.
-    body="$(curl -sS --max-time 10 \
-              --form-string "token=${TOKEN}" \
-              --form-string "user=${USER_KEY}" \
-              "$VALIDATE_URL" 2>/dev/null)" || body=""
+    body="$(curl -sS --max-time 10 "$VALIDATE_URL" -K /dev/stdin 2>/dev/null <<CFG
+--form-string "token=$(cfg_escape "$TOKEN")"
+--form-string "user=$(cfg_escape "$USER_KEY")"
+CFG
+    )" || body=""
     # Whitespace-tolerant: JSON permits spaces after the colon, and matching the
     # compact form only would silently report a VALID credential as rejected.
     if printf '%s' "$body" | grep -qE '"status":[[:space:]]*1'; then
@@ -125,13 +137,14 @@ case "$MODE" in
     fi
     # No `|| true`. If the alarm cannot fire, that must be visible as a failed
     # step; swallowing it is the whole of ops #3310.
-    if curl -fsS --max-time 10 \
-         --form-string "token=${TOKEN}" \
-         --form-string "user=${USER_KEY}" \
-         --form-string "priority=1" \
-         --form-string "title=homelab-gitops: PRODUCTION DEPLOY FAILED" \
-         --form-string "message=Deploy of ${SHORT_SHA:-unknown} to CT 123 FAILED; prod is serving the last good build and every merge since is unshipped. Failed: ${FAILED_JOBS:-unknown}. Run: ${RUN_URL:-unknown}" \
-         "$MESSAGES_URL" -o /dev/null; then
+    if curl -fsS --max-time 10 "$MESSAGES_URL" -o /dev/null -K /dev/stdin <<CFG
+--form-string "token=$(cfg_escape "$TOKEN")"
+--form-string "user=$(cfg_escape "$USER_KEY")"
+--form-string "priority=1"
+--form-string "title=$(cfg_escape "homelab-gitops: PRODUCTION DEPLOY FAILED")"
+--form-string "message=$(cfg_escape "Deploy of ${SHORT_SHA:-unknown} to CT 123 FAILED; prod is serving the last good build and every merge since is unshipped. Failed: ${FAILED_JOBS:-unknown}. Run: ${RUN_URL:-unknown}")"
+CFG
+    then
       log "failure alert sent"
       exit 0
     fi

@@ -41,6 +41,15 @@ echo "[$TIMESTAMP] Audit completed with exit code: $EXIT_CODE"
 # Clean up old reports (keep last 12 weeks)
 ls -t "$LOG_DIR"/audit-*.log 2>/dev/null | tail -n +13 | xargs -r rm -f
 
+# curl -K is line-oriented; escape every interpolated value (ops #4348).
+cfg_escape() {
+  local s=${1//\\/\\\\}
+  s=${s//\"/\\\"}
+  s=${s//$'\r'/\\r}
+  s=${s//$'\n'/\\n}
+  printf '%s' "$s"
+}
+
 # Send Pushover notification
 send_pushover() {
     local title="$1"
@@ -53,15 +62,16 @@ send_pushover() {
         return 1
     fi
 
-    curl -s \
-        --form-string "token=$PUSHOVER_API_TOKEN" \
-        --form-string "user=$PUSHOVER_USER_KEY" \
-        --form-string "title=$title" \
-        --form-string "message=$message" \
-        --form-string "priority=$priority" \
-        --form-string "sound=$sound" \
-        --form-string "html=1" \
-        https://api.pushover.net/1/messages.json > /dev/null
+    # Credentials go to curl on stdin via -K, never argv (ops #4348).
+    curl -s https://api.pushover.net/1/messages.json -o /dev/null -K /dev/stdin <<CFG
+--form-string "token=$(cfg_escape "$PUSHOVER_API_TOKEN")"
+--form-string "user=$(cfg_escape "$PUSHOVER_USER_KEY")"
+--form-string "title=$(cfg_escape "$title")"
+--form-string "message=$(cfg_escape "$message")"
+--form-string "priority=$(cfg_escape "$priority")"
+--form-string "sound=$(cfg_escape "$sound")"
+--form-string "html=1"
+CFG
 
     # Audit line for pushover_history Loki stream (homelab-iac task #803)
     logger -t pushover-history "pushover_sent: title='${title}' priority=${priority}"
