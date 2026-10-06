@@ -61,7 +61,7 @@ function createApp({
     webhookHandler,
     orchestrator,
     phase2WS,
-      githubMCP,
+    githubMCP,
     wikiAgentManager,
     config,
     rootDir,
