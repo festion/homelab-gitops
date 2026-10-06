@@ -53,6 +53,10 @@ repos:
     hooks:
       - id: gitleaks
         args: ["--config=.gitleaks.toml"]
+        # The hook scans the whole staged diff (pass_filenames: false), but
+        # pre-commit SKIPS it when every staged file matches the global
+        # exclude below (logs/, audit-history/, repos/, deploy tarballs).
+        always_run: true
 
 # Global excludes for WSL2 compatibility
 exclude: |
