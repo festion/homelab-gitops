@@ -85,7 +85,6 @@ echo -e "${GREEN}✓ Backup created: ${BACKUP_NAME}${NC}"
 
 # Execute deployment phases
 PHASES=(
-    "2.1:deploy-dashboard-v2.sh:Dashboard UI Components"
     "2.2:deploy-pipeline-engine.sh:Pipeline Engine"
     "2.3:deploy-dependencies.sh:Dependency Management"
     "2.4:deploy-quality-gates.sh:Quality Gates"
@@ -138,7 +137,6 @@ Path: ${DEPLOYMENT_DIR}
 Backup: ${BACKUP_NAME}
 
 Components Deployed:
-- Advanced Dashboard UI ✓
 - Pipeline Engine ✓
 - Dependency Manager ✓
 - Quality Gates ✓

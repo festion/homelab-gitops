@@ -20,7 +20,7 @@ Phase 2 transforms the GitOps Auditor into a comprehensive DevOps platform with 
 - **Templates page** - Template management interface
 - **Pipelines page** - CI/CD pipeline dashboard
 - Router configuration updates
-- Deployment script: `deploy-dashboard-v2.sh`
+- Deployment script: `deploy-dashboard-v2.sh` (retired, ops #4355 -- deleted)
 
 #### 3. Pipeline Engine
 - **pipeline-orchestrator.py** - Core orchestration engine
@@ -128,7 +128,7 @@ Phase 2 transforms the GitOps Auditor into a comprehensive DevOps platform with 
 ./scripts/phase2/deploy-phase2-complete.sh
 
 # Deploy individual components
-./scripts/phase2/deploy-dashboard-v2.sh
+# deploy-dashboard-v2.sh: retired (ops #4355), script deleted
 ./scripts/phase2/deploy-pipeline-engine.sh
 ./scripts/phase2/deploy-dependencies.sh
 

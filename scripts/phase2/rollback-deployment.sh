@@ -115,7 +115,6 @@ fi
 # Stop current services
 log "🛑 Stopping current services..."
 systemctl stop gitops-audit-api || true
-systemctl stop nginx || true
 
 # Create rollback point for database
 log "🔄 Preparing database rollback..."
@@ -243,44 +242,11 @@ else
     exit 1
 fi
 
-# Update Nginx configuration to Phase 1
-log "⚙️ Updating Nginx configuration..."
-cat > /etc/nginx/sites-available/gitops-audit << EOF
-server {
-    listen 80;
-    server_name localhost;
-    
-    # Dashboard static files
-    location / {
-        root $CURRENT_DIR/dashboard/dist;
-        try_files \$uri \$uri/ /index.html;
-        add_header Cache-Control "no-cache, no-store, must-revalidate";
-    }
-    
-    # API proxy
-    location /api/ {
-        proxy_pass http://localhost:3070/;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-    }
-    
-    # Direct audit endpoint proxy
-    location /audit {
-        proxy_pass http://localhost:3070/audit;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-    }
-}
-EOF
-
 # Reload systemd and start services
 log "🚀 Reloading systemd and starting services..."
 systemctl daemon-reload
 systemctl enable gitops-audit-api
 systemctl start gitops-audit-api
-systemctl start nginx
 
 # Wait for services to start
 log "⏳ Waiting for services to start..."
@@ -347,7 +313,6 @@ Database Backup: $DB_BACKUP
 
 Services Status:
 - API Service: $(systemctl is-active gitops-audit-api)
-- Nginx Service: $(systemctl is-active nginx)
 - Database: $(psql -d gitops_audit -c "SELECT 1;" > /dev/null 2>&1 && echo "Connected" || echo "Failed")
 
 Rollback Actions Performed:
@@ -403,11 +368,9 @@ echo "✅ System functionality verified"
 echo ""
 echo "🔍 Service Status:"
 echo "  API: $(systemctl is-active gitops-audit-api)"
-echo "  Nginx: $(systemctl is-active nginx)"
 echo "  Database: $(psql -d gitops_audit -c "SELECT 1;" > /dev/null 2>&1 && echo "Connected" || echo "Failed")"
 echo ""
 echo "🌐 Access Points:"
-echo "  Dashboard: http://localhost:3070/"
 echo "  API: http://localhost:3070/api/"
 echo "  Health Check: http://localhost:3070/api/health"
 echo ""

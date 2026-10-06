@@ -70,7 +70,7 @@ cd "$PROJECT_ROOT"
 # Core Requirements
 echo ""
 echo "📋 Core Requirements"
-validate "Project structure" "test -f package.json && test -d api && test -d dashboard && test -d scripts"
+validate "Project structure" "test -f package.json && test -d api && test -d scripts"
 validate "Git repository" "git rev-parse --git-dir > /dev/null"
 validate "Node.js available" "command -v node"
 validate "npm available" "command -v npm"
@@ -112,17 +112,12 @@ if [[ -f "api/package.json" ]]; then
     validate "API dependencies" "cd api && npm ls --depth=0 > /dev/null || npm install --dry-run"
 fi
 
-if [[ -f "dashboard/package.json" ]]; then
-    validate "Dashboard dependencies" "cd dashboard && npm ls --depth=0 > /dev/null || npm install --dry-run"
-fi
-
 # Phase 2 Features
 echo ""
 echo "🚀 Phase 2 Features"
 validate "Pipeline management code" "find api -name '*.js' -exec grep -l 'pipeline' {} \\; | head -1"
 validate "WebSocket implementation" "find api -name '*.js' -exec grep -l 'socket.io\\|websocket' {} \\; | head -1"
 validate "Compliance tracking" "find api -name '*.js' -exec grep -l 'compliance' {} \\; | head -1"
-validate "Real-time updates UI" "find dashboard/src -name '*.tsx' -exec grep -l 'realtime\\|websocket' {} \\; | head -1"
 
 # Security
 echo ""

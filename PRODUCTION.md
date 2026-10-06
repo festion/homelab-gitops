@@ -58,7 +58,7 @@ If you need to deploy manually or troubleshoot the deployment:
    rsync -avz --exclude 'node_modules' --exclude '.git' /mnt/c/GIT/homelab-gitops-auditor/ root@192.168.1.58:/opt/gitops/
    ```
 
-2. **Build the dashboard:**
+2. **Build the dashboard:** (retired, ops #4355 -- dashboard/ no longer exists; skip steps 2-3)
    ```bash
    ssh root@192.168.1.58 "cd /opt/gitops/dashboard && npm install && npm run build"
    ```

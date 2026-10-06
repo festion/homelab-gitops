@@ -522,7 +522,7 @@ echo -e "${BLUE}Target: ${PRODUCTION_SERVER}:${DEPLOYMENT_DIR}${NC}"
 
 # Phase 2.1: Dashboard UI Components
 echo -e "\n${BLUE}[Phase 2.1]${NC} Deploying Dashboard UI Components..."
-./scripts/deploy-dashboard-v2.sh
+# deploy-dashboard-v2.sh: retired (ops #4355), script deleted
 
 # Phase 2.2: Pipeline Engine
 echo -e "\n${BLUE}[Phase 2.2]${NC} Deploying Pipeline Engine..."
