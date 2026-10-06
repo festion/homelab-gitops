@@ -19,7 +19,7 @@
       "id": "GHSA-vfj7-8cjw-p6xm",
       "directory": ".",
       "review_by": "2026-11-05",
-      "reason": "braces 3.0.3 (GHSA-vfj7-8cjw-p6xm) has no patched version upstream. Reached via root chokidar ^3.5.3 and jest micromatch (same transitive path appears in api/ and dashboard/; the gate matches by id only). Exposure: brace patterns come from repo config/globs at build/test time, never user input, so the nested-pattern stack-exhaustion DoS is not reachable. Re-review by 2026-11-05 (ops #4362)."
+      "reason": "braces 3.0.3 (GHSA-vfj7-8cjw-p6xm) has no patched version upstream. Reached via root chokidar ^3.5.3 and jest micromatch (the same transitive path appears in api/; the gate matches by id only; the dashboard/ tree was retired in ops #4365). Exposure: brace patterns come from repo config/globs at build/test time, never user input, so the nested-pattern stack-exhaustion DoS is not reachable. Re-review by 2026-11-05 (ops #4362)."
     }
   ]
 }

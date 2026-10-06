@@ -184,12 +184,6 @@ install_gitops_auditor() {
         cd api && npm install --production >/dev/null 2>&1
         cd ..
 
-        # Install and build dashboard
-        cd dashboard
-        npm install >/dev/null 2>&1
-        npm run build >/dev/null 2>&1
-        cd ..
-
         # Set up configuration with interactive prompts
         chmod +x scripts/*.sh
 
@@ -223,12 +217,11 @@ server {
     listen 80 default_server;
     listen [::]:80 default_server;
 
-    root /opt/gitops/dashboard/dist;
-    index index.html;
-
+    # The dashboard UI was retired (ops #4355); nginx only fronts the API.
     location / {
-        try_files \$uri \$uri/ /index.html;
-        add_header Cache-Control \"no-cache, no-store, must-revalidate\";
+        proxy_pass http://localhost:3070/;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
     }
 
     location /api/ {
@@ -317,7 +310,6 @@ perform_upgrade() {
 
         # Install/update dependencies
         cd api && npm install --production >/dev/null 2>&1
-        cd ../dashboard && npm install >/dev/null 2>&1 && npm run build >/dev/null 2>&1
         cd ..
 
         # Restore configuration

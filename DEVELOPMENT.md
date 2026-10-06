@@ -1,5 +1,7 @@
 # Development Guide for GitOps Auditor
 
+> **Dashboard UI retired (ops #4355, ops #4365).** The `dashboard/` tree was deleted and the API (`api/`) is the only deployable. Any dashboard/Vite/nginx-static steps below are historical and no longer apply.
+
 This document provides instructions for setting up and running the GitOps Auditor in a development environment.
 
 ## Overview

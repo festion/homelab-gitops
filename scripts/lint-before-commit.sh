@@ -103,35 +103,6 @@ if [ -f "$PROJECT_ROOT/api/config-loader.js" ]; then
     fi
 fi
 
-# Lint Dashboard (React/TypeScript)
-if [ -d "$PROJECT_ROOT/dashboard" ]; then
-    echo "Checking dashboard TypeScript/React files..."
-    
-    cd "$PROJECT_ROOT/dashboard"
-    
-    # Install dependencies if needed
-    if [ ! -d "node_modules" ]; then
-        log_warning "Installing dashboard dependencies..."
-        npm ci
-    fi
-    
-    # Run ESLint
-    if npm run lint; then
-        log_success "Dashboard ESLint passed"
-    else
-        log_error "Dashboard ESLint failed"
-    fi
-    
-    # TypeScript compilation check
-    if npx tsc -b; then
-        log_success "Dashboard TypeScript compilation passed"
-    else
-        log_error "Dashboard TypeScript compilation failed"
-    fi
-    
-    cd "$PROJECT_ROOT"
-fi
-
 echo -e "\n${BLUE}🐚 Linting Shell scripts...${NC}"
 
 # Find all shell scripts and lint them

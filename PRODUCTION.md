@@ -1,5 +1,7 @@
 # Production Deployment Guide
 
+> **Dashboard UI retired (ops #4355, ops #4365).** The `dashboard/` tree was deleted and the API (`api/`) is the only deployable. Any dashboard/Vite/nginx-static steps below are historical and no longer apply.
+
 This document explains how to deploy and update the GitOps Auditor in a production environment.
 
 ## Initial Deployment

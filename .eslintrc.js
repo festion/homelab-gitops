@@ -33,8 +33,6 @@ module.exports = {
     'audit-history/',
     'frontend/dist/',
     'frontend/node_modules/',
-    'dashboard/dist/',
-    'dashboard/node_modules/',
     'gitops_deploy_*.tar.gz',
   ],
 };

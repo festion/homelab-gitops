@@ -17,7 +17,6 @@ services:
       - ./nginx/logs:/var/log/nginx
     depends_on:
       - api-green
-      - dashboard-green
     networks:
       - homelab-green-network
     restart: unless-stopped
@@ -60,27 +59,6 @@ services:
       start_period: 40s
     labels:
       - "com.homelab.service=api"
-      - "com.homelab.environment=green"
-
-  # Dashboard Frontend (Green)
-  dashboard-green:
-    build:
-      context: ./dashboard
-      dockerfile: Dockerfile.production
-    container_name: homelab-green-dashboard
-    environment:
-      - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=http://localhost:3072
-    networks:
-      - homelab-green-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    labels:
-      - "com.homelab.service=dashboard"
       - "com.homelab.environment=green"
 
   # Redis Cache (Green)

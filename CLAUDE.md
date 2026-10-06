@@ -21,14 +21,10 @@ dashboard backed by an Express API.
 | Historical snapshots | `/audit-history/` |
 | Nightly audit | 03:00 |
 | Manual audit | `/opt/gitops/scripts/sync_github_repos.sh` |
-| Deploy | `scripts/deploy.sh` (API) · `scripts/install-dashboard.sh` (dashboard) |
+| Deploy | `scripts/deploy.sh` (API only; the dashboard UI was retired, ops #4355) |
 
 ## Traps
 
-- **A blank dashboard is usually a missing CSS build, not a broken app.** The
-  frontend generates `dashboard/src/generated.css` from `src/index.css` via
-  `npm run tw:watch`; without that step the page renders empty and the console
-  is clean.
 - **An empty repo list with a healthy API means the report is missing or
   invalid**, not that there is nothing to audit — check
   `/output/GitRepoReport.json` parses before debugging the scan itself.

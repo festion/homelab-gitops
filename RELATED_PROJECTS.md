@@ -10,7 +10,7 @@ This document explains the relationship between homelab repositories and when to
 **Purpose:** GitOps platform for infrastructure automation, auditing, and deployment.
 
 **Contains:**
-- React dashboard frontend (`dashboard/`)
+- React dashboard frontend (retired, ops #4355/#4365 -- `dashboard/` deleted)
 - Express.js API backend (`api/`)
 - MCP servers (`mcp-servers/`)
   - Proxmox, TrueNAS, WikiJS, GitHub, Home Assistant, etc.

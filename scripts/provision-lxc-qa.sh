@@ -98,12 +98,6 @@ pct exec ${CONTAINER_ID} -- bash -c "
     npm install --production >/dev/null 2>&1
     cd ..
     
-    # Install and build dashboard (production mode)
-    cd dashboard
-    npm install >/dev/null 2>&1
-    npm run build >/dev/null 2>&1
-    cd ..
-    
     # Create QA configuration
     mkdir -p /opt/gitops/config
     cat > /opt/gitops/config/qa.env << 'EOF'
@@ -133,17 +127,16 @@ server {
     listen 80 default_server;
     listen [::]:80 default_server;
 
-    root /opt/gitops/dashboard/dist;
-    index index.html;
-
+    # The dashboard UI was retired (ops #4355); nginx only fronts the API.
     # Security headers for QA
     add_header X-Frame-Options \"SAMEORIGIN\" always;
     add_header X-Content-Type-Options \"nosniff\" always;
     add_header X-XSS-Protection \"1; mode=block\" always;
 
     location / {
-        try_files \$uri \$uri/ /index.html;
-        add_header Cache-Control \"no-cache, no-store, must-revalidate\";
+        proxy_pass http://localhost:3070/;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
     }
 
     location /api/ {
@@ -179,14 +172,6 @@ mkdir -p /opt/gitops/qa-tests
 cat > /opt/gitops/qa-tests/functional-tests.sh << 'EOF'
 #!/bin/bash
 echo \"🧪 Running QA Functional Tests...\"
-
-# Test dashboard loading
-RESPONSE=\$(curl -s -o /dev/null -w \"%{http_code}\" http://localhost/)
-if [ \"\$RESPONSE\" = \"200\" ]; then
-    echo \"✅ Dashboard loads successfully\"
-else
-    echo \"❌ Dashboard failed (HTTP \$RESPONSE)\"
-fi
 
 # Test API endpoints
 AUDIT_RESPONSE=\$(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3070/audit)

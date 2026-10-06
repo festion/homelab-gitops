@@ -30,30 +30,14 @@ jobs:
         cd api
         npm ci
         
-    - name: Install dependencies (Dashboard)
-      run: |
-        cd dashboard
-        npm ci
-        
     - name: Run ESLint (API)
       run: |
         cd api
         npm run lint
         
-    - name: Run ESLint (Dashboard)
-      run: |
-        cd dashboard
-        npm run lint
-        
     - name: Run Prettier check (API)
       run: |
         cd api
-        npm run format:check || echo "Format check not available"
-      continue-on-error: true
-        
-    - name: Run Prettier check (Dashboard)
-      run: |
-        cd dashboard
         npm run format:check || echo "Format check not available"
       continue-on-error: true
         
@@ -63,24 +47,12 @@ jobs:
         npx tsc --noEmit || echo "TypeScript check not available for API"
       continue-on-error: true
         
-    - name: Check TypeScript compilation (Dashboard)
-      run: |
-        cd dashboard
-        npx tsc --noEmit
-        
     - name: Validate package.json (root)
       run: ./scripts/ci-audit-gate.sh . high
 
     - name: Validate package.json (API)
       run: ./scripts/ci-audit-gate.sh api high
 
-    - name: Validate package.json (Dashboard)
-      run: ./scripts/ci-audit-gate.sh dashboard high
-
-    # mcp-servers/ is a first-party workspace (59 tracked files, its own
-    # lockfile) that was NEVER gated. It silently accumulated the same three
-    # highs the other workspaces were carrying, and they only surfaced because
-    # Trivy's fs scan walks the whole tree (ops #2296).
     - name: Validate package.json (mcp-servers)
       run: ./scripts/ci-audit-gate.sh mcp-servers high
 
@@ -103,19 +75,9 @@ jobs:
         cd api
         npm ci
         
-    - name: Install dependencies (Dashboard)
-      run: |
-        cd dashboard
-        npm ci
-        
     - name: Run unit tests (API)
       run: |
         cd api
-        npm run test:unit || npm test
-        
-    - name: Run unit tests (Dashboard)
-      run: |
-        cd dashboard
         npm run test:unit || npm test
         
     - name: Generate coverage report (API)
@@ -124,16 +86,10 @@ jobs:
         npm run test:coverage || echo "Coverage not configured for API"
       continue-on-error: true
         
-    - name: Generate coverage report (Dashboard)
-      run: |
-        cd dashboard
-        npm run test:coverage || echo "Coverage not configured for Dashboard"
-      continue-on-error: true
-        
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
       with:
-        files: ./api/coverage/lcov.info,./dashboard/coverage/lcov.info
+        files: ./api/coverage/lcov.info
         flags: unit-tests
         fail_ci_if_error: false
         
@@ -176,11 +132,6 @@ jobs:
         cd api
         npm ci
         
-    - name: Install dependencies (Dashboard)
-      run: |
-        cd dashboard
-        npm ci
-        
     - name: Setup test database
       run: |
         cd api
@@ -212,11 +163,6 @@ jobs:
         NODE_ENV: test
         DATABASE_URL: postgresql://test_user:test_password@localhost:5432/homelab_gitops_test
 
-    # The "Run integration tests (Dashboard)" step was removed: dashboard has no
-    # `test:integration` script, so it errored on every run and was swallowed by
-    # the same `|| echo` + continue-on-error. A step that can only ever fail
-    # silently is worse than no step. Its unit tests run in the Unit Tests job.
-    #
     # NOT wired up here: the ROOT tests/integration suite (`npm run
     # test:integration` at the repo root). It is currently non-functional -- see
     # the header of tests/integration/jest.config.js. Tracked in ops #2271.
@@ -255,20 +201,10 @@ jobs:
         cd api
         npm ci
         
-    - name: Install dependencies (Dashboard)
-      run: |
-        cd dashboard
-        npm ci
-        
     - name: Build API
       run: |
         cd api
         npm run build || echo "Build script not available for API"
-        
-    - name: Build Dashboard
-      run: |
-        cd dashboard
-        npm run build
         
     - name: Create deployment package
       run: |
@@ -330,26 +266,18 @@ jobs:
         cd api
         npm ci
         
-    - name: Install dependencies (Dashboard)
-      run: |
-        cd dashboard
-        npm ci
-        
     - name: Run dependency audit (root)
       run: ./scripts/ci-audit-gate.sh . high
 
     - name: Run dependency audit (API)
       run: ./scripts/ci-audit-gate.sh api high
 
-    - name: Run dependency audit (Dashboard)
-      run: ./scripts/ci-audit-gate.sh dashboard high
-
     - name: Run dependency audit (mcp-servers)
       run: ./scripts/ci-audit-gate.sh mcp-servers high
         
     # The two "Check for critical vulnerabilities" steps that used to sit here
     # were removed. They gated on `.metadata.vulnerabilities.high + .critical`
-    # for api/ and dashboard/ -- the same question the two "Run dependency
+    # for api/ (and the since-retired dashboard/) -- the same question the two "Run dependency
     # audit" steps above already answer, but via a second, allowlist-unaware
     # code path. Two gates on one question, disagreeing about exceptions, is
     # how this job stayed red on an advisory that had already been assessed and

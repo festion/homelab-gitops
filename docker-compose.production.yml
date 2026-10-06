@@ -17,7 +17,6 @@ services:
       - ./nginx/www:/var/www/html
     depends_on:
       - api
-      - dashboard
     networks:
       - homelab-network
     restart: unless-stopped
@@ -92,34 +91,6 @@ services:
           memory: 512M
           cpus: '0.5'
         reservations:
-          memory: 256M
-          cpus: '0.25'
-
-  # Dashboard Frontend
-  dashboard:
-    build:
-      context: ./dashboard
-      dockerfile: Dockerfile.production
-    container_name: homelab-dashboard
-    environment:
-      - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=https://api.${DOMAIN:-homelab.local}
-      - NEXT_PUBLIC_WS_URL=wss://api.${DOMAIN:-homelab.local}
-      - NEXT_PUBLIC_SENTRY_DSN=${SENTRY_DSN}
-    networks:
-      - homelab-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    labels:
-      - "com.homelab.service=dashboard"
-      - "com.homelab.environment=production"
-    deploy:
-      resources:
-        limits:
           memory: 256M
           cpus: '0.25'
 

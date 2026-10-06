@@ -11,7 +11,7 @@ Comprehensive deployment plans for three major enhancements to the GitOps Audito
 ## 🎯 Feature Summary
 
 ### 1. WebSocket Real-Time Dashboard
-**📄 Plan:** [WEBSOCKET-DEPLOYMENT-PLAN.md](./WEBSOCKET-DEPLOYMENT-PLAN.md)
+**📄 Plan:** RETIRED -- the WebSocket server (ops #4364) and the dashboard UI (ops #4355, ops #4365) were removed; the plan document was deleted.
 - **Goal**: Eliminate manual refresh, provide live repository status
 - **Impact**: Real-time updates, improved UX, reduced server load
 - **Timeline**: 3 weeks
