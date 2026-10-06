@@ -187,7 +187,6 @@ pct exec ${CONTAINER_ID} -- bash -c "
     cat > .env.development << 'EOF'
 NODE_ENV=development
 PORT=3070
-VITE_PORT=5173
 CORS_ENABLED=true
 LOG_LEVEL=debug
 AUDIT_HISTORY_PATH=/opt/gitops-auditor/audit-history

@@ -244,23 +244,10 @@ validate_python_mcp() {
 validate_js_ts_fallback() {
     local file="$1"
     
-    if [[ -f "$PROJECT_ROOT/api/package.json" ]]; then
-        cd "$PROJECT_ROOT/api"
-        if command -v npx >/dev/null 2>&1; then
-            local eslint_args="--quiet"
-            if [[ "$FIX_MODE" == "true" ]]; then
-                eslint_args="$eslint_args --fix"
-            fi
-            
-            if npx eslint $eslint_args "$file" 2>/dev/null; then
-                return 0
-            else
-                return 1
-            fi
-        fi
-    fi
-    
-    # If ESLint not available, basic syntax check
+    # The ESLint branch ran inside dashboard/, retired in ops #4355; api/ has no
+    # ESLint config (ops #4374 review), so fall through to the syntax check as
+    # before.
+    # Basic syntax check
     if [[ "$file" == *.js || "$file" == *.jsx ]]; then
         if command -v node >/dev/null 2>&1; then
             if node -c "$file" 2>/dev/null; then
