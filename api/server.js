@@ -5,7 +5,6 @@
 const path = require('path');
 const ConfigLoader = require('./config-loader');
 
-const WebSocketManager = require('./websocket-server');
 const WebhookHandler = require('./services/webhook-handler');
 
 const Database = require('./models/database');
@@ -16,7 +15,6 @@ const wikiRoutes = require('./routes/wiki');
 
 const SecurityMiddleware = require('./middleware/security');
 const { createApp } = require('./createApp');
-const { resolveAuditDataPath } = require('./audit-data-path');
 
 const config = new ConfigLoader();
 
@@ -70,10 +68,6 @@ async function initializeWikiAgent() {
   }
 }
 
-const auditDataPath = resolveAuditDataPath(isDev, rootDir);
-
-let wsManager;
-
 async function startServer() {
   try {
     await initializeAuth();
@@ -84,23 +78,10 @@ async function startServer() {
       console.log(`📋 Configuration loaded successfully`);
       console.log(`🔐 Authentication system ready`);
 
-      // Initialize WebSocket after server starts.
-      try {
-        wsManager = new WebSocketManager(app, auditDataPath, {
-          maxConnections: 50,
-          debounceDelay: 1000,
-        });
-        app.locals.wsManager = wsManager;
-        console.log(`🔌 WebSocket server initialized - watching: ${auditDataPath}`);
-      } catch (error) {
-        console.error(`❌ Failed to initialize WebSocket server:`, error);
-      }
-
       // Initialize GitHub Webhook Handler.
       try {
         const webhookHandler = new WebhookHandler({
           secret: process.env.GITHUB_WEBHOOK_SECRET,
-          websocketService: wsManager,
         });
 
         app.locals.webhookHandler = webhookHandler;
@@ -110,30 +91,6 @@ async function startServer() {
         // Rate limit added for Vikunja #669 (CodeQL js/missing-rate-limiting);
         // signature verification inside webhookHandler still gates authenticity.
         app.use('/api/v2/webhooks/github', SecurityMiddleware.sensitiveRateLimit(), webhookHandler.middleware());
-
-        webhookHandler.on('push_event', (event) => {
-          if (wsManager) {
-            wsManager.broadcastUpdate({ type: 'webhook', eventType: 'push', data: event });
-          }
-        });
-
-        webhookHandler.on('workflow_run_event', (event) => {
-          if (wsManager) {
-            wsManager.broadcastUpdate({ type: 'webhook', eventType: 'workflow_run', data: event });
-          }
-        });
-
-        webhookHandler.on('pull_request_event', (event) => {
-          if (wsManager) {
-            wsManager.broadcastUpdate({ type: 'webhook', eventType: 'pull_request', data: event });
-          }
-        });
-
-        webhookHandler.on('audit_refresh_needed', (event) => {
-          if (wsManager) {
-            wsManager.broadcastUpdate({ type: 'audit_refresh', data: event });
-          }
-        });
 
         console.log(`🪝 GitHub webhook handler initialized - endpoint: /api/v2/webhooks/github`);
       } catch (error) {
@@ -148,12 +105,10 @@ async function startServer() {
         console.log(`📍 Development mode - API: ${config.getApiUrl(true)}`);
         console.log(`📍 Dashboard: ${config.getDashboardUrl(true)}`);
         console.log(`📁 Local Git Root: ${config.get('LOCAL_GIT_ROOT')}`);
-        console.log(`🔌 WebSocket: ws://localhost:${PORT}/ws`);
       } else {
         console.log(`📍 Production mode - API: ${config.getApiUrl(false)}`);
         console.log(`📍 Dashboard: ${config.getDashboardUrl(false)}`);
         console.log(`📁 Local Git Root: ${config.get('LOCAL_GIT_ROOT')}`);
-        console.log(`🔌 WebSocket: ws://0.0.0.0:${PORT}/ws`);
       }
     });
 
@@ -167,9 +122,6 @@ async function startServer() {
 startServer().then(server => {
   const shutdown = (signal) => {
     console.log(`📊 ${signal} received, shutting down gracefully`);
-    if (wsManager) {
-      wsManager.cleanup();
-    }
     server.close(() => {
       console.log('✅ Server closed');
       process.exit(0);
