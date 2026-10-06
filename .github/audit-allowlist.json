@@ -20,6 +20,12 @@
       "directory": ".",
       "review_by": "2026-11-05",
       "reason": "braces 3.0.3 (GHSA-vfj7-8cjw-p6xm) has no patched version upstream. Reached via root chokidar ^3.5.3 and jest micromatch (same transitive path appears in api/ and dashboard/; the gate matches by id only). Exposure: brace patterns come from repo config/globs at build/test time, never user input, so the nested-pattern stack-exhaustion DoS is not reachable. Re-review by 2026-11-05 (ops #4362)."
+    },
+    {
+      "id": "GHSA-hp3w-g68c-fv3c",
+      "directory": ".",
+      "review_by": "2026-11-05",
+      "reason": "sprintf-js 1.0.3 (GHSA-hp3w-g68c-fv3c, moderate, published 2026-09-24) has no patched version upstream (affects <= 1.1.3, the latest). DEV-ONLY in both . and api/: jest coverage -> babel-plugin-istanbul -> @istanbuljs/load-nyc-config -> js-yaml@3 -> argparse@1 -> sprintf-js, established from package-lock.json (dev: true in both). The DoS needs an attacker-controlled format string; argparse only formats its own help/usage templates at test time, and nothing ships to prod (npm ci --omit=dev). Re-review by 2026-11-05 (ops #4368)."
     }
   ]
 }
