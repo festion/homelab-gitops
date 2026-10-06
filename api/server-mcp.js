@@ -22,9 +22,6 @@ const WikiAgentManager = require('./wiki-agent-manager');
 // Phase 2 API Endpoints
 const phase2Router = require('./phase2-endpoints');
 
-// WebSocket Support
-const WebSocketManager = require('./websocket-server');
-
 const config = new ConfigLoader();
 const githubMCP = new GitHubMCPManager(config);
 
@@ -727,19 +724,6 @@ app.listen(PORT, '0.0.0.0', async () => {
     console.error('❌ WikiJS Agent initialization failed:', error.message);
   }
   
-  // Initialize WebSocket Manager
-  const auditDataPath = path.join(HISTORY_DIR, 'latest.json');
-  const wsManager = new WebSocketManager(app, auditDataPath, {
-    maxConnections: 100,
-    debounceDelay: 1000
-  });
-  
-  // Make WebSocket manager available to Phase 2 endpoints. phase2WS (the
-  // multiplexed channel shim) was removed in #702 — phase2-endpoints.js
-  // emit callsites are already defensive (`if (phase2WS) ...`), so they
-  // silently no-op when it's not injected.
-  app.locals.wsManager = wsManager;
-  
   // Initialize MCP integration with real MCP servers
   const SerenaOrchestrator = require('./serena-orchestrator');
   const MCPConnector = require('./mcp-connector');
@@ -764,7 +748,7 @@ app.listen(PORT, '0.0.0.0', async () => {
   /*
   const healthServices = {
     metrics: null, // Will be integrated with MetricsService when available
-    websocket: wsManager,
+    websocket: null,
     alerting: null // Will be integrated with AlertingService when available
   };
   
@@ -777,8 +761,6 @@ app.listen(PORT, '0.0.0.0', async () => {
   }
   */
   
-  console.log('🔌 WebSocket server initialized with Phase 2 extensions');
-  
   console.log(`🎯 Ready to serve GitOps audit operations!`);
 });
 
@@ -786,22 +768,12 @@ app.listen(PORT, '0.0.0.0', async () => {
 process.on('SIGTERM', async () => {
   console.log('🛑 Received SIGTERM signal, shutting down gracefully...');
   
-  // Clean up WebSocket connections
-  if (app.locals.wsManager) {
-    app.locals.wsManager.cleanup();
-  }
-  
   await wikiAgent.close();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
   console.log('🛑 Received SIGINT signal, shutting down gracefully...');
-  
-  // Clean up WebSocket connections
-  if (app.locals.wsManager) {
-    app.locals.wsManager.cleanup();
-  }
   
   await wikiAgent.close();
   process.exit(0);

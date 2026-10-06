@@ -45,7 +45,6 @@ module.exports = {
     'phase2-endpoints.js',
     'server.js',
     'server-v2.js',
-    'websocket-server.js',
     '!**/node_modules/**',
     '!**/tests/**',
     '!**/test/**',
@@ -147,15 +146,6 @@ module.exports = {
         '<rootDir>/tests/setup/database.setup.js'
       ]
     },
-    {
-      displayName: 'WebSocket Tests',
-      testMatch: [
-        '<rootDir>/tests/websocket/*.test.js'
-      ],
-      setupFilesAfterEnv: [
-        '<rootDir>/tests/setup/jest.setup.js'
-      ]
-    },
     // ops #2631: api/test/ finally gets a project that collects it.
     //
     // It is a SEPARATE project on purpose. These suites need config the three
@@ -174,13 +164,12 @@ module.exports = {
         '<rootDir>/test/*.test.js'
       ],
       testPathIgnorePatterns: [
-        // ESM-only dependencies (@octokit/webhooks, chokidar). Not fixable by
+        // ESM-only dependencies (@octokit/webhooks). Not fixable by
         // transformIgnorePatterns -- api declares a babel-jest transform while
         // babel-jest/@babel/core/@babel/preset-env are all absent and no babel
         // config exists, so the transform is inert. See ops #2659.
         '<rootDir>/test/webhook-handler.test.js',
         '<rootDir>/test/webhook-integration.test.js',
-        '<rootDir>/test/websocket-server.test.js',
         // Needs chai + sinon, neither of which is a dependency. ops #2660.
         '<rootDir>/test/coordination.test.js',
         // Runs, but all 27 fail: the fixture's DDL trips SQLITE_ERROR
