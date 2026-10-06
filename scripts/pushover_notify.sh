@@ -135,6 +135,14 @@ CFG
       summary "🚨 **Deploy failed AND the alert could not be sent** — Pushover $missing missing."
       exit 1
     fi
+    message="Deploy of ${SHORT_SHA:-unknown} to CT 123 FAILED; prod is serving the last good build and every merge since is unshipped. Failed: ${FAILED_JOBS:-unknown}. Run: ${RUN_URL:-unknown}"
+    # ops #4372 — Pushover rejects a message over 1024 characters (the page is lost).
+    # Cap the RAW text before any escaping; count characters, never exit non-zero.
+    message=$(exec 2>/dev/null; LC_ALL=C.UTF-8
+      m=$message s='… (truncated)'
+      [ "${#m}" -gt 1024 ] && m="${m:0:$((1024 - ${#s}))}$s"
+      printf '%sx' "$m")
+    message=${message%x}
     # No `|| true`. If the alarm cannot fire, that must be visible as a failed
     # step; swallowing it is the whole of ops #3310.
     if curl -fsS --max-time 10 "$MESSAGES_URL" -o /dev/null -K /dev/stdin <<CFG
@@ -142,7 +150,7 @@ CFG
 --form-string "user=$(cfg_escape "$USER_KEY")"
 --form-string "priority=1"
 --form-string "title=$(cfg_escape "homelab-gitops: PRODUCTION DEPLOY FAILED")"
---form-string "message=$(cfg_escape "Deploy of ${SHORT_SHA:-unknown} to CT 123 FAILED; prod is serving the last good build and every merge since is unshipped. Failed: ${FAILED_JOBS:-unknown}. Run: ${RUN_URL:-unknown}")"
+--form-string "message=$(cfg_escape "$message")"
 CFG
     then
       log "failure alert sent"
