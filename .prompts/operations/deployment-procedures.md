@@ -65,7 +65,7 @@ gh workflow run deploy.yml -f environment=production
 ./scripts/deploy.sh
 
 # Alternative manual deployment
-./manual-deploy.sh
+# ./manual-deploy.sh -- retired (ops #4355), script deleted; use deploy.yml above
 ```
 
 ### Step 4: Post-Deployment Verification
