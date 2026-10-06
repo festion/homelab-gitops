@@ -23,7 +23,7 @@
 // repair.
 //
 // CI does not invoke this suite at all -- the "Integration Tests" job runs the
-// api/ and dashboard/ suites only.
+// api/ suite only.
 
 module.exports = {
   // rootDir defaults to THIS file's directory, which made every

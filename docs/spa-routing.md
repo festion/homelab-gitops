@@ -12,10 +12,7 @@ The GitOps Dashboard uses React Router for client-side routing. When a user navi
 
 If you're running Nginx directly on your server:
 
-```bash
-# Install configuration
-curl -s https://raw.githubusercontent.com/festion/homelab-gitops-auditor/main/fix-spa-routing.sh | bash
-```
+> **Retired (ops #4355 / #4365):** the dashboard UI and `fix-spa-routing.sh` were removed. This section is kept for history only.
 
 This script creates a configuration file at `/etc/nginx/conf.d/gitops-dashboard.conf` with proper routing rules.
 

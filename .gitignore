@@ -60,8 +60,6 @@ node_modules
 jspm_packages/
 
 # Build output
-dashboard/dist/
-dashboard/build/
 dist/
 build/
 build/Release

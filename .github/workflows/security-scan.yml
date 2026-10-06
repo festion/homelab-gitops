@@ -38,20 +38,9 @@ jobs:
         cd api
         npm ci
     
-    - name: Install dependencies (Dashboard)
-      run: |
-        cd dashboard
-        npm ci
-    
     - name: Run npm audit (API)
       run: |
         cd api
-        npm audit --audit-level moderate
-      continue-on-error: true
-    
-    - name: Run npm audit (Dashboard)
-      run: |
-        cd dashboard
         npm audit --audit-level moderate
       continue-on-error: true
     

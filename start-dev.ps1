@@ -1,5 +1,5 @@
 # GitOps Auditor Development Startup Script
-# Coordinates API and Dashboard servers properly
+# Starts the API server (the dashboard UI was retired -- ops #4355)
 
 Write-Host "🚀 Starting GitOps Auditor Development Environment..." -ForegroundColor Cyan
 
@@ -13,14 +13,8 @@ Start-Process PowerShell -ArgumentList "-Command", "cd 'C:\GIT\homelab-gitops-au
 # Wait a moment for API to start
 Start-Sleep -Seconds 3
 
-# Start Dashboard dev server  
-Write-Host "🎨 Starting Dashboard dev server on port 5173..." -ForegroundColor Green
-Set-Location "dashboard"
-Start-Process PowerShell -ArgumentList "-Command", "cd 'C:\GIT\homelab-gitops-auditor\dashboard'; npm run dev" -WindowStyle Normal
-
 Write-Host ""
 Write-Host "✅ Development environment started!" -ForegroundColor Green
-Write-Host "📊 Dashboard: http://localhost:5173" -ForegroundColor Yellow
 Write-Host "📡 API: http://localhost:3070" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "Press any key to stop servers..." -ForegroundColor Red

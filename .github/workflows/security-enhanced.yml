@@ -86,20 +86,10 @@ jobs:
         cd api
         npm ci
         
-    - name: Install dependencies (Dashboard)
-      run: |
-        cd dashboard
-        npm ci
-        
     - name: Build API
       run: |
         cd api
         npm run build || echo "Build script not available for API"
-        
-    - name: Build Dashboard
-      run: |
-        cd dashboard
-        npm run build
         
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28 # v4.37.8
@@ -185,7 +175,7 @@ jobs:
     # Scans the tree that is actually deployed (rsync to CT 123 -- see the
     # container-security job above for why an image-based scan was removed).
     # Trivy's npm scanner reads package-lock.json directly, so this covers
-    # every lockfile in the repo (root, api, dashboard, scripts,
+    # every lockfile in the repo (root, api, scripts,
     # mcp-servers) with no `npm ci` / node_modules involved -- node_modules
     # is gitignored and never installed in this job, so there is nothing to
     # exclude.
@@ -207,7 +197,7 @@ jobs:
     #   - `exit-code: '0'` + no `--audit-level`-style gate: this step
     #     REPORTS findings via SARIF to code-scanning, it does not fail the
     #     build. scripts/ci-audit-gate.sh already gates npm advisories for
-    #     api/dashboard with a reviewed, expiring allowlist -- a second gate
+    #     api with a reviewed, expiring allowlist -- a second gate
     #     here that disagrees about exceptions is exactly what left main
     #     permanently red before (PR #196).
     - name: Run Trivy filesystem scan
@@ -252,20 +242,9 @@ jobs:
         cd api
         npm ci
         
-    - name: Install dependencies (Dashboard)
-      run: |
-        cd dashboard
-        npm ci
-        
     - name: Run npm audit (API)
       run: |
         cd api
-        npm audit --audit-level moderate
-      continue-on-error: true
-        
-    - name: Run npm audit (Dashboard)
-      run: |
-        cd dashboard
         npm audit --audit-level moderate
       continue-on-error: true
         
@@ -275,14 +254,6 @@ jobs:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       with:
         args: --file=api/package.json --severity-threshold=high
-      continue-on-error: true
-
-    - name: Security scan with Snyk (Dashboard)
-      uses: snyk/actions/node@9adf32b1121593767fc3c057af55b55db032dc04 # v1.0.0
-      env:
-        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-      with:
-        args: --file=dashboard/package.json --severity-threshold=high
       continue-on-error: true
 
   shell-script-security:
@@ -343,11 +314,6 @@ jobs:
         cd api
         npm ci
         
-    - name: Install dependencies (Dashboard)
-      run: |
-        cd dashboard
-        npm ci
-        
     - name: Setup test database
       run: |
         cd api
@@ -363,12 +329,6 @@ jobs:
       env:
         NODE_ENV: test
         DATABASE_URL: postgresql://test_user:test_password@localhost:5432/homelab_gitops_test
-        
-    - name: Run security tests (Dashboard)
-      run: |
-        cd dashboard
-        npm run test:security || echo "Security tests not configured for Dashboard"
-      continue-on-error: true
         
     - name: Generate security report
       run: |

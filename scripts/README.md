@@ -24,8 +24,7 @@ scripts/
 │   └── config-manager.sh       # Config validation and management
 ├── deployment/                  # Deployment scripts
 │   ├── deploy-production.sh    # Full production deployment
-│   ├── deploy-home-assistant-config.sh
-│   └── deploy-websocket-agent.sh
+│   └── deploy-home-assistant-config.sh
 ├── dev/                        # Development and testing
 │   ├── curl_test.sh           # API endpoint testing
 │   ├── debug-api.sh           # API debugging utilities
@@ -75,11 +74,6 @@ scripts/
 **Purpose**: Deploy Home Assistant configuration from GitOps
 **Usage**: `./deployment/deploy-home-assistant-config.sh`
 **Dependencies**: Git, rsync, Home Assistant API access
-
-#### `deploy-websocket-agent.sh`
-**Purpose**: Deploy WebSocket agent service
-**Usage**: `./deployment/deploy-websocket-agent.sh`
-**Dependencies**: Node.js, systemd
 
 ### Monitoring Scripts (`monitoring/`)
 

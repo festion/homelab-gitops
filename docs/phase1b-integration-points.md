@@ -265,7 +265,7 @@ CREATE TABLE pipeline_executions (
 ## 7. WebSocket Event Architecture
 
 ### Current WebSocket Implementation
-**WebSocket Manager (`/api/websocket-server.js`):**
+**WebSocket Manager (retired, ops #4364 -- formerly `/api/websocket-server.js`):**
 - Basic connection management
 - File watching for audit updates
 - Client connection tracking

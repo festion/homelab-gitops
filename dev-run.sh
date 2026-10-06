@@ -22,30 +22,15 @@ if [ ! -d "api/node_modules" ]; then
   cd ..
 fi
 
-# Check dashboard dependencies
-echo -e "${CYAN}Checking dashboard dependencies...${NC}"
-cd dashboard
-if [ ! -d "node_modules" ]; then
-  echo -e "${CYAN}Installing dashboard dependencies...${NC}"
-  npm install
-fi
-
-# Start the API server
+# Start the API server (the dashboard UI was retired -- ops #4355)
 echo -e "${GREEN}Starting API server...${NC}"
-cd ..
 NODE_ENV=development node api/server.js &
 API_PID=$!
-
-# Start the dashboard development server
-echo -e "${GREEN}Starting dashboard dev server...${NC}"
-cd dashboard
-npm run dev &
-DASHBOARD_PID=$!
 
 # Function to kill processes on exit
 cleanup() {
   echo -e "${RED}Shutting down servers...${NC}"
-  kill $API_PID $DASHBOARD_PID 2>/dev/null || true
+  kill $API_PID 2>/dev/null || true
 }
 
 # Register cleanup function
@@ -54,6 +39,5 @@ trap cleanup EXIT
 # Wait for user to press Ctrl+C
 echo -e "${GREEN}✅ Development environment is running!${NC}"
 echo -e "${CYAN}API server:${NC} http://localhost:3070"
-echo -e "${CYAN}Dashboard:${NC} http://localhost:5173"
 echo -e "Press Ctrl+C to stop the servers"
 wait

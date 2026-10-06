@@ -34,10 +34,7 @@ This plan covers the development, testing, and deployment of:
    - `/api/phase2/dependencies` - Dependency graph data
    - `/api/phase2/quality` - Quality metrics and gates
 
-2. **WebSocket Integration** (`api/websocket-server.js`):
-   - Add real-time channels for each feature area
-   - Implement push notifications for pipeline events
-   - Quality metric live updates
+2. **WebSocket Integration** -- RETIRED (ops #4364): the WebSocket server was removed and the dashboard UI it served was retired (ops #4355, ops #4365). Left here as plan history only.
 
 ### 2.2 Frontend Components
 1. **Create new page components**:

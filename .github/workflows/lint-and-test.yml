@@ -111,36 +111,16 @@ jobs:
         cd api
         npm ci
     
-    - name: Install dependencies (Dashboard)
-      run: |
-        cd dashboard
-        npm ci
-    
     - name: Lint API code
       run: |
         cd api
         npm run lint
-    
-    - name: Lint Dashboard code
-      run: |
-        cd dashboard
-        npm run lint
-    
-    - name: TypeScript compilation check
-      run: |
-        cd dashboard
-        npx tsc --noEmit
     
     - name: Test API endpoints
       run: |
         cd api
         npm test
     
-    - name: Build Dashboard
-      run: |
-        cd dashboard
-        npm run build
-        
     - name: Run audit script validation
       run: |
         bash scripts/sync_github_repos.sh --dry-run

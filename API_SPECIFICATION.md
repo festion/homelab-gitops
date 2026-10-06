@@ -310,7 +310,9 @@ Configure webhook in the home-assistant-config repository settings.
 ### Real-time Deployment Status
 WebSocket endpoint for real-time deployment status updates.
 
-**WebSocket URL:** `ws://192.168.1.58:3070/ws/deployments`
+> **RETIRED (ops #4364):** the WebSocket server was removed. This endpoint no longer exists; poll the REST API instead.
+
+**Former WebSocket URL:** `/ws/deployments`
 
 **Message Format:**
 ```json

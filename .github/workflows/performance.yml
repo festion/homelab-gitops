@@ -9,7 +9,6 @@ on:
     paths:
       - 'api/**'
       - 'scripts/**'
-      - 'dashboard/**'
 
 jobs:
   performance-tests:
@@ -46,11 +45,6 @@ jobs:
         cd api
         npm ci
         
-    - name: Install dependencies (Dashboard)
-      run: |
-        cd dashboard
-        npm ci
-        
     - name: Setup test environment
       run: |
         cd api
@@ -72,8 +66,6 @@ jobs:
       run: |
         cd api
         npm run build || echo "API build not available"
-        cd ../dashboard
-        npm run build
         
     - name: Start API server for testing
       run: |
@@ -169,25 +161,6 @@ jobs:
         testDbPerformance().catch(console.error);
         " > db-performance.txt || echo "Database performance test failed"
         
-    - name: Frontend build performance
-      run: |
-        echo "Testing frontend build performance..."
-        cd dashboard
-        
-        # Measure build time
-        start_time=$(date +%s)
-        npm run build
-        end_time=$(date +%s)
-        build_time=$((end_time - start_time))
-        
-        echo "Frontend build time: ${build_time}s" > ../frontend-build-perf.txt
-        
-        # Check bundle size
-        if [ -d "dist" ]; then
-          echo "Bundle sizes:" >> ../frontend-build-perf.txt
-          du -sh dist/* >> ../frontend-build-perf.txt 2>/dev/null || true
-        fi
-        
     - name: Extract performance metrics
       run: |
         echo "Extracting performance metrics..."
@@ -206,12 +179,6 @@ jobs:
           echo "DB_PERFORMANCE=$DB_PERF" >> performance-metrics.env
         fi
         
-        # Build performance
-        if [ -f "frontend-build-perf.txt" ]; then
-          BUILD_TIME=$(head -1 frontend-build-perf.txt | grep -o '[0-9]*s' || echo "0s")
-          echo "BUILD_TIME=$BUILD_TIME" >> performance-metrics.env
-        fi
-        
     - name: Generate performance report
       run: |
         cat > performance-report.json << EOF
@@ -222,8 +189,7 @@ jobs:
           "metrics": {
             "api_requests_per_second": "${API_RPS:-"N/A"}",
             "api_latency": "${API_LATENCY:-"N/A"}",
-            "database_performance": "${DB_PERF:-"N/A"}",
-            "build_time": "${BUILD_TIME:-"N/A"}"
+            "database_performance": "${DB_PERF:-"N/A"}"
           },
           "test_duration": "5 minutes",
           "environment": "ci",
@@ -287,7 +253,6 @@ jobs:
           api-gitops-perf.txt
           artillery-results.txt
           clinic-results.txt
-          frontend-build-perf.txt
           db-performance.txt
         retention-days: 30
         if-no-files-found: ignore
@@ -303,84 +268,10 @@ jobs:
           ./scripts/stop-mcp-servers.sh || true
         fi
 
-  lighthouse-performance:
-    name: Frontend Performance (Lighthouse)
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      
-    - name: Setup Node.js
-      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-      with:
-        node-version: '20'
-        cache: 'npm'
-        
-    - name: Install dependencies
-      run: |
-        cd dashboard
-        npm ci
-        
-    - name: Build dashboard
-      run: |
-        cd dashboard
-        npm run build
-        
-    - name: Install Lighthouse CI
-      run: npm install -g @lhci/cli@0.12.x
-      
-    - name: Serve built application
-      run: |
-        cd dashboard
-        npx serve -s dist -l 3000 &
-        sleep 10
-        
-    - name: Run Lighthouse CI
-      run: |
-        lhci autorun --config=lighthouserc.json || echo "Lighthouse config not found, using defaults"
-        
-        # Run Lighthouse manually if no config
-        lhci collect --url=http://localhost:3000 --numberOfRuns=3
-        lhci assert --preset=lighthouse:recommended || echo "Lighthouse assertions failed"
-        
-    - name: Generate Lighthouse report
-      run: |
-        # Extract Lighthouse scores
-        if [ -f ".lighthouseci/lhr-*.json" ]; then
-          PERFORMANCE_SCORE=$(jq '.categories.performance.score * 100' .lighthouseci/lhr-*.json | head -1)
-          ACCESSIBILITY_SCORE=$(jq '.categories.accessibility.score * 100' .lighthouseci/lhr-*.json | head -1)
-          BEST_PRACTICES_SCORE=$(jq '.categories."best-practices".score * 100' .lighthouseci/lhr-*.json | head -1)
-          SEO_SCORE=$(jq '.categories.seo.score * 100' .lighthouseci/lhr-*.json | head -1)
-          
-          cat > lighthouse-report.json << EOF
-        {
-          "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)",
-          "commit": "${{ github.sha }}",
-          "scores": {
-            "performance": $PERFORMANCE_SCORE,
-            "accessibility": $ACCESSIBILITY_SCORE,
-            "best_practices": $BEST_PRACTICES_SCORE,
-            "seo": $SEO_SCORE
-          }
-        }
-        EOF
-        fi
-        
-    - name: Upload Lighthouse results
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-      with:
-        name: lighthouse-results-${{ github.sha }}
-        path: |
-          .lighthouseci/
-          lighthouse-report.json
-        retention-days: 30
-        if-no-files-found: ignore
-
   performance-summary:
     name: Performance Summary
     runs-on: ubuntu-latest
-    needs: [performance-tests, lighthouse-performance]
+    needs: [performance-tests]
     if: always()
     
     steps:
@@ -411,27 +302,8 @@ jobs:
         fi
         
         echo "" >> PERFORMANCE_SUMMARY.md
-        echo "## Frontend Performance" >> PERFORMANCE_SUMMARY.md
-        
-        if [ -f "lighthouse-report.json" ]; then
-          echo "- **Performance Score:** $(jq -r '.scores.performance' lighthouse-report.json)/100" >> PERFORMANCE_SUMMARY.md
-          echo "- **Accessibility Score:** $(jq -r '.scores.accessibility' lighthouse-report.json)/100" >> PERFORMANCE_SUMMARY.md
-          echo "- **Best Practices Score:** $(jq -r '.scores.best_practices' lighthouse-report.json)/100" >> PERFORMANCE_SUMMARY.md
-          echo "- **SEO Score:** $(jq -r '.scores.seo' lighthouse-report.json)/100" >> PERFORMANCE_SUMMARY.md
-        else
-          echo "- Frontend performance tests not available" >> PERFORMANCE_SUMMARY.md
-        fi
-        
-        echo "" >> PERFORMANCE_SUMMARY.md
-        echo "## Build Performance" >> PERFORMANCE_SUMMARY.md
-        if [ -f "performance-report.json" ]; then
-          echo "- **Build Time:** $(jq -r '.metrics.build_time' performance-report.json)" >> PERFORMANCE_SUMMARY.md
-        fi
-        
-        echo "" >> PERFORMANCE_SUMMARY.md
         echo "## Recommendations" >> PERFORMANCE_SUMMARY.md
         echo "- Monitor API response times under load" >> PERFORMANCE_SUMMARY.md
-        echo "- Optimize frontend bundle size if Lighthouse performance < 90" >> PERFORMANCE_SUMMARY.md
         echo "- Consider database query optimization if needed" >> PERFORMANCE_SUMMARY.md
         echo "- Review error rates during peak load testing" >> PERFORMANCE_SUMMARY.md
         

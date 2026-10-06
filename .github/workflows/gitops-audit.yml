@@ -35,7 +35,6 @@ jobs:
           cache: 'npm'
           cache-dependency-path: |
             package-lock.json
-            dashboard/package-lock.json
             api/package-lock.json
 
       - name: Install root dependencies
@@ -45,26 +44,6 @@ jobs:
         run: |
           cd api
           npm ci
-
-      - name: Install dashboard dependencies
-        run: |
-          cd dashboard
-          npm ci
-
-      - name: Lint dashboard code
-        run: |
-          cd dashboard
-          npm run lint
-
-      - name: TypeScript compilation check
-        run: |
-          cd dashboard
-          npx tsc -b
-
-      - name: Build dashboard for production
-        run: |
-          cd dashboard
-          npm run build
 
       - name: Validate shell scripts
         run: |
@@ -130,9 +109,7 @@ jobs:
 
       - name: Install dependencies and audit
         run: |
-          (cd dashboard && npm ci)
           (cd api && npm ci)
-          ./scripts/ci-audit-gate.sh dashboard moderate
           ./scripts/ci-audit-gate.sh api moderate
 
       - name: Check for sensitive files

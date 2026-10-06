@@ -11,7 +11,6 @@ module.exports = {
   testEnvironment: 'node',
   collectCoverageFrom: [
     'api/**/*.js',
-    'dashboard/**/*.js',
     '!**/node_modules/**',
     '!**/*.test.js',
     '!**/*.spec.js',
@@ -40,7 +39,6 @@ module.exports = {
   globalTeardown: '<rootDir>/tests/e2e/setup/global-teardown.js',
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/api/$1',
-    '^@dashboard/(.*)$': '<rootDir>/dashboard/$1',
     '^@tests/(.*)$': '<rootDir>/tests/$1'
   },
   testPathIgnorePatterns: [
