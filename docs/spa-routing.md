@@ -1,5 +1,7 @@
 # SPA Routing Configuration for GitOps Dashboard
 
+> **Retired (ops #4355 / #4369).** The dashboard UI, `nginx/gitops-dashboard.conf` and `fix-spa-routing.sh` were removed. Nothing in this document applies to the current deploy (API only, on CT 123 behind Traefik). Kept for history.
+
 This document explains how to properly configure SPA (Single Page Application) routing for the GitOps Dashboard with various server setups.
 
 ## The Problem
