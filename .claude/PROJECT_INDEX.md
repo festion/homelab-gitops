@@ -1,36 +1,47 @@
 # Project Index: homelab-gitops
-
 ## 1. Core Purpose
-
-This project, "GitOps Auditor," audits Git repositories within a homelab environment. It checks for uncommitted changes, stale branches, and synchronization drift between local and remote repositories. It is built on a template designed for homelab infrastructure automation, utilizing a system of "Model Context Protocol" (MCP) servers for interacting with various services like GitHub.
+The `homelab-gitops` project serves as a comprehensive GitOps auditor for homelab environments. Its primary purpose is to audit git repositories for uncommitted changes, stale tags, missing files, and local-vs-GitHub synchronization drift. The project provides an Express.js API backend to serve audit results, integrates with multiple MCP (Model Context Protocol) servers, automates documentation generation, and supports GitHub project management. The dashboard UI has been retired (ops #4355), with focus remaining on the API and backend processes.
 
 ## 2. Architecture
-
-The core of the project is a Node.js Express API that performs the git audits and provides endpoints for the results. The frontend dashboard component has been retired. The application is designed to be run as a `systemd` service (`gitops-audit-api`) in production. It relies on a specific filesystem layout (`/opt/gitops`, `/repos`, `/output`) for its operation. The architecture is modular, using MCP connectors to interface with different systems (e.g., GitHub, filesystems).
+The project is built around an Express.js API (`api/server.js`) that handles audit logic, data processing, and serves results. It scans repositories located at `/repos` and outputs the current audit report to `/output/GitRepoReport.json`, with historical snapshots stored in `/audit-history/`. A nightly audit is scheduled at 03:00, and manual audits can be triggered via `scripts/sync_github_repos.sh`. The system includes integration with various MCP servers for different functionalities (e.g., Filesystem, Network-FS, GitHub, Home Assistant, WikiJS), automated workflows, and a template system for consistent project structure. Deployment of the API is managed by `scripts/deploy.sh`.
 
 ## 3. Key Files
-
--   `CLAUDE.md`: **Authoritative Source.** Contains critical, non-obvious operational instructions, production paths, and troubleshooting guidance for an AI assistant. Should be consulted first.
--   `api/server.js`: The main entry point for the Express.js backend API.
--   `api/createApp.js`: Configures and initializes the Express application, including middleware and routes.
--   `api/mcp-connector.js`: Core module for connecting to and managing various MCP servers.
--   `api/github-mcp-manager.js`: Manages the specific integration with GitHub via the MCP framework.
--   `api/routes/`: This directory contains the API endpoint definitions.
--   `api/middleware/`: Contains Express middleware for handling security, authentication, and validation.
--   `scripts/sync_github_repos.sh`: The shell script used to manually trigger a full audit of the configured repositories.
--   `docker-compose.production.yml`: Defines the services and configuration for production deployment using Docker.
+-   `CLAUDE.md`: Instructions and operational details specifically for AI assistants.
+-   `README.md`: Main project documentation, quick start, features, and structure overview.
+-   `api/server.js`: Entry point for the Express.js API server.
+-   `api/createApp.js`: Handles API application setup and configuration.
+-   `api/routes/`: Contains definitions for API endpoints.
+-   `api/models/`: Defines data models used by the API.
+-   `api/middleware/`: Houses middleware for authentication, authorization, validation, and security.
+-   `api/services/`: Contains business logic and utility functions for the API.
+-   `api/config/`: Configuration files for the API, including Infisical integration and logging.
+-   `api/tests/`: Unit and integration tests for the API.
+-   `api/AUTHENTICATION.md`: Documentation detailing API authentication mechanisms.
+-   `api/SECURITY_IMPLEMENTATION.md`: Documentation on security implementation details.
+-   `.mcp/`: Directory containing Model Context Protocol server scripts and related components.
+-   `scripts/`: Collection of utility, setup, and deployment scripts (e.g., `sync_github_repos.sh`, `deploy.sh`).
+-   `config/`: Project-wide configuration files (e.g., `deployment-config.json`, `discovery-sources.json`).
+-   `output/GitRepoReport.json`: The most recent generated audit report.
+-   `audit-history/`: Stores historical snapshots of audit reports.
+-   `package.json`: Defines project metadata, scripts, and Node.js dependencies.
 
 ## 4. Dependencies
-
--   **Runtime**: Node.js, Express.js.
--   **System**: `git` is required for all core audit functionality. `systemd` is used for managing the production service.
--   **Infrastructure**: Docker and Docker Compose are used for deployment.
--   **Configuration**: The application expects a specific directory structure on the host system (e.g., `/opt/gitops`, `/repos`, `/output`).
+The project is primarily a Node.js application, utilizing npm for package management. Key dependencies include:
+-   **Node.js & npm**: Runtime environment and package manager.
+-   **Express.js**: Web application framework for the API backend.
+-   **Git**: For repository auditing and operations.
+-   **MCP Servers**: Integration with various Model Context Protocol servers (e.g., Filesystem, GitHub, WikiJS).
+-   **Infisical**: For secret management (indicated by `api/config/infisical.js` and `api/config/infisical-admin.js`).
+-   **Jest**: For running API tests.
 
 ## 5. Common Tasks
-
--   **Manually Trigger an Audit**: Execute the script `/opt/gitops/scripts/sync_github_repos.sh`.
--   **Deploy API Changes**: Run the `scripts/deploy.sh` script.
--   **Troubleshoot a Failed Audit**: Before debugging the scanner, check that the output file `/output/GitRepoReport.json` exists and contains valid JSON.
--   **Check API Status**: The API service runs on port `3070`. Use standard tools like `curl` or `netstat` to verify it's running.
--   **Recall Project Knowledge**: Use the `memory-search` command as directed in `CLAUDE.md` to query the project's learnings database before making changes.
+An AI assistant working in this codebase might perform tasks such as:
+-   **Modifying API Endpoints**: Adding, updating, or debugging routes and their associated logic in `api/routes/` and `api/services/`.
+-   **Updating Audit Logic**: Adjusting the scripts or API services responsible for scanning git repositories and generating reports.
+-   **Enhancing Security**: Implementing or modifying authentication, authorization, or other security features within `api/middleware/` and `api/SECURITY_IMPLEMENTATION.md`.
+-   **Managing Configuration**: Adjusting project or API settings in `config/` and `api/config/`.
+-   **Troubleshooting Deployment**: Investigating issues related to the API service deployment using `scripts/deploy.sh` or systemd configurations.
+-   **Expanding MCP Integrations**: Developing or modifying components related to MCP server interactions within the `.mcp/` directory.
+-   **Writing/Updating Documentation**: Maintaining and generating project documentation, especially `CLAUDE.md` and `README.md`.
+-   **Writing/Fixing Tests**: Developing or debugging unit and integration tests for the API using Jest in `api/tests/`.
+-   **Analyzing Audit Reports**: Interpreting and summarizing the contents of `/output/GitRepoReport.json`.
