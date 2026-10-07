@@ -1,98 +1,54 @@
 # Project Index: homelab-gitops
+
 ## 1. Core Purpose
-The `homelab-gitops` project serves as both a comprehensive project template for homelab environments and a GitOps Auditor. As an auditor, it scans homelab Git repositories for uncommitted changes, stale tags, missing files, and synchronization discrepancies between local and GitHub repositories. The results are presented via a React dashboard, powered by an Express API. As a template, it integrates multiple pre-configured Model Context Protocol (MCP) servers, automates documentation generation, and streamlines GitHub project management, supporting GitOps workflows.
+
+The `homelab-gitops` project serves as a GitOps Auditor for a homelab environment. It audits git repositories for uncommitted changes, stale tags, missing files, and synchronization drift between local and GitHub repositories. The results are presented via an Express API (the dashboard UI was retired). It also functions as a comprehensive project template with integrated MCP (Model Context Protocol) servers, automated documentation generation, and GitHub project management features, optimized for self-hosted infrastructure and GitOps workflows.
 
 ## 2. Architecture
-The project follows a client-server architecture:
--   **Frontend**: A React-based dashboard (implied by `frontend/` directory) for visualizing audit reports.
--   **Backend API**: An Express.js API (located in `api/`) handles business logic, interacts with various services, and provides data to the frontend.
-    -   **MCP Integration**: The `api/mcp-connector.js` and `.mcp/` directory indicate integration with Model Context Protocol servers for various operations (filesystem, network, GitHub, Home Assistant, etc.).
-    -   **Authentication & Security**: Managed by middleware (e.g., `api/middleware/auth.js`, `api/middleware/security.js`).
-    -   **Data Models**: Defined in `api/models/` for entities like compliance, metrics, pipelines, and users.
-    -   **Routes**: API endpoints are defined in `api/routes/`.
--   **Automation & Scripting**: `scripts/` contains various utility, setup, and deployment scripts. `.github/workflows/` defines GitHub Actions for CI/CD and automated processes.
--   **Configuration**: `config/` holds environment-specific and general settings.
--   **Documentation**: `docs/` and various `*.md` files at the root provide project documentation, with automation for generation and upload to WikiJS.
+
+The core architecture revolves around an Express API that performs repository audits. The API runs as a `systemd` service (`gitops-audit-api`) on port `3070`. It scans repositories located in `/repos`, storing the current report in `/output/GitRepoReport.json` and historical snapshots in `/audit-history/`.
+
+Key components and integrations:
+
+-   **Express API**: Backend for auditing and serving data.
+-   **MCP Servers**: Over 10 integrated servers for various functions (Filesystem, Network-FS, GitHub, Home Assistant, Proxmox, TrueNAS, WikiJS, Serena Enhanced, Code Linter, Directory Polling).
+-   **GitOps Workflows**: Utilizes `git` for managing infrastructure and configurations.
+-   **Documentation Generation**: Template-driven `CLAUDE.md` and `README.md` generation.
+-   **GitHub Integration**: Manages project boards, issue templates, and automated workflows.
+-   **Configuration**: Uses `template-config.json` for project structure configuration.
 
 ## 3. Key Files
--   `./api/add-homepage-secrets.js`: Script for adding secrets to the homepage.
--   `./api/AUTHENTICATION.md`: Documentation detailing API authentication methods.
--   `./api/config/infisical-admin.js`: Configuration for Infisical admin integration.
--   `./api/config/infisical.js`: General Infisical configuration.
--   `./api/config-loader.js`: Utility for loading configurations dynamically.
--   `./api/config/logging.js`: Configuration for API logging.
--   `./api/config/orchestrationProfiles.js`: Defines profiles for orchestration.
--   `./api/config/security-config-example.json`: Example security configuration.
--   `./api/createApp.js`: Initializes and configures the Express application.
--   `./api/csv-export.js`: Handles CSV data export functionality.
--   `./api/docs/LOGGING.md`: Documentation specific to API logging.
--   `./api/email-notifications.js`: Module for sending email notifications.
--   `./api/enhanced-discovery-manager.js`: Manages enhanced discovery processes.
--   `./api/github-mcp-manager.js`: Manages GitHub interactions via MCP.
--   `./api/.github/workflows/test.yml`: GitHub Actions workflow for API testing.
--   `./api/jest.config.js`: Jest testing framework configuration for the API.
--   `./api/jest.simple.config.js`: Simplified Jest configuration.
--   `./api/jobs/complianceChecker.js`: Background job for checking compliance.
--   `./api/jobs/metricsCollector.js`: Background job for collecting metrics.
--   `./api/lib/html-sanitize.js`: Utility for sanitizing HTML content.
--   `./api/lib/regex-safe.js`: Provides safe regular expression utilities.
--   `./api/lib/safe-exec.js`: Utility for safely executing commands.
--   `./api/lib/sql-identifiers.js`: Manages SQL identifiers.
--   `./api/mcp-connector.js`: Connects to and manages MCP servers.
--   `./api/MCP_INTEGRATION.md`: Documentation on MCP integration.
--   `./api/MCP_INTEGRATION_WIKI.md`: Wiki-specific documentation for MCP integration.
--   `./api/middleware/auth.js`: Middleware for user authentication.
--   `./api/middleware/authorization.js`: Middleware for user authorization.
--   `./api/middleware/enhanced-auth.js`: Enhanced authentication middleware.
--   `./api/middleware/enhanced-input-validation.js`: Enhanced input validation middleware.
--   `./api/middleware/enhanced-security-headers.js`: Middleware for enhanced security headers.
--   `./api/middleware/enhanced-security.js`: Enhanced security middleware.
--   `./api/middleware/enhanced-validation.js`: Enhanced validation middleware.
--   `./api/middleware/rateLimit.js`: Middleware for API rate limiting.
--   `./api/middleware/security-integration-example.js`: Example security integration middleware.
--   `./api/middleware/security.js`: General security middleware.
--   `./api/middleware/validation.js`: General input validation middleware.
--   `./api/middleware/webhook-middleware.js`: Middleware for handling webhooks.
--   `./api/models/compliance.js`: Database model for compliance data.
--   `./api/models/database.js`: Database connection and utilities.
--   `./api/models/metrics.js`: Database model for metrics data.
--   `./api/models/pipeline.js`: Database model for pipeline data.
--   `./api/models/user.js`: Database model for user data.
--   `./api/package.json`: Node.js package manifest for the API.
--   `./api/package-lock.json`: Node.js dependency lock file for the API.
--   `./api/perf/baseline.json`: Performance baseline data.
--   `./api/perf/bench-concurrent.js`: Concurrent performance benchmarking script.
--   `./api/perf/bench-response-time.js`: Response time performance benchmarking script.
--   `./api/perf/harness.js`: Performance testing harness.
--   `./api/perf/README.md`: Documentation for performance testing.
+
+-   **`api/server.js`**: Main entry point for the Express API server.
+-   **`api/config-loader.js`**: Handles loading various configurations for the API.
+-   **`api/routes/`**: Contains definitions for API endpoints.
+-   **`api/middleware/`**: Houses middleware for authentication, authorization, validation, and security.
+-   **`api/models/`**: Defines data models for compliance, metrics, pipelines, and users.
+-   **`api/mcp-connector.js`**: Connects the API to MCP servers.
+-   **`api/enhanced-discovery-manager.js`**: Manages enhanced discovery functionalities.
+-   **`api/github-mcp-manager.js`**: Manages GitHub-related MCP integrations.
+-   **`CLAUDE.md`**: AI assistant instructions and production wiring details.
+-   **`README.md`**: Project overview, features, and quick start guide.
+-   **`scripts/deploy.sh`**: Script for deploying the API.
+-   **`scripts/sync_github_repos.sh`**: Script for manual repository audits.
+-   **`output/GitRepoReport.json`**: Stores the current audit report.
+-   **`.mcp/`**: Directory containing MCP-related scripts and configuration.
+-   **`.github/workflows/`**: GitHub Actions workflows.
+-   **`config/`**: Contains various configuration files like `database.js`, `deployment-config.json`, `discovery-sources.json`.
+-   **`package.json`**: Defines project metadata and dependencies for the API.
 
 ## 4. Dependencies
--   **Node.js**: The API is built with Express.js, requiring a Node.js runtime environment.
--   **npm**: Used for managing Node.js packages and dependencies.
--   **React**: The frontend dashboard is built with React.
--   **Git**: Essential for GitOps workflows, repository auditing, and managing the codebase.
--   **Systemd**: Used for managing the `gitops-audit-api` service in production.
--   **MCP Servers**: Integration with various Model Context Protocol servers is a core dependency.
--   **GitHub**: Relied upon for repository management, project boards, issue templates, and CI/CD workflows.
--   **Infisical**: Implied by `api/config/infisical.js` for secret management.
--   **WikiJS**: Used for documentation management and upload.
+
+The project primarily uses Node.js for its API backend, evidenced by `package.json` and JavaScript files. It leverages `Express.js` for the API framework. For GitOps functionalities, it relies on `git` and associated shell scripts. Systemd is used for managing the API service in production. Specific dependencies like `jest` for testing are also indicated.
 
 ## 5. Common Tasks
--   **Project Setup**:
-    -   `git clone https://github.com/festion/homelab-project-template.git my-new-project && cd my-new-project && ./scripts/apply-template.sh` (one-line creation).
-    -   `./scripts/apply-template.sh --interactive` (interactive setup).
-    -   `./scripts/setup-mcp-config.sh` (configure MCP servers).
-    -   `./scripts/apply-github-project-template.py` (initialize GitHub project).
--   **Auditing**:
-    -   Nightly audit (scheduled for 03:00).
-    -   Manual audit: `/opt/gitops/scripts/sync_github_repos.sh`.
--   **Deployment**:
-    -   `scripts/deploy.sh` (API only).
--   **Documentation**:
-    -   `upload-docs-to-wiki.js` (for general documentation upload).
-    -   `upload-mcp-docs-to-wikijs.py` (for MCP-specific documentation upload).
--   **Cleanup**:
-    -   `cleanup-mcp-structure.sh` (for cleaning up MCP structure).
--   **Testing**:
-    -   Running Jest tests within the `api/` directory (e.g., `jest`, `npm test`).
-    -   Performance testing via scripts in `api/perf/`.
+
+-   **Setup a new project**: Use `./scripts/apply-template.sh` (interactive or not).
+-   **Configure MCP servers**: Run `./scripts/setup-mcp-config.sh`.
+-   **Initialize GitHub project**: Use `./scripts/apply-github-project-template.py`.
+-   **Deploy the API**: Execute `scripts/deploy.sh`.
+-   **Trigger a manual audit**: Run `/opt/gitops/scripts/sync_github_repos.sh`.
+-   **Troubleshoot missing/invalid reports**: Check `/output/GitRepoReport.json` for parsing errors.
+-   **Develop API endpoints**: Modify files within the `api/routes/` directory.
+-   **Manage project configuration**: Edit files in the `config/` directory.
+-   **Run tests**: Use `jest` (e.g., `api/jest.config.js`).
