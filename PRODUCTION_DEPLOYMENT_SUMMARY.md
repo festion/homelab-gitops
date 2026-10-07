@@ -12,7 +12,7 @@ All components of the production deployment have been successfully implemented a
 
 ### 1. ✅ Docker Infrastructure
 - **docker-compose.production.yml**: Complete production stack configuration
-- **docker-compose.green.yml**: Blue-green deployment support
+- **docker-compose.green.yml**: blue-green compose file (not used by the production deploy path, which is `.github/workflows/deploy.yml`)
 - **config/environment.production.example**: Environment template with security best practices
 - Multi-service architecture with proper networking and resource limits
 
@@ -100,7 +100,7 @@ All components of the production deployment have been successfully implemented a
 - 📊 **Audit Logging**: Comprehensive security event tracking
 
 ### High Availability Features
-- 🔄 **Blue-Green Deployment**: Zero-downtime deployments
+- 🔄 **Atomic-swap deploys**: `deploy.yml` installs a tarball, swaps it in, keeps a timestamped `gitops-*` backup and smoke-tests the endpoints
 - 🏥 **Health Monitoring**: Automated health checks and alerting
 - 💾 **Automated Backups**: Multiple backup strategies with offsite storage
 - 📈 **Performance Monitoring**: Real-time metrics and alerting
@@ -179,7 +179,8 @@ gh workflow run rollback.yml -f reason="<why>" -f backup=gitops-20231215_143022
 # List backups
 ./scripts/backup.sh list
 
-# Restore from backup
+# Restore from backup (this is backup.sh's own backup set; to roll back a
+# deploy, use rollback.yml with a gitops-* backup instead -- see above)
 ./scripts/backup.sh restore backup-20231215-143022 full
 
 # Verify backup
