@@ -12,7 +12,7 @@ All components of the production deployment have been successfully implemented a
 
 ### 1. ✅ Docker Infrastructure
 - **docker-compose.production.yml**: Complete production stack configuration
-- **docker-compose.green.yml**: Blue-green deployment support
+- **docker-compose.green.yml**: blue-green compose file (not used by the production deploy path, which is `.github/workflows/deploy.yml`)
 - **config/environment.production.example**: Environment template with security best practices
 - Multi-service architecture with proper networking and resource limits
 
@@ -39,7 +39,7 @@ All components of the production deployment have been successfully implemented a
 - SSL certificate management
 
 ### 5. ✅ Deployment Automation
-- **scripts/deployment/deploy-production.sh**: Blue-green deployment script
+- **.github/workflows/deploy.yml**: production deploy (tarball over SSH to CT 123, atomic swap, smoke test); `rollback.yml` restores a backup. The old `scripts/deployment/deploy-production.sh` was retired (ops #3311).
 - Automated rollback capabilities
 - Health checks and validation
 - Pre and post-deployment procedures
@@ -100,7 +100,7 @@ All components of the production deployment have been successfully implemented a
 - 📊 **Audit Logging**: Comprehensive security event tracking
 
 ### High Availability Features
-- 🔄 **Blue-Green Deployment**: Zero-downtime deployments
+- 🔄 **Atomic-swap deploys**: `deploy.yml` installs a tarball, swaps it in, keeps a timestamped `gitops-*` backup and smoke-tests the endpoints
 - 🏥 **Health Monitoring**: Automated health checks and alerting
 - 💾 **Automated Backups**: Multiple backup strategies with offsite storage
 - 📈 **Performance Monitoring**: Real-time metrics and alerting
@@ -128,8 +128,8 @@ nano .env  # Configure all required variables
 # 3. Run security setup
 sudo ./scripts/security-setup.sh setup
 
-# 4. Deploy application
-./scripts/deployment/deploy-production.sh latest production
+# 4. Deploy application (GitHub Actions, not a local script)
+gh workflow run deploy.yml -f environment=production
 
 # 5. Verify deployment
 ./scripts/health-check.sh check
@@ -158,14 +158,14 @@ sudo ./scripts/security-setup.sh ssl
 
 ### Deployment Operations
 ```bash
-# Standard deployment
-./scripts/deployment/deploy-production.sh v1.2.0 production
+# Standard deployment: push tag v1.2.0 (deploy.yml triggers on v* tags), or
+gh workflow run deploy.yml -f environment=production
 
-# Dry run deployment
-./scripts/deployment/deploy-production.sh v1.2.0 production true
+# deploy.yml has no dry-run mode -- every run ships to the target host.
 
-# Rollback to backup
-./scripts/deployment/deploy-production.sh rollback backup-20231215-143022
+# Rollback to a backup (names look like gitops-YYYYMMDD_HHMMSS under
+# /opt/gitops-backups on the prod host)
+gh workflow run rollback.yml -f reason="<why>" -f backup=gitops-20231215_143022
 
 # Health check
 ./scripts/health-check.sh check
@@ -179,7 +179,8 @@ sudo ./scripts/security-setup.sh ssl
 # List backups
 ./scripts/backup.sh list
 
-# Restore from backup
+# Restore from backup (this is backup.sh's own backup set; to roll back a
+# deploy, use rollback.yml with a gitops-* backup instead -- see above)
 ./scripts/backup.sh restore backup-20231215-143022 full
 
 # Verify backup

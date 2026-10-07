@@ -140,8 +140,8 @@ The system automatically generates URLs based on your configuration:
 The deployment scripts automatically use your configuration:
 
 ```bash
-# Deploy to your configured production server
-./scripts/deployment/deploy-production.sh
+# Deploy to production (GitHub Actions, .github/workflows/deploy.yml)
+gh workflow run deploy.yml -f environment=production
 
 # Run audit with your settings
 ./scripts/comprehensive_audit.sh --dev
@@ -173,7 +173,7 @@ The deployment scripts automatically use your configuration:
    ```bash
    # Test connection
    ./scripts/config/config-manager.sh test-connection
-   
+
    # Update IP if needed
    ./scripts/config/config-manager.sh set PRODUCTION_SERVER_IP "correct.ip.address"
    ```
@@ -182,7 +182,7 @@ The deployment scripts automatically use your configuration:
    ```bash
    # Change API port if 3070 is in use
    ./scripts/config/config-manager.sh set DEVELOPMENT_API_PORT "3071"
-   
+
    # Change dashboard port if 5173 is in use
    ./scripts/config/config-manager.sh set DEVELOPMENT_DASHBOARD_PORT "5174"
    ```
@@ -216,5 +216,5 @@ If upgrading from a version with hardcoded settings:
 
 4. **Deploy with new settings**:
    ```bash
-   ./scripts/deployment/deploy-production.sh
+   gh workflow run deploy.yml -f environment=production
    ```

@@ -1,5 +1,7 @@
 # CI/CD Pipeline Implementation
 
+> **Status (2026-10-07, ops #3311):** this describes the pipeline as planned. What runs today: production deploys through `.github/workflows/deploy.yml` (tarball over SSH to CT 123, atomic swap, smoke test) and rolls back through `rollback.yml`. There is no blue-green deploy, no `deploy-staging.yml` (retired, ops #3282) and no `deploy-production.yml`.
+
 ## Overview
 
 This document describes the comprehensive CI/CD pipeline implementation for the homelab-gitops-auditor project. The pipeline consists of 6 major workflows that provide automated testing, security scanning, deployment automation, performance monitoring, rollback capabilities, and release management.
@@ -57,7 +59,9 @@ This document describes the comprehensive CI/CD pipeline implementation for the 
 - No high-severity dependency issues
 - Shell scripts pass security checks
 
-### 3. Staging Deployment (`deploy-staging.yml`)
+### 3. Staging Deployment (`deploy-staging.yml`) — RETIRED
+> Retired by ops #3282: it never once succeeded and no staging deploy exists. Kept below as history.
+
 **Triggers:** Push to develop branch, Manual dispatch
 **Purpose:** Automated staging environment deployment
 
@@ -77,15 +81,15 @@ This document describes the comprehensive CI/CD pipeline implementation for the 
 - Validate deployment with health checks
 - Run post-deployment tests
 
-### 4. Production Deployment (`deploy-production.yml`)
-**Triggers:** Push to main branch, Manual dispatch
-**Purpose:** Zero-downtime production deployment
+### 4. Production Deployment (`deploy.yml`)
+**Triggers:** Push to main, `v*` tags, manual dispatch
+**Purpose:** Production deployment by atomic swap (zero downtime not measured)
 
 **Features:**
-- **Blue-Green Deployment:** Zero downtime strategy
+- **Atomic swap:** tarball installed beside the live tree, swapped in, timestamped `gitops-*` backup kept
 - **Pre-deployment Validation:** Complete test suite
 - **Emergency Backup:** Automatic backup before deployment
-- **Health Monitoring:** Continuous health validation
+- **Smoke test:** polls `/api/v2/platform/health` after the swap
 - **Automatic Rollback:** On failure detection
 - **Performance Validation:** Response time monitoring
 
@@ -160,7 +164,7 @@ PRODUCTION_HOST             # Production server hostname/IP
 PRODUCTION_USER             # SSH username (default: deploy)
 PRODUCTION_URL              # Production application URL
 
-# Staging Environment  
+# Staging Environment
 STAGING_SSH_KEY             # SSH private key for staging server
 STAGING_HOST                # Staging server hostname/IP
 STAGING_USER                # SSH username (default: deploy)
@@ -185,7 +189,7 @@ GITHUB_TOKEN                # Automatic (GitHub-provided)
 docker-compose.yml                  # Docker composition file
 nginx.conf                          # Nginx configuration for blue-green
 
-# Staging Server Setup  
+# Staging Server Setup
 /opt/homelab-gitops-auditor/        # Application directory
 docker-compose.staging.yml          # Staging composition file
 ```
@@ -194,11 +198,8 @@ docker-compose.staging.yml          # Staging composition file
 
 ### Manual Workflow Triggers
 ```bash
-# Trigger staging deployment
-gh workflow run deploy-staging.yml
-
-# Trigger production deployment
-gh workflow run deploy-production.yml
+# Trigger production deployment (deploy-staging.yml was retired, ops #3282)
+gh workflow run deploy.yml -f environment=production
 
 # Create a new release
 gh workflow run release.yml -f release_type=minor
