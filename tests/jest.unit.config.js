@@ -72,6 +72,7 @@ module.exports = {
       lines: 4,
       statements: 4
     },
+    // NOTE: path targets api/services/, but the skipped suite tests scripts/services/mcp-coordinator.js (see ops #4401).
     './api/services/mcp-coordinator.js': {
       branches: 0,
       functions: 0,
