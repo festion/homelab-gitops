@@ -1,6 +1,6 @@
 # CI/CD Pipeline Implementation
 
-> **Status (2026-10-07, ops #3311):** this describes the pipeline as planned. What runs today: production deploys through `.github/workflows/deploy.yml` (tarball over SSH to CT 123, atomic swap, smoke test) and rolls back through `rollback.yml`. There is no blue-green deploy, no staging deploy (`deploy-staging.yml` retired, ops #3282) and no `deploy-production.yml`.
+> **Status (2026-10-07, ops #3311):** this describes the pipeline as planned. What runs today: production deploys through `.github/workflows/deploy.yml` (tarball over SSH to CT 123, atomic swap, smoke test) and rolls back through `rollback.yml`. There is no blue-green deploy, no `deploy-staging.yml` (retired, ops #3282) and no `deploy-production.yml`.
 
 ## Overview
 
@@ -82,14 +82,14 @@ This document describes the comprehensive CI/CD pipeline implementation for the 
 - Run post-deployment tests
 
 ### 4. Production Deployment (`deploy.yml`)
-**Triggers:** Push to main branch, Manual dispatch
-**Purpose:** Zero-downtime production deployment
+**Triggers:** Push to main, `v*` tags, manual dispatch
+**Purpose:** Production deployment by atomic swap (zero downtime not measured)
 
 **Features:**
 - **Atomic swap:** tarball installed beside the live tree, swapped in, timestamped `gitops-*` backup kept
 - **Pre-deployment Validation:** Complete test suite
 - **Emergency Backup:** Automatic backup before deployment
-- **Health Monitoring:** Continuous health validation
+- **Smoke test:** polls `/api/v2/platform/health` after the swap
 - **Automatic Rollback:** On failure detection
 - **Performance Validation:** Response time monitoring
 
