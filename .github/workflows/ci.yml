@@ -78,7 +78,7 @@ jobs:
     - name: Run unit tests (API)
       run: |
         cd api
-        npm run test:unit || npm test
+        npm run test:unit
         
     - name: Generate coverage report (API)
       run: |

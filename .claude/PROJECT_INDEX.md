@@ -1,36 +1,31 @@
 # Project Index: homelab-gitops
-
 ## 1. Core Purpose
-
-This project, "GitOps Auditor," audits Git repositories within a homelab environment. It checks for uncommitted changes, stale branches, and synchronization drift between local and remote repositories. It is built on a template designed for homelab infrastructure automation, utilizing a system of "Model Context Protocol" (MCP) servers for interacting with various services like GitHub.
+The `homelab-gitops` codebase functions as a GitOps Auditor, continuously monitoring homelab Git repositories for uncommitted changes, stale tags, missing files, and synchronization discrepancies with GitHub. It processes audit results via an Express API. Additionally, it serves as a comprehensive project template repository integrating various MCP (Model Context Protocol) servers, facilitating automated documentation generation, and managing GitHub projects within a self-hosted infrastructure.
 
 ## 2. Architecture
-
-The core of the project is a Node.js Express API that performs the git audits and provides endpoints for the results. The frontend dashboard component has been retired. The application is designed to be run as a `systemd` service (`gitops-audit-api`) in production. It relies on a specific filesystem layout (`/opt/gitops`, `/repos`, `/output`) for its operation. The architecture is modular, using MCP connectors to interface with different systems (e.g., GitHub, filesystems).
+The project is primarily built around an Express.js API (`api/server.js`, `api/server-v2.js`, `api/server-mcp.js`) which serves as the core backend, previously supporting a React dashboard (now retired). The API service, `gitops-audit-api`, is managed by systemd and runs on port 3070. It interacts with various MCP (Model Context Protocol) servers located under `.mcp/` and `mcp-integrations/`. Configuration is handled through files in `config/` and `api/config/`. Audit reports are stored in `/output/GitRepoReport.json`, with historical snapshots maintained in `/audit-history/`. The system relies on GitOps workflows and GitHub integrations for project management and automation.
 
 ## 3. Key Files
-
--   `CLAUDE.md`: **Authoritative Source.** Contains critical, non-obvious operational instructions, production paths, and troubleshooting guidance for an AI assistant. Should be consulted first.
--   `api/server.js`: The main entry point for the Express.js backend API.
--   `api/createApp.js`: Configures and initializes the Express application, including middleware and routes.
--   `api/mcp-connector.js`: Core module for connecting to and managing various MCP servers.
--   `api/github-mcp-manager.js`: Manages the specific integration with GitHub via the MCP framework.
--   `api/routes/`: This directory contains the API endpoint definitions.
--   `api/middleware/`: Contains Express middleware for handling security, authentication, and validation.
--   `scripts/sync_github_repos.sh`: The shell script used to manually trigger a full audit of the configured repositories.
--   `docker-compose.production.yml`: Defines the services and configuration for production deployment using Docker.
+-   `api/server.js`, `api/server-v2.js`, `api/server-mcp.js`: Main Express API entry points.
+-   `api/routes/`: Defines API endpoints and their handlers.
+-   `api/models/`: Database models for compliance, metrics, pipeline, and user management.
+-   `api/middleware/`: Contains authentication, authorization, validation, and security middleware components.
+-   `api/services/`: Business logic and service implementations.
+-   `api/config-loader.js`: Utility for loading application configurations.
+-   `api/config/`: API-specific configuration files (e.g., `infisical.js`, `logging.js`).
+-   `.mcp/`: Core MCP (Model Context Protocol) server scripts and logic.
+-   `scripts/`: Utility scripts for deployment, setup, and various operations.
+-   `config/`: Global project configuration, including `deployment-config.json` and `discovery-sources.json`.
+-   `CLAUDE.md`: Instructions and production wiring details for the AI assistant.
+-   `README.md`: High-level project overview, features, and quick start guides.
+-   `package.json`: Lists project dependencies and scripts.
 
 ## 4. Dependencies
-
--   **Runtime**: Node.js, Express.js.
--   **System**: `git` is required for all core audit functionality. `systemd` is used for managing the production service.
--   **Infrastructure**: Docker and Docker Compose are used for deployment.
--   **Configuration**: The application expects a specific directory structure on the host system (e.g., `/opt/gitops`, `/repos`, `/output`).
+The project primarily uses Node.js and npm for its API backend and various utility scripts. Key dependencies include Express.js for the API, and potentially other libraries as listed in `package.json` and `api/package.json`. It integrates with GitHub for repository management, issue tracking, and automated workflows (via `.github/workflows/`). MCP servers represent internal or external services this project connects to.
 
 ## 5. Common Tasks
-
--   **Manually Trigger an Audit**: Execute the script `/opt/gitops/scripts/sync_github_repos.sh`.
--   **Deploy API Changes**: Run the `scripts/deploy.sh` script.
--   **Troubleshoot a Failed Audit**: Before debugging the scanner, check that the output file `/output/GitRepoReport.json` exists and contains valid JSON.
--   **Check API Status**: The API service runs on port `3070`. Use standard tools like `curl` or `netstat` to verify it's running.
--   **Recall Project Knowledge**: Use the `memory-search` command as directed in `CLAUDE.md` to query the project's learnings database before making changes.
+-   **Run the API:** Start the Express API service, typically managed by systemd as `gitops-audit-api`.
+-   **Manual Audit:** Execute `/opt/gitops/scripts/sync_github_repos.sh` to trigger an immediate audit of Git repositories.
+-   **Deployment:** Use `scripts/deploy.sh` for deploying the API component (the dashboard UI is retired).
+-   **Project Setup:** Initialize new projects using `./scripts/apply-template.sh` (one-line or interactive), configure MCP servers via `./scripts/setup-mcp-config.sh`, and optionally initialize GitHub projects using `./scripts/apply-github-project-template.py`.
+-   **Code Quality:** Utilize linting and testing tools (configured via `.eslintrc.js`, `.prettierrc`, `jest.config.js`) for maintaining code quality.

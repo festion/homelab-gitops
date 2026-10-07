@@ -918,6 +918,11 @@ class EnhancedWebhookHandler extends EventEmitter {
       // make an untested HA deployment path live. Do not "fix" it by adding
       // the missing dependencies without deciding whether this subsystem is
       // wanted at all.
+      //
+      // Update (ops #4395): helmet, joi and sqlite are now present as root
+      // devDependencies ONLY so the unit suite can load the deployer module. The
+      // subsystem remains inert in production and the #2270 decision (whether it
+      // is wanted at all) is still open.
       if (!this.webhookProcessor) {
         const { WebhookProcessor } = require('../webhook-processor');
         this.webhookProcessor = new WebhookProcessor();
