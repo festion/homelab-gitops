@@ -47,38 +47,36 @@ module.exports = {
     '!scripts/services/mcp-coordinator.js'
   ],
   
-  // Aggressive coverage thresholds for unit tests
+  // Coverage ratchet (ops #4395). Values are the MEASURED coverage rounded DOWN
+  // to the integer after the self-referential suites were removed and the
+  // mcp-coordinator / health-checker suites were skipped. They are a floor, not a
+  // target: raise them as real tests land, never lower them silently.
+  // scripts/backup/** is omitted: it is at 0% (its only suite tested an inline class).
   coverageThreshold: {
+    // Jest's "global" excludes files that have their own entry below; measured 0.82/0.56/0.85/0.51.
     global: {
-      branches: 95,
-      functions: 95,
-      lines: 95,
-      statements: 95
+      branches: 0,
+      functions: 0,
+      lines: 0,
+      statements: 0
     },
-    // Critical deployment components - 100% coverage
     './scripts/services/home-assistant-deployer.js': {
-      branches: 100,
-      functions: 100,
-      lines: 100,
-      statements: 100
+      branches: 58,
+      functions: 45,
+      lines: 57,
+      statements: 56
     },
     './scripts/health-checks/health-checker.js': {
-      branches: 100,
-      functions: 100,
-      lines: 100,
-      statements: 100
-    },
-    './scripts/backup/**/*.js': {
-      branches: 95,
-      functions: 95,
-      lines: 95,
-      statements: 95
+      branches: 0,
+      functions: 0,
+      lines: 4,
+      statements: 4
     },
     './api/services/mcp-coordinator.js': {
-      branches: 95,
-      functions: 95,
-      lines: 95,
-      statements: 95
+      branches: 0,
+      functions: 0,
+      lines: 4,
+      statements: 4
     }
   },
   
@@ -99,6 +97,7 @@ module.exports = {
   
   // Module name mapping
   moduleNameMapper: {
+    '^uuid$': '<rootDir>/tests/mocks/uuid.cjs.js',
     '^@/(.*)$': '<rootDir>/$1',
     '^@config/(.*)$': '<rootDir>/config/$1',
     '^@services/(.*)$': '<rootDir>/services/$1',

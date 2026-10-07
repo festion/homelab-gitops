@@ -187,7 +187,7 @@ jobs:
     - name: Run test suite
       run: |
         # Run comprehensive test suite
-        cd api && (npm run test:unit || npm test)
+        cd api && npm run test:unit
         
         # Integration tests
         (npm run test:integration || echo "Integration tests not configured")
