@@ -23,7 +23,6 @@ scripts/
 │   ├── config-loader.sh        # Environment config loader
 │   └── config-manager.sh       # Config validation and management
 ├── deployment/                  # Deployment scripts
-│   ├── deploy-production.sh    # Full production deployment
 │   └── deploy-home-assistant-config.sh
 ├── dev/                        # Development and testing
 │   ├── curl_test.sh           # API endpoint testing
@@ -56,11 +55,9 @@ scripts/
 
 ### Deployment Scripts (`deployment/`)
 
-#### `deploy-production.sh`
-**Purpose**: Full production deployment orchestration
-**Usage**: `./deployment/deploy-production.sh [environment]`
-**Dependencies**: Docker, systemd
-**Notes**: Main production deployment script
+Production deploys are not a script here: they run through `.github/workflows/deploy.yml`
+(`gh workflow run deploy.yml -f environment=production`), with `rollback.yml` for restores.
+The old `deploy-production.sh` was retired (ops #3311).
 
 #### `deploy-home-assistant-config.sh`
 **Purpose**: Deploy Home Assistant configuration from GitOps
@@ -408,8 +405,8 @@ source "${SCRIPT_DIR}/config/config-loader.sh"
 ### Most Common Operations
 
 ```bash
-# Production deployment
-./deployment/deploy-production.sh production
+# Production deployment (GitHub Actions)
+gh workflow run deploy.yml -f environment=production
 
 # Monitor TrueNAS
 ./monitoring/truenas_monitor.sh --verbose

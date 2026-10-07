@@ -107,8 +107,8 @@ gitops-qa-workflow test performance # Performance benchmarks
 ### 3. Production Deployment
 
 ```bash
-# Deploy to production (existing process)
-./scripts/deployment/deploy-production.sh
+# Deploy to production (GitHub Actions, .github/workflows/deploy.yml)
+gh workflow run deploy.yml -f environment=production
 ```
 
 ## Environment Management
