@@ -43,16 +43,15 @@ module.exports = {
     '!**/fixtures/**'
   ],
 
-  // Coverage ratchet (ops #4395). Values are the MEASURED coverage rounded DOWN
-  // to the integer after the self-referential suites were removed and the
-  // mcp-coordinator / health-checker suites were skipped. They are a floor, not a
-  // target: raise them as real tests land, never lower them silently.
+  // Coverage ratchet (ops #4395). Values are a floor, not a target: raise them
+  // as real tests land, never lower them silently.
   // ops #4401 removed the per-file floors for home-assistant-deployer,
   // health-checker and mcp-coordinator together with the files themselves: the
   // deployer subsystem was unreachable from api/server.js (the only production
   // entry point) and was retired, not de-tested.
   coverageThreshold: {
-    // Jest's "global" excludes files that have their own entry below; measured 0.82/0.56/0.85/0.51.
+    // Measured 2026-10-07 after ops #4401: statements 0.78, branches 0.48,
+    // functions 0.57, lines 0.81 (%). Below 1%, so the integer floor is 0.
     global: {
       branches: 0,
       functions: 0,

@@ -81,8 +81,8 @@ jobs:
         npm run test:unit
 
     # ops #4403: the steps above run api's jest project only. The root
-    # tests/unit suites (jest --config tests/jest.unit.config.js) cover
-    # scripts/services/*, and until this step nothing in CI executed them, so a
+    # tests/unit suites (jest --config tests/jest.unit.config.js) cover live
+    # api/ code from the root, and until this step nothing in CI executed them, so a
     # failing root unit test could never turn a check red. No `|| ...`
     # fallback (ops #4395): the step's exit code must be jest's.
     - name: Install dependencies (root)
