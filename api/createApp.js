@@ -84,9 +84,7 @@ function createApp({
   // which surfaced as a 400 on EVERY well-formed webhook. The endpoint had
   // never once succeeded, and WebhookHandler.verifySignature() -- the check
   // that actually guards this route, via webhookHandler.middleware() mounted
-  // at server.js:113 -- was never reached (ops #2524). Note the repo also has
-  // an unrelated validateWebhookSignature() in api/utils/security-validator.js
-  // which is NOT on this path; don't go reading that one.
+  // at server.js:113 -- was never reached (ops #2524).
   app.use('/api/v2/webhooks/github', express.raw({ type: 'application/json' }));
 
   app.use(express.json());
