@@ -1,20 +1,20 @@
 module.exports = {
   displayName: 'Unit Tests',
   testEnvironment: 'node',
-  
+
   // Root directory for tests and modules
   rootDir: '..',
-  
+
   // Setup files
   setupFilesAfterEnv: [
     '<rootDir>/tests/setup/jest.setup.js'
   ],
-  
+
   // Test file patterns - Only unit tests
   testMatch: [
     '<rootDir>/tests/unit/**/*.test.js'
   ],
-  
+
   // Ignore patterns
   testPathIgnorePatterns: [
     '/node_modules/',
@@ -25,13 +25,10 @@ module.exports = {
     '/tests/integration/',
     '/tests/performance/'
   ],
-  
+
   // Coverage configuration for unit tests
   collectCoverage: true,
   collectCoverageFrom: [
-    'scripts/services/**/*.js',
-    'scripts/health-checks/**/*.js',
-    'scripts/backup/**/*.js',
     'api/services/**/*.js',
     'api/middleware/**/*.js',
     'api/models/**/*.js',
@@ -43,15 +40,17 @@ module.exports = {
     '!**/*.config.js',
     '!**/logs/**',
     '!**/mocks/**',
-    '!**/fixtures/**',
-    '!scripts/services/mcp-coordinator.js'
+    '!**/fixtures/**'
   ],
-  
+
   // Coverage ratchet (ops #4395). Values are the MEASURED coverage rounded DOWN
   // to the integer after the self-referential suites were removed and the
   // mcp-coordinator / health-checker suites were skipped. They are a floor, not a
   // target: raise them as real tests land, never lower them silently.
-  // scripts/backup/** is omitted: it is at 0% (its only suite tested an inline class).
+  // ops #4401 removed the per-file floors for home-assistant-deployer,
+  // health-checker and mcp-coordinator together with the files themselves: the
+  // deployer subsystem was unreachable from api/server.js (the only production
+  // entry point) and was retired, not de-tested.
   coverageThreshold: {
     // Jest's "global" excludes files that have their own entry below; measured 0.82/0.56/0.85/0.51.
     global: {
@@ -59,28 +58,9 @@ module.exports = {
       functions: 0,
       lines: 0,
       statements: 0
-    },
-    './scripts/services/home-assistant-deployer.js': {
-      branches: 58,
-      functions: 45,
-      lines: 57,
-      statements: 56
-    },
-    './scripts/health-checks/health-checker.js': {
-      branches: 0,
-      functions: 0,
-      lines: 4,
-      statements: 4
-    },
-    // NOTE: path targets api/services/, but the skipped suite tests scripts/services/mcp-coordinator.js (see ops #4401).
-    './api/services/mcp-coordinator.js': {
-      branches: 0,
-      functions: 0,
-      lines: 4,
-      statements: 4
     }
   },
-  
+
   // Coverage reporting
   coverageReporters: [
     'text',
@@ -89,13 +69,13 @@ module.exports = {
     'html',
     'json'
   ],
-  
+
   // Coverage output directory
   coverageDirectory: '<rootDir>/tests/coverage/unit',
-  
+
   // Test timeout (shorter for unit tests)
   testTimeout: 10000,
-  
+
   // Module name mapping
   moduleNameMapper: {
     '^uuid$': '<rootDir>/tests/mocks/uuid.cjs.js',
@@ -107,7 +87,7 @@ module.exports = {
     '^@mocks/(.*)$': '<rootDir>/tests/mocks/$1',
     '^@fixtures/(.*)$': '<rootDir>/tests/fixtures/$1'
   },
-  
+
   // Global variables for tests
   globals: {
     'process.env.NODE_ENV': 'test',
@@ -116,22 +96,22 @@ module.exports = {
     'process.env.GITHUB_TOKEN': 'test-github-token-unit',
     'process.env.WEBHOOK_SECRET': 'test-webhook-secret-unit'
   },
-  
+
   // Verbose output for unit test debugging
   verbose: true,
-  
+
   // Detect open handles for proper cleanup
   detectOpenHandles: true,
-  
+
   // Clear mocks between tests
   clearMocks: true,
-  
+
   // Restore mocks after each test
   restoreMocks: true,
-  
+
   // Error handling
   errorOnDeprecated: true,
-  
+
   // Performance optimizations for unit tests
   maxWorkers: '75%',
   cache: true,
