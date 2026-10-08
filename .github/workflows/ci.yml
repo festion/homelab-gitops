@@ -14,39 +14,39 @@ jobs:
   code-quality:
     name: Code Quality Checks
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      
+
     - name: Setup Node.js
       uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
       with:
         node-version: ${{ env.NODE_VERSION }}
         cache: 'npm'
-        
+
     - name: Install dependencies (API)
       run: |
         cd api
         npm ci
-        
+
     - name: Run ESLint (API)
       run: |
         cd api
         npm run lint
-        
+
     - name: Run Prettier check (API)
       run: |
         cd api
         npm run format:check || echo "Format check not available"
       continue-on-error: true
-        
+
     - name: Check TypeScript compilation (API)
       run: |
         cd api
         npx tsc --noEmit || echo "TypeScript check not available for API"
       continue-on-error: true
-        
+
     - name: Validate package.json (root)
       run: ./scripts/ci-audit-gate.sh . high
 
@@ -59,40 +59,52 @@ jobs:
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      
+
     - name: Setup Node.js
       uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
       with:
         node-version: ${{ env.NODE_VERSION }}
         cache: 'npm'
-        
+
     - name: Install dependencies (API)
       run: |
         cd api
         npm ci
-        
+
     - name: Run unit tests (API)
       run: |
         cd api
         npm run test:unit
-        
+
+    # ops #4403: the steps above run api's jest project only. The root
+    # tests/unit suites (jest --config tests/jest.unit.config.js) cover
+    # scripts/services/*, and until this step nothing in CI executed them, so a
+    # failing root unit test could never turn a check red. No `|| ...`
+    # fallback (ops #4395): the step's exit code must be jest's.
+    - name: Install dependencies (root)
+      run: npm ci
+
+    - name: Run unit tests (root)
+      timeout-minutes: 10
+      run: npm run test:unit
+
     - name: Generate coverage report (API)
       run: |
         cd api
         npm run test:coverage || echo "Coverage not configured for API"
       continue-on-error: true
-        
+
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
       with:
         files: ./api/coverage/lcov.info
         flags: unit-tests
         fail_ci_if_error: false
-        
+
     - name: Check coverage threshold
       run: |
         echo "Coverage threshold check would be implemented here"
@@ -101,7 +113,7 @@ jobs:
   integration-tests:
     name: Integration Tests
     runs-on: ubuntu-latest
-    
+
     services:
       postgres:
         image: postgres:17
@@ -116,29 +128,29 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
-          
+
     steps:
     - name: Checkout code
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      
+
     - name: Setup Node.js
       uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
       with:
         node-version: ${{ env.NODE_VERSION }}
         cache: 'npm'
-        
+
     - name: Install dependencies (API)
       run: |
         cd api
         npm ci
-        
+
     - name: Setup test database
       run: |
         cd api
         npm run db:migrate:test || echo "Database migration not configured"
         npm run db:seed:test || echo "Database seeding not configured"
       continue-on-error: true
-        
+
     - name: Start MCP servers for testing
       run: |
         if [ -f "./scripts/start-mcp-servers.sh" ]; then
@@ -146,7 +158,7 @@ jobs:
           ./scripts/start-mcp-servers.sh --test &
           sleep 10
         fi
-        
+
     # This step used to be `|| echo ...` AND `continue-on-error: true` -- doubly
     # suppressed, so the job reported success no matter what happened. The
     # underlying non-zero exit was NOT a test failure: the 8 integration tests
@@ -166,14 +178,14 @@ jobs:
     # NOT wired up here: the ROOT tests/integration suite (`npm run
     # test:integration` at the repo root). It is currently non-functional -- see
     # the header of tests/integration/jest.config.js. Tracked in ops #2271.
-        
+
     - name: Test audit script validation
       run: |
         if [ -f "./scripts/sync_github_repos.sh" ]; then
           chmod +x ./scripts/sync_github_repos.sh
           ./scripts/sync_github_repos.sh --dry-run
         fi
-        
+
     - name: Stop MCP servers
       run: |
         if [ -f "./scripts/stop-mcp-servers.sh" ]; then
@@ -185,27 +197,27 @@ jobs:
     name: Build Application
     runs-on: ubuntu-latest
     needs: [code-quality, unit-tests]
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      
+
     - name: Setup Node.js
       uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
       with:
         node-version: ${{ env.NODE_VERSION }}
         cache: 'npm'
-        
+
     - name: Install dependencies (API)
       run: |
         cd api
         npm ci
-        
+
     - name: Build API
       run: |
         cd api
         npm run build || echo "Build script not available for API"
-        
+
     - name: Create deployment package
       run: |
         # Write the archive to RUNNER_TEMP so creating it doesn't touch the
@@ -221,7 +233,7 @@ jobs:
           --exclude='.nyc_output' \
           .
         mv "${RUNNER_TEMP}/homelab-gitops-auditor-${{ github.sha }}.tar.gz" .
-        
+
     - name: Build Docker image
       run: |
         if [ -f "Dockerfile" ]; then
@@ -230,13 +242,13 @@ jobs:
         else
           echo "Dockerfile not found, skipping Docker build"
         fi
-        
+
     - name: Save Docker image
       run: |
         if docker images | grep -q homelab-gitops-auditor; then
           docker save homelab-gitops-auditor:${{ github.sha }} | gzip > homelab-gitops-auditor-docker.tar.gz
         fi
-        
+
     - name: Upload build artifacts
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
@@ -250,22 +262,22 @@ jobs:
   dependency-check:
     name: Dependency Vulnerability Check
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      
+
     - name: Setup Node.js
       uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
       with:
         node-version: ${{ env.NODE_VERSION }}
         cache: 'npm'
-        
+
     - name: Install dependencies (API)
       run: |
         cd api
         npm ci
-        
+
     - name: Run dependency audit (root)
       run: ./scripts/ci-audit-gate.sh . high
 
@@ -274,7 +286,7 @@ jobs:
 
     - name: Run dependency audit (mcp-servers)
       run: ./scripts/ci-audit-gate.sh mcp-servers high
-        
+
     # The two "Check for critical vulnerabilities" steps that used to sit here
     # were removed. They gated on `.metadata.vulnerabilities.high + .critical`
     # for api/ (and the since-retired dashboard/) -- the same question the two "Run dependency
