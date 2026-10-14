@@ -1,61 +1,75 @@
-# Project Index: homelab-gitops
+# Project Index: festion__homelab-gitops
 
 ## 1. Core Purpose
 
-The `homelab-gitops` project serves as a GitOps Auditor for homelab environments. Its primary function is to audit git repositories for uncommitted changes, stale tags, missing files, and local-vs-GitHub sync drift. The results are presented via an Express API (with a retired React dashboard). It integrates over 10 pre-configured MCP (Model Context Protocol) servers (filesystem, network, GitHub, Home Assistant, Proxmox, TrueNAS, WikiJS, Serena Enhanced, Code Linter, Directory Polling), provides smart, template-driven documentation generation, and includes GitHub project management features. It is optimized for self-hosted infrastructure and GitOps workflows.
+The `festion__homelab-gitops` project serves as a comprehensive template repository for homelab environments. Its primary function is to audit Git repositories within the homelab for uncommitted changes, stale tags, missing files, and synchronization drift between local and GitHub states. It presents these audit results via an Express API, historically backed by a React dashboard (now retired). Beyond auditing, it integrates with Model Context Protocol (MCP) servers, automates documentation generation, and facilitates GitHub project management, providing a robust GitOps framework for infrastructure automation.
 
 ## 2. Architecture
 
-The architecture revolves around an Express API (`gitops-audit-api` on port 3070) that scans repositories located at `/repos`. Audit reports are saved to `/output/GitRepoReport.json`, with historical snapshots in `/audit-history/`. A nightly audit runs at 03:00, with manual audits triggered by `/opt/gitops/scripts/sync_github_repos.sh`.
+The codebase implements a multi-component architecture:
 
-Key components include:
--   **API (Node.js/Express):** Handles auditing logic, data collection, and serving results.
--   **MCP Servers:** A collection of specialized modules for interacting with various services (filesystem, GitHub, Home Assistant, etc.).
--   **Documentation Generation:** Automated generation of `CLAUDE.md` and `README.md` using templates.
--   **GitHub Integration:** Workflows, issue templates, and project boards.
--   **Scripts:** Utility scripts for setup, deployment, and configuration.
-
-The project works in conjunction with the `operations` repository for documentation and SOPs.
+*   **API Service (`/api`):** An Express.js API (systemd service `gitops-audit-api` on port 3070) that handles core logic, integrates with MCP servers, manages data, and exposes endpoints. It includes modules for authentication, authorization, input validation, and security.
+*   **MCP Server Integration (`/.mcp`, `/mcp-servers`, `/mcp-integrations`):** Integrates with over 10 pre-configured MCP servers (e.g., Filesystem, Network-FS, GitHub, Home Assistant, WikiJS, Serena Enhanced) for various homelab operations.
+*   **Documentation Generation:** Features automated, template-driven `CLAUDE.md` and `README.md` generation.
+*   **GitHub Integration:** Manages project boards, issue templates, and automated workflows via `.github/` configurations.
+*   **Data Management:** Scans repositories located at `/repos`, stores the current audit report at `/output/GitRepoReport.json`, and maintains historical snapshots in `/audit-history/`.
+*   **Scripts (`/scripts`):** Houses utility scripts for setup, deployment, and ongoing operations.
 
 ## 3. Key Files
 
--   **`api/server.js`, `api/server-mcp.js`, `api/server-v2.js`**: Main API entry points and server definitions.
--   **`api/config-loader.js`**: Utility for loading configuration.
--   **`api/routes/`**: Contains API route definitions.
--   **`api/models/`**: Defines database models for compliance, metrics, pipeline, and user data.
--   **`api/middleware/`**: Houses authentication, authorization, validation, and security middleware.
--   **`api/services/`**: Core business logic and service implementations.
--   **`api/enhanced-discovery-manager.js`, `api/github-mcp-manager.js`, `api/mcp-connector.js`, `api/serena-orchestrator.js`, `api/wiki-agent-manager.js`**: Core MCP and integration managers.
--   **`api/jobs/complianceChecker.js`, `api/jobs/metricsCollector.js`**: Background job definitions.
--   **`config/deployment-config.json`, `config/deployment-config.schema.json`**: Deployment configurations and schemas.
--   **`config/discovery-cron.json`, `config/discovery-sources.json`**: Configuration for discovery services.
--   **`config/database.js`**: Database configuration.
--   **`.mcp/`**: Directory for MCP server-related scripts and logic.
--   **`CLAUDE.md`, `README.md`**: Primary project documentation, often generated.
--   **`scripts/`**: Directory containing setup, deployment, and utility scripts (e.g., `sync_github_repos.sh`, `deploy.sh`).
--   **`.github/workflows/`**: GitHub Actions workflows for CI/CD and automation.
+*   **Core API:**
+    *   `api/server.js`, `api/server-mcp.js`, `api/server-v2.js`: Main entry points for the API services.
+    *   `api/routes/`: Defines API endpoints.
+    *   `api/models/`: Database models for compliance, metrics, pipeline, and user data.
+    *   `api/services/`: Contains business logic for various API functionalities.
+    *   `api/middleware/`: Implements authentication, authorization, security, and validation logic.
+*   **Configuration:**
+    *   `api/config/`: API-specific configurations (e.g., `infisical.js`, `orchestrationProfiles.js`).
+    *   `config/deployment-config.json`: Global deployment configurations.
+    *   `config-loader.js`: Utility for loading configurations.
+*   **Documentation:**
+    *   `CLAUDE.md`: AI assistant instructions.
+    *   `README.md`: Project overview and quick start guide.
+    *   `API_SPECIFICATION.md`, `AUTHENTICATION.md`, `SECURITY_CONSIDERATIONS.md`: API and security documentation.
+*   **Scripts & Tools:**
+    *   `install.sh`, `setup-claude.sh`, `update-production.sh`: Project setup and update scripts.
+    *   `create-consolidated-config.py`: Python script for configuration management.
+    *   `cleanup-mcp-structure.sh`: Script for MCP structure cleanup.
+*   **Testing:**
+    *   `api/jest.config.js`, `api/jest.simple.config.js`: Jest configurations for API tests.
+    *   `api/test/`, `api/tests/`: API test files.
+    *   `api/.github/workflows/test.yml`: GitHub Actions workflow for testing.
 
 ## 4. Dependencies
 
--   **`operations` repository**: This repository works alongside `https://github.com/festion/operations` for documentation and Standard Operating Procedures (SOPs).
--   **Node.js/npm**: The API and many scripts are JavaScript-based, requiring Node.js and npm for dependency management (indicated by `package.json` and `package-lock.json` in `api/` and the root).
--   **Systemd**: Used for managing the `gitops-audit-api` service.
--   **Git**: Fundamental for the GitOps auditing functionality.
+*   **Programming Languages:** Node.js (for the Express API), Python (for various scripts), Bash (for shell scripts).
+*   **Frameworks/Libraries:** Express.js for the API, Jest for testing.
+*   **External Systems/Protocols:**
+    *   **Git:** Core for auditing repositories.
+    *   **GitHub:** For repository management, project boards, and CI/CD workflows.
+    *   **Model Context Protocol (MCP):** Integrates with various MCP servers for extended functionality (e.g., Filesystem, Network-FS, Home Assistant, Proxmox, WikiJS, Serena Enhanced).
+    *   **Infisical:** For secret management (implied by `infisical-admin.js`, `infisical.js` in `api/config`).
+*   **Operating System:** Designed for homelab environments, likely Linux-based given the shell scripts and systemd reference.
 
 ## 5. Common Tasks
 
--   **Clone and setup a new project**:
-    ```bash
-    git clone https://github.com/festion/homelab-project-template.git my-new-project
-    cd my-new-project
-    ./scripts/apply-template.sh
-    ```
--   **Interactive setup**:
-    ```bash
-    ./scripts/apply-template.sh --interactive
-    ./scripts/setup-mcp-config.sh
-    ./scripts/apply-github-project-template.py (optional)
-    ```
--   **Manual audit**: Run `/opt/gitops/scripts/sync_github_repos.sh`.
--   **Deploy API**: Execute `scripts/deploy.sh` (API only).
--   **Memory Search**: To recall project knowledge before making changes, use `memory-search "<what you're about to change>" --project homelab-gitops`.
+*   **Project Setup:**
+    *   Clone the repository and run `./scripts/apply-template.sh` for one-line setup.
+    *   Execute `./scripts/apply-template.sh --interactive`, `./scripts/setup-mcp-config.sh`, and `./scripts/apply-github-project-template.py` for interactive setup and configuration.
+*   **Auditing:**
+    *   Perform a manual audit by running `/opt/gitops/scripts/sync_github_repos.sh`.
+    *   Understand that nightly audits are scheduled for 03:00.
+*   **Deployment:**
+    *   Deploy the API using `scripts/deploy.sh`.
+*   **API Development/Maintenance:**
+    *   Start the API server (e.g., `node api/server.js`).
+    *   Implement new API routes in `api/routes/`.
+    *   Develop or modify business logic in `api/services/`.
+    *   Manage database models in `api/models/`.
+*   **Testing:**
+    *   Run API tests using `jest` (e.g., `npm test` in the `api/` directory).
+*   **Configuration:**
+    *   Adjust API configurations in `api/config/` and global configurations in `config/`.
+*   **Documentation:**
+    *   Refer to `CLAUDE.md` and `README.md` for project instructions and overview.
+    *   Consult other `.md` files in `docs/` and `api/docs/` for specific details.
